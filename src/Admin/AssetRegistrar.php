@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 final class AssetRegistrar {
 	private const SCRIPT_HANDLE = 'yaxii-shipping-manager-admin';
 	private const STYLE_HANDLE  = 'yaxii-shipping-manager-admin';
-	private const ENTRY_FILE    = 'src/wp-admin-main.tsx';
+	private const ENTRY_FILE    = 'src/main.tsx';
 
 	private BootstrapController $bootstrap;
 
