@@ -1,0 +1,510 @@
+#yaxii-shipping-manager-admin-app {
+  margin: 16px 20px 0 0;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-admin-app {
+  --ysm-bg: #f6f7f7;
+  --ysm-panel: #ffffff;
+  --ysm-panel-muted: #f8fafc;
+  --ysm-border: #dcdcde;
+  --ysm-text: #1d2327;
+  --ysm-muted: #646970;
+  --ysm-primary: #2271b1;
+  --ysm-primary-dark: #135e96;
+  --ysm-good: #008a20;
+  --ysm-warn: #996800;
+  --ysm-danger: #b32d2e;
+  --ysm-radius: 8px;
+  box-sizing: border-box;
+  min-height: calc(100vh - 120px);
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--ysm-border);
+  border-radius: var(--ysm-radius);
+  background: var(--ysm-bg);
+  color: var(--ysm-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-admin-app *,
+#yaxii-shipping-manager-admin-app .ysm-admin-app *::before,
+#yaxii-shipping-manager-admin-app .ysm-admin-app *::after {
+  box-sizing: border-box;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-centered-state {
+  display: flex;
+  min-height: 420px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-centered-state h1,
+#yaxii-shipping-manager-admin-app .ysm-screen-header h2,
+#yaxii-shipping-manager-admin-app .ysm-topbar h1,
+#yaxii-shipping-manager-admin-app .ysm-panel h3 {
+  margin: 0;
+  color: var(--ysm-text);
+  line-height: 1.25;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-centered-state p,
+#yaxii-shipping-manager-admin-app .ysm-screen-header p,
+#yaxii-shipping-manager-admin-app .ysm-panel p {
+  margin: 4px 0 0;
+  color: var(--ysm-muted);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-sidebar {
+  border-inline-end: 1px solid var(--ysm-border);
+  background: var(--ysm-panel);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 18px;
+  border-bottom: 1px solid var(--ysm-border);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-brand-mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--ysm-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-brand-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-brand-subtitle {
+  margin-top: 2px;
+  color: var(--ysm-muted);
+  font-size: 12px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-nav {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-nav-link {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 7px;
+  color: var(--ysm-text);
+  text-decoration: none;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-nav-link:hover,
+#yaxii-shipping-manager-admin-app .ysm-nav-link:focus,
+#yaxii-shipping-manager-admin-app .ysm-nav-link.is-active {
+  background: #edf4fb;
+  color: var(--ysm-primary-dark);
+  outline: none;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-nav-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-nav-link strong,
+#yaxii-shipping-manager-admin-app .ysm-nav-link small {
+  display: block;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-nav-link small {
+  margin-top: 2px;
+  color: var(--ysm-muted);
+  font-size: 11px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-main {
+  min-width: 0;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-topbar {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ysm-border);
+  background: var(--ysm-panel);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-eyebrow {
+  margin: 0 0 4px;
+  color: var(--ysm-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-status-group,
+#yaxii-shipping-manager-admin-app .ysm-actions,
+#yaxii-shipping-manager-admin-app .ysm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-status-pill,
+#yaxii-shipping-manager-admin-app .ysm-status-label {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--ysm-border);
+  border-radius: 999px;
+  background: var(--ysm-panel-muted);
+  color: var(--ysm-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-status-pill.is-good {
+  border-color: #9fd3ad;
+  background: #effaf2;
+  color: var(--ysm-good);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-status-pill.is-warn {
+  border-color: #dba617;
+  background: #fcf6e8;
+  color: var(--ysm-warn);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-content {
+  padding: 20px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-screen {
+  display: grid;
+  gap: 16px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-screen-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-grid {
+  display: grid;
+  gap: 12px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#yaxii-shipping-manager-admin-app .ysm-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+#yaxii-shipping-manager-admin-app .ysm-panel,
+#yaxii-shipping-manager-admin-app .ysm-metric,
+#yaxii-shipping-manager-admin-app .ysm-choice,
+#yaxii-shipping-manager-admin-app .ysm-coming-later,
+#yaxii-shipping-manager-admin-app .ysm-data-notice {
+  border: 1px solid var(--ysm-border);
+  border-radius: var(--ysm-radius);
+  background: var(--ysm-panel);
+  padding: 16px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-metric {
+  display: grid;
+  gap: 8px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-metric svg {
+  width: 20px;
+  height: 20px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-metric span {
+  color: var(--ysm-muted);
+  font-size: 12px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-metric strong {
+  font-size: 24px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-metric.is-good svg,
+#yaxii-shipping-manager-admin-app .ysm-dot.is-good {
+  color: var(--ysm-good);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-metric.is-warn svg,
+#yaxii-shipping-manager-admin-app .ysm-dot.is-warning {
+  color: var(--ysm-warn);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-button,
+#yaxii-shipping-manager-admin-app button.ysm-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--ysm-primary);
+  border-radius: 6px;
+  background: var(--ysm-primary);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-button.is-secondary {
+  border-color: var(--ysm-border);
+  background: var(--ysm-panel);
+  color: var(--ysm-text);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-steps {
+  margin: 12px 0 0 20px;
+  color: var(--ysm-text);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-steps li + li {
+  margin-top: 8px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-choice {
+  text-align: start;
+  cursor: pointer;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-choice strong,
+#yaxii-shipping-manager-admin-app .ysm-choice span {
+  display: block;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-choice span {
+  margin-top: 6px;
+  color: var(--ysm-muted);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-choice.is-selected,
+#yaxii-shipping-manager-admin-app .ysm-wilaya-chip.is-selected {
+  border-color: var(--ysm-primary);
+  background: #edf4fb;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-wilaya-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-wilaya-chip {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--ysm-border);
+  border-radius: 6px;
+  background: var(--ysm-panel-muted);
+  text-align: start;
+  cursor: pointer;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-wilaya-chip span,
+#yaxii-shipping-manager-admin-app .ysm-code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-weight: 700;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-input {
+  min-height: 34px;
+  padding: 4px 10px;
+  border: 1px solid var(--ysm-border);
+  border-radius: 6px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-table-wrap {
+  overflow: auto;
+  margin-top: 12px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-table th,
+#yaxii-shipping-manager-admin-app .ysm-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--ysm-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-table th {
+  color: var(--ysm-muted);
+  font-size: 12px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-table td span {
+  display: block;
+  margin-top: 3px;
+  color: var(--ysm-muted);
+  font-size: 12px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-coming-later {
+  border-color: #dba617;
+  background: #fcf6e8;
+  color: #493a13;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-data-notice {
+  background: #f0f6fc;
+  color: #1d4f75;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-check-list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-check-list li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 8px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-check-list p {
+  grid-column: 2;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-dot.is-critical {
+  color: var(--ysm-danger);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-upload {
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  padding: 36px;
+  border: 2px dashed var(--ysm-border);
+  border-radius: var(--ysm-radius);
+  cursor: pointer;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-toggle-row + .ysm-toggle-row {
+  border-top: 1px solid var(--ysm-border);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-spinner {
+  width: 22px;
+  height: 22px;
+  animation: ysm-spin 0.8s linear infinite;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-error-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--ysm-danger);
+}
+
+#yaxii-shipping-manager-admin-app .ysm-route-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#yaxii-shipping-manager-admin-app .ysm-empty-state {
+  max-width: 560px;
+}
+
+@keyframes ysm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 960px) {
+  #yaxii-shipping-manager-admin-app .ysm-admin-app {
+    grid-template-columns: 1fr;
+  }
+
+  #yaxii-shipping-manager-admin-app .ysm-sidebar {
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--ysm-border);
+  }
+
+  #yaxii-shipping-manager-admin-app .ysm-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #yaxii-shipping-manager-admin-app .ysm-grid-3,
+  #yaxii-shipping-manager-admin-app .ysm-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  #yaxii-shipping-manager-admin-app .ysm-topbar,
+  #yaxii-shipping-manager-admin-app .ysm-screen-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -1,18 +1,117 @@
 {
-  "C:/Users/Aymen/Local Sites/yaxii-ysz/app/public/wp-content/plugins/yaxii-shipping-manager/app/src/styles.css": {
-    "file": "assets/styles-DrrTE0kH.css",
-    "src": "C:/Users/Aymen/Local Sites/yaxii-ysz/app/public/wp-content/plugins/yaxii-shipping-manager/app/src/styles.css"
+  "_mock-data-DHQnLXg0.js": {
+    "file": "assets/mock-data-DHQnLXg0.js",
+    "name": "mock-data"
+  },
+  "_shared-BMcXwLon.js": {
+    "file": "assets/shared-BMcXwLon.js",
+    "name": "shared",
+    "imports": [
+      "src/wp-admin-main.tsx"
+    ]
   },
   "src/wp-admin-main.tsx": {
-    "file": "assets/wp-admin-main-DNqvkEQ4.js",
+    "file": "assets/wp-admin-main-CuXMCUAM.js",
     "name": "wp-admin-main",
     "src": "src/wp-admin-main.tsx",
     "isEntry": true,
-    "css": [
-      "assets/styles-DrrTE0kH.css"
+    "dynamicImports": [
+      "src/wp-admin-screens/Dashboard.tsx",
+      "src/wp-admin-screens/Wizard.tsx",
+      "src/wp-admin-screens/ShippingManager.tsx",
+      "src/wp-admin-screens/Preview.tsx",
+      "src/wp-admin-screens/Diagnostics.tsx",
+      "src/wp-admin-screens/ImportExport.tsx",
+      "src/wp-admin-screens/YsfSync.tsx",
+      "src/wp-admin-screens/Settings.tsx"
     ],
-    "assets": [
-      "assets/styles-DrrTE0kH.css"
+    "css": [
+      "assets/wp-admin-main-wz_MUFnz.css"
+    ]
+  },
+  "src/wp-admin-screens/Dashboard.tsx": {
+    "file": "assets/Dashboard-UkExJ3K_.js",
+    "name": "Dashboard",
+    "src": "src/wp-admin-screens/Dashboard.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/wp-admin-main.tsx",
+      "_mock-data-DHQnLXg0.js",
+      "_shared-BMcXwLon.js"
+    ]
+  },
+  "src/wp-admin-screens/Diagnostics.tsx": {
+    "file": "assets/Diagnostics-CrrBx2qx.js",
+    "name": "Diagnostics",
+    "src": "src/wp-admin-screens/Diagnostics.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/wp-admin-main.tsx",
+      "_mock-data-DHQnLXg0.js",
+      "_shared-BMcXwLon.js"
+    ]
+  },
+  "src/wp-admin-screens/ImportExport.tsx": {
+    "file": "assets/ImportExport-BMhdtsLI.js",
+    "name": "ImportExport",
+    "src": "src/wp-admin-screens/ImportExport.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/wp-admin-main.tsx",
+      "_shared-BMcXwLon.js"
+    ]
+  },
+  "src/wp-admin-screens/Preview.tsx": {
+    "file": "assets/Preview-B-uy47xb.js",
+    "name": "Preview",
+    "src": "src/wp-admin-screens/Preview.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/wp-admin-main.tsx",
+      "_mock-data-DHQnLXg0.js",
+      "_shared-BMcXwLon.js"
+    ]
+  },
+  "src/wp-admin-screens/Settings.tsx": {
+    "file": "assets/Settings-DZbPaEbL.js",
+    "name": "Settings",
+    "src": "src/wp-admin-screens/Settings.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/wp-admin-main.tsx",
+      "_shared-BMcXwLon.js"
+    ]
+  },
+  "src/wp-admin-screens/ShippingManager.tsx": {
+    "file": "assets/ShippingManager-CDD_nXJy.js",
+    "name": "ShippingManager",
+    "src": "src/wp-admin-screens/ShippingManager.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/wp-admin-main.tsx",
+      "_mock-data-DHQnLXg0.js",
+      "_shared-BMcXwLon.js"
+    ]
+  },
+  "src/wp-admin-screens/Wizard.tsx": {
+    "file": "assets/Wizard-CFRNpzeF.js",
+    "name": "Wizard",
+    "src": "src/wp-admin-screens/Wizard.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/wp-admin-main.tsx",
+      "_mock-data-DHQnLXg0.js",
+      "_shared-BMcXwLon.js"
+    ]
+  },
+  "src/wp-admin-screens/YsfSync.tsx": {
+    "file": "assets/YsfSync-Cw9OoEgZ.js",
+    "name": "YsfSync",
+    "src": "src/wp-admin-screens/YsfSync.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/wp-admin-main.tsx",
+      "_shared-BMcXwLon.js"
     ]
   }
 }
