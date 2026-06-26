@@ -1,0 +1,21 @@
+# Nested Git internals and preserved prototype backup.
+app/.git/
+app/.git-prototype-backup/
+
+# Dependencies and build output.
+node_modules/
+app/node_modules/
+vendor/
+dist/
+build/
+assets/dist/
+app/.output/
+app/.vinxi/
+
+# Local environment files.
+.env
+.env.*
+
+# OS/editor noise.
+.DS_Store
+Thumbs.db
