@@ -1,5 +1,5 @@
-@import "tailwindcss/theme" layer(theme) source(none);
-@import "tailwindcss/utilities" layer(utilities) source(none);
+@import "tailwindcss/theme" source(none);
+@import "tailwindcss/utilities" source(none);
 @import "tw-animate-css";
 @source "../src";
 
@@ -100,6 +100,9 @@
 #yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app *,
 #yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app *::before,
 #yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app *::after {
+  border-color: var(--border);
+  border-style: solid;
+  border-width: 0;
   box-sizing: border-box;
 }
 
@@ -108,10 +111,16 @@
 }
 
 #yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(button, input, select, textarea) {
+  background-color: transparent;
+  background-image: none;
+  border-radius: 0;
+  box-shadow: none;
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
+  line-height: inherit;
   margin: 0;
+  min-height: 0;
 }
 
 #yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(button, select) {
