@@ -6,6 +6,22 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 const styleScope = "#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app";
 
+function scopeSelector(selector: string, prefixedSelector: string): string {
+  if (selector.includes("#yaxii-shipping-manager-admin-app")) {
+    return selector;
+  }
+
+  if (selector === ":root" || selector === ":host") {
+    return styleScope;
+  }
+
+  if (selector.startsWith(".")) {
+    return `${styleScope}${selector}, ${prefixedSelector}`;
+  }
+
+  return prefixedSelector;
+}
+
 export default defineConfig({
   base: "",
   plugins: [react(), tsconfigPaths(), tailwindcss()],
@@ -15,15 +31,7 @@ export default defineConfig({
         prefixSelector({
           prefix: styleScope,
           transform(_prefix, selector, prefixedSelector) {
-            if (selector.includes("#yaxii-shipping-manager-admin-app")) {
-              return selector;
-            }
-
-            if (selector === ":root" || selector === ":host") {
-              return styleScope;
-            }
-
-            return prefixedSelector;
+            return scopeSelector(selector, prefixedSelector);
           },
         }),
       ],

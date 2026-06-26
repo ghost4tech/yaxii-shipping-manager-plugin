@@ -1,5 +1,6 @@
 @import "tailwindcss/theme" layer(theme) source(none);
 @import "tailwindcss/utilities" layer(utilities) source(none);
+@import "tw-animate-css";
 @source "../src";
 
 @custom-variant dark (&:is(.dark *));
@@ -95,6 +96,45 @@
   line-height: 1.5;
 }
 
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app,
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app *,
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app *::before,
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app *::after {
+  box-sizing: border-box;
+}
+
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd) {
+  margin: 0;
+}
+
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(button, input, select, textarea) {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  margin: 0;
+}
+
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(button, select) {
+  text-transform: none;
+}
+
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(button, [role="button"]) {
+  cursor: pointer;
+}
+
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(button:disabled, [aria-disabled="true"]) {
+  cursor: default;
+}
+
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(img, svg) {
+  display: block;
+  vertical-align: middle;
+}
+
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app :where(table) {
+  border-collapse: collapse;
+}
+
 #yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app.dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
@@ -128,11 +168,4 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
-}
-
-#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app button,
-#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app input,
-#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app select,
-#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app textarea {
-  font: inherit;
 }
