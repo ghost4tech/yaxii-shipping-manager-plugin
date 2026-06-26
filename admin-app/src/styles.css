@@ -1,437 +1,138 @@
-#yaxii-shipping-manager-admin-app {
-  margin: 16px 20px 0 0;
+@import "tailwindcss/theme" layer(theme) source(none);
+@import "tailwindcss/utilities" layer(utilities) source(none);
+@source "../src";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 #yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app {
-  --ysm-bg: #f6f7f7;
-  --ysm-panel: #ffffff;
-  --ysm-panel-soft: #f8fafc;
-  --ysm-border: #dcdcde;
-  --ysm-border-strong: #c3c4c7;
-  --ysm-text: #1d2327;
-  --ysm-muted: #646970;
-  --ysm-primary: #2271b1;
-  --ysm-primary-dark: #135e96;
-  --ysm-accent: #00a32a;
-  --ysm-warn: #996800;
-  --ysm-danger: #b32d2e;
-  --ysm-radius: 8px;
-  box-sizing: border-box;
-  min-height: calc(100vh - 120px);
-  border: 1px solid var(--ysm-border);
-  border-radius: var(--ysm-radius);
-  background: var(--ysm-bg);
-  color: var(--ysm-text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  overflow: hidden;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.21 0.03 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.03 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.03 265);
+  --primary: oklch(0.52 0.19 277);
+  --primary-foreground: oklch(0.99 0.005 270);
+  --secondary: oklch(0.97 0.012 270);
+  --secondary-foreground: oklch(0.28 0.06 270);
+  --muted: oklch(0.975 0.008 270);
+  --muted-foreground: oklch(0.52 0.03 265);
+  --accent: oklch(0.96 0.025 277);
+  --accent-foreground: oklch(0.32 0.12 277);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.92 0.012 265);
+  --input: oklch(0.92 0.012 265);
+  --ring: oklch(0.52 0.19 277);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.984 0.003 247.858);
+  --sidebar-foreground: oklch(0.129 0.042 264.695);
+  --sidebar-primary: oklch(0.208 0.042 265.755);
+  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent: oklch(0.968 0.007 247.896);
+  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
+  --sidebar-border: oklch(0.929 0.013 255.508);
+  --sidebar-ring: oklch(0.704 0.04 256.788);
+  border-color: var(--color-border);
+  color: var(--color-foreground);
+  color-scheme: light;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  line-height: 1.5;
 }
 
-#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app.is-centered {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 10px;
-  min-height: 420px;
-  padding: 40px;
-  text-align: center;
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app.dark {
+  --background: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.984 0.003 247.858);
+  --card: oklch(0.208 0.042 265.755);
+  --card-foreground: oklch(0.984 0.003 247.858);
+  --popover: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: oklch(0.279 0.041 260.031);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  --muted: oklch(0.279 0.041 260.031);
+  --muted-foreground: oklch(0.704 0.04 256.788);
+  --accent: oklch(0.279 0.041 260.031);
+  --accent-foreground: oklch(0.984 0.003 247.858);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.551 0.027 264.364);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.208 0.042 265.755);
+  --sidebar-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-accent: oklch(0.279 0.041 260.031);
+  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
-#yaxii-shipping-manager-admin-app .ysm-header {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22px 28px;
-  border-bottom: 1px solid var(--ysm-border);
-  background: var(--ysm-panel);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-brand-lockup {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-brand-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border-radius: 7px;
-  background: var(--ysm-primary);
-  color: #fff;
-  font-weight: 700;
-}
-
-#yaxii-shipping-manager-admin-app h1,
-#yaxii-shipping-manager-admin-app h2,
-#yaxii-shipping-manager-admin-app h3,
-#yaxii-shipping-manager-admin-app p {
-  margin-top: 0;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-brand-lockup p,
-#yaxii-shipping-manager-admin-app .ysm-section-header p,
-#yaxii-shipping-manager-admin-app .ysm-panel p,
-#yaxii-shipping-manager-admin-app .ysm-coming-later p,
-#yaxii-shipping-manager-admin-app .ysm-notice,
-#yaxii-shipping-manager-admin-app small {
-  color: var(--ysm-muted);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-brand-lockup p {
-  margin-bottom: 2px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-brand-lockup h1 {
-  margin-bottom: 0;
-  font-size: 21px;
-  line-height: 1.25;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-status-group,
-#yaxii-shipping-manager-admin-app .ysm-section-header,
-#yaxii-shipping-manager-admin-app .ysm-panel-heading,
-#yaxii-shipping-manager-admin-app .ysm-method-row,
-#yaxii-shipping-manager-admin-app .ysm-setting-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-status-group {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-status-pill {
-  display: inline-flex;
-  width: fit-content;
-  align-items: center;
-  min-height: 24px;
-  padding: 3px 9px;
-  border: 1px solid var(--ysm-border);
-  border-radius: 999px;
-  background: var(--ysm-panel-soft);
-  color: var(--ysm-muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-status-pill.is-good {
-  border-color: #9fd3ad;
-  background: #effaf2;
-  color: var(--ysm-accent);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-status-pill.is-warn {
-  border-color: #dba617;
-  background: #fcf6e8;
-  color: var(--ysm-warn);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-status-pill.is-danger {
-  border-color: #e0a4a4;
-  background: #fcf0f1;
-  color: var(--ysm-danger);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-top-nav {
-  display: flex;
-  gap: 2px;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 0 20px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--ysm-border);
-  background: var(--ysm-panel);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-tab {
-  display: inline-flex;
-  position: relative;
-  align-items: center;
-  gap: 7px;
-  min-height: 46px;
-  padding: 0 13px;
-  border: 0;
-  background: transparent;
-  color: var(--ysm-muted);
-  cursor: pointer;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-tab:hover,
-#yaxii-shipping-manager-admin-app .ysm-tab:focus,
-#yaxii-shipping-manager-admin-app .ysm-tab.is-active {
-  color: var(--ysm-primary-dark);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-tab.is-active::after {
-  position: absolute;
-  right: 12px;
-  bottom: 0;
-  left: 12px;
-  height: 3px;
-  border-radius: 999px 999px 0 0;
-  background: var(--ysm-primary);
-  content: "";
-}
-
-#yaxii-shipping-manager-admin-app svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-main {
-  display: grid;
-  gap: 16px;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 24px 20px 32px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-screen {
-  display: grid;
-  gap: 16px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-section-header h2 {
-  margin-bottom: 4px;
-  font-size: 22px;
-  line-height: 1.25;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-grid {
-  display: grid;
-  gap: 14px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-grid.is-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-#yaxii-shipping-manager-admin-app .ysm-grid.is-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-#yaxii-shipping-manager-admin-app .ysm-grid.is-4 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-#yaxii-shipping-manager-admin-app .ysm-panel,
-#yaxii-shipping-manager-admin-app .ysm-choice,
-#yaxii-shipping-manager-admin-app .ysm-metric,
-#yaxii-shipping-manager-admin-app .ysm-notice,
-#yaxii-shipping-manager-admin-app .ysm-coming-later,
-#yaxii-shipping-manager-admin-app .ysm-empty-box {
-  box-sizing: border-box;
-  border: 1px solid var(--ysm-border);
-  border-radius: var(--ysm-radius);
-  background: var(--ysm-panel);
-  padding: 16px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-notice {
-  background: #f0f6fc;
-  color: #1d4f75;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-notice.is-warn,
-#yaxii-shipping-manager-admin-app .ysm-coming-later {
-  border-color: #dba617;
-  background: #fcf6e8;
-  color: #493a13;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-choice {
-  display: grid;
-  gap: 8px;
-  text-align: start;
-  cursor: pointer;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-choice.is-selected {
-  border-color: var(--ysm-primary);
-  background: #edf4fb;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-choice span,
-#yaxii-shipping-manager-admin-app .ysm-metric span,
-#yaxii-shipping-manager-admin-app .ysm-table span,
-#yaxii-shipping-manager-admin-app .ysm-method-row small,
-#yaxii-shipping-manager-admin-app .ysm-setting-row small {
-  display: block;
-  color: var(--ysm-muted);
-  font-size: 12px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-metric {
-  display: grid;
-  gap: 8px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-metric strong {
-  font-size: 20px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-option-stack,
-#yaxii-shipping-manager-admin-app .ysm-method-list {
-  display: grid;
-  gap: 10px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-radio-row {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  padding: 12px;
-  border: 1px solid var(--ysm-border);
-  border-radius: 6px;
-  background: var(--ysm-panel-soft);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-table-wrap {
-  overflow: auto;
-  border: 1px solid var(--ysm-border);
-  border-radius: var(--ysm-radius);
-  background: var(--ysm-panel);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-table th,
-#yaxii-shipping-manager-admin-app .ysm-table td {
-  padding: 12px;
-  border-bottom: 1px solid var(--ysm-border);
-  text-align: start;
-  vertical-align: top;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-table th {
-  color: var(--ysm-muted);
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-code {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-weight: 700;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-method-editor {
-  display: grid;
-  gap: 6px;
-  min-width: 150px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-method-editor label {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-#yaxii-shipping-manager-admin-app input[type="number"],
-#yaxii-shipping-manager-admin-app select {
-  min-height: 32px;
-  border: 1px solid var(--ysm-border-strong);
-  border-radius: 6px;
-}
-
-#yaxii-shipping-manager-admin-app input[type="number"] {
-  max-width: 120px;
-  padding: 0 8px;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 34px;
-  padding: 6px 12px;
-  border: 1px solid var(--ysm-primary);
-  border-radius: 6px;
-  background: var(--ysm-primary);
-  color: #fff;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-button.is-secondary {
-  border-color: var(--ysm-border-strong);
-  background: var(--ysm-panel);
-  color: var(--ysm-text);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-button.is-quiet {
-  border-color: transparent;
-  background: var(--ysm-panel-soft);
-  color: var(--ysm-primary-dark);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-method-row {
-  padding: 12px;
-  border: 1px solid var(--ysm-border);
-  border-radius: 6px;
-  background: var(--ysm-panel-soft);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-upload {
-  display: grid;
-  gap: 8px;
-  margin: 14px 0;
-  padding: 32px;
-  border: 2px dashed var(--ysm-border-strong);
-  border-radius: var(--ysm-radius);
-  background: var(--ysm-panel-soft);
-  text-align: center;
-  cursor: pointer;
-}
-
-#yaxii-shipping-manager-admin-app .ysm-setting-row + .ysm-setting-row {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--ysm-border);
-}
-
-#yaxii-shipping-manager-admin-app .ysm-coming-later {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-
-@media (max-width: 960px) {
-  #yaxii-shipping-manager-admin-app .ysm-header,
-  #yaxii-shipping-manager-admin-app .ysm-section-header,
-  #yaxii-shipping-manager-admin-app .ysm-panel-heading,
-  #yaxii-shipping-manager-admin-app .ysm-setting-row,
-  #yaxii-shipping-manager-admin-app .ysm-method-row {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  #yaxii-shipping-manager-admin-app .ysm-status-group {
-    justify-content: flex-start;
-  }
-
-  #yaxii-shipping-manager-admin-app .ysm-grid.is-2,
-  #yaxii-shipping-manager-admin-app .ysm-grid.is-3,
-  #yaxii-shipping-manager-admin-app .ysm-grid.is-4 {
-    grid-template-columns: 1fr;
-  }
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app button,
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app input,
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app select,
+#yaxii-shipping-manager-admin-app .yaxii-shipping-manager-app textarea {
+  font: inherit;
 }

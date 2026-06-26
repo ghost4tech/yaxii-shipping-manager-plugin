@@ -86,7 +86,7 @@ final class AssetRegistrar {
 		$script_pattern = '/<script\b(?=[^>]*\bid=(["\'])'
 			. $script_id
 			. '\1)(?![^>]*\btype=)([^>]*)><\/script>/';
-		$module_tag = preg_replace(
+		$module_tag     = preg_replace(
 			$script_pattern,
 			'<script type="module"$2></script>',
 			$tag,
