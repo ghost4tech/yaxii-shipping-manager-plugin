@@ -1,0 +1,18 @@
+{
+  "C:/Users/Aymen/Local Sites/yaxii-ysz/app/public/wp-content/plugins/yaxii-shipping-manager/app/src/styles.css": {
+    "file": "assets/styles-DrrTE0kH.css",
+    "src": "C:/Users/Aymen/Local Sites/yaxii-ysz/app/public/wp-content/plugins/yaxii-shipping-manager/app/src/styles.css"
+  },
+  "src/wp-admin-main.tsx": {
+    "file": "assets/wp-admin-main-DNqvkEQ4.js",
+    "name": "wp-admin-main",
+    "src": "src/wp-admin-main.tsx",
+    "isEntry": true,
+    "css": [
+      "assets/styles-DrrTE0kH.css"
+    ],
+    "assets": [
+      "assets/styles-DrrTE0kH.css"
+    ]
+  }
+}

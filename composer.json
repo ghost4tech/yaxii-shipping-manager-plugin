@@ -1,0 +1,14 @@
+{
+  "name": "yaxii/shipping-manager",
+  "description": "Algeria shipping setup for WooCommerce.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "autoload": {
+    "psr-4": {
+      "Yaxii\\ShippingManager\\": "src/"
+    }
+  },
+  "require": {
+    "php": ">=7.4"
+  }
+}

@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "build:wp-admin": "vite build --config vite.wp-admin.config.ts",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write ."
   },
   "dependencies": {
