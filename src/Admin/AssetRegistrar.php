@@ -82,7 +82,18 @@ final class AssetRegistrar {
 			return $tag;
 		}
 
-		return '<script type="module" src="' . esc_url( $src ) . '" id="' . esc_attr( $handle ) . '-js"></script>' . "\n";
+		$script_id      = preg_quote( self::SCRIPT_HANDLE . '-js', '/' );
+		$script_pattern = '/<script\b(?=[^>]*\bid=(["\'])'
+			. $script_id
+			. '\1)(?![^>]*\btype=)([^>]*)><\/script>/';
+		$module_tag = preg_replace(
+			$script_pattern,
+			'<script type="module"$2></script>',
+			$tag,
+			1
+		);
+
+		return is_string( $module_tag ) ? $module_tag : $tag;
 	}
 
 	private function is_plugin_page_hook( string $hook_suffix ): bool {
