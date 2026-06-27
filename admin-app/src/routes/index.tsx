@@ -15,14 +15,12 @@ import {
   Lock,
   Package,
   Percent,
-  Plus,
   Power,
   PowerOff,
   RefreshCw,
   Settings as SettingsIcon,
   ShieldCheck,
   Sparkles,
-  Trash2,
   Upload,
   Wand2,
   X,
@@ -31,8 +29,28 @@ import {
 
 import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
 import { fetchDatasetWilayas } from "../api/dataset-api";
+import {
+  DATASET_MODE_OPTIONS,
+  DEFAULT_GENERATOR_DRAFT,
+  DEFAULT_SETTINGS_DRAFT,
+  DEFAULT_SHIPPING_METHOD_TEMPLATES,
+  OFFICE_METHOD_WORDING_OPTIONS,
+  REGION_LABEL_FORMAT_OPTIONS,
+  SAFETY_RULES,
+  SETUP_PATH_OPTIONS,
+  ZONE_NAMING_OPTIONS,
+  officeLabelForWording,
+} from "../data/default-settings";
+import { formatRegionLabel } from "../domain/format-region-label";
+import { zoneNamePreview } from "../domain/zone-name-preview";
 import type { DatasetMode, WilayaDatasetRecord } from "../types/dataset";
-import type { ShippingMethodKey } from "../types/generator";
+import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
+import type {
+  OfficeMethodWording,
+  RegionLabelFormat,
+  SetupPath,
+  ZoneNameFormat,
+} from "../types/settings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,14 +104,9 @@ type Wilaya = {
   methods: Record<string, Method>;
 };
 
-type MethodDef = { id: ShippingMethodKey; label: string };
+type MethodDef = Pick<ShippingMethodTemplate, "key" | "label" | "defaultPrice" | "locked">;
 
-const DEFAULT_METHOD_DEFS: MethodDef[] = [
-  { id: "home_delivery", label: "Home delivery" },
-  { id: "office_delivery", label: "Office / Stopdesk" },
-  { id: "custom_1", label: "Custom method 1" },
-  { id: "custom_2", label: "Custom method 2" },
-];
+const DEFAULT_METHOD_DEFS: MethodDef[] = enabledMethodDefs(DEFAULT_SHIPPING_METHOD_TEMPLATES);
 
 const TABS = [
   { id: "zones", label: "Shipping Zones", icon: Package },
@@ -105,7 +118,6 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
-type ImportMode = "manual" | "csv";
 type WilayaReference = { code: string; name: string; ar: string };
 type DatasetLoadState =
   | { status: "loading" }
@@ -237,11 +249,11 @@ function datasetRecordsToWilayas(
   return records.map((record) => {
     const methods: Record<string, Method> = {};
     methodDefs.forEach((method) => {
-      methods[method.id] = {
-        id: method.id,
+      methods[method.key] = {
+        id: method.key,
         label: method.label,
-        price: undefined,
-        enabled: false,
+        price: method.defaultPrice,
+        enabled: true,
       };
     });
 
@@ -254,6 +266,17 @@ function datasetRecordsToWilayas(
       methods,
     };
   });
+}
+
+function enabledMethodDefs(methods: ShippingMethodTemplate[]): MethodDef[] {
+  return methods
+    .filter((method) => method.enabled)
+    .map((method) => ({
+      key: method.key,
+      label: method.label,
+      defaultPrice: method.defaultPrice,
+      locked: method.locked,
+    }));
 }
 
 function wilayasToReference(wilayas: Wilaya[]): WilayaReference[] {
@@ -456,39 +479,83 @@ function GeneratorWizard({
   onComplete: (wilayas: Wilaya[], defs: MethodDef[]) => void;
 }) {
   const [step, setStep] = useState(0);
-  const [dataset, setDataset] = useState<DatasetMode>("current");
-  const [mode, setMode] = useState<ImportMode>("manual");
-  const [methodDefs, setMethodDefs] = useState<MethodDef[]>(DEFAULT_METHOD_DEFS);
-  const [rows, setRows] = useState<Record<string, Record<string, number | null | undefined>>>({});
+  const [setupPath, setSetupPathState] = useState<SetupPath>(DEFAULT_GENERATOR_DRAFT.setupPath);
+  const [dataset, setDataset] = useState<DatasetMode>(DEFAULT_GENERATOR_DRAFT.datasetMode);
+  const [labelFormat, setLabelFormat] = useState<RegionLabelFormat>(
+    DEFAULT_GENERATOR_DRAFT.labelFormat,
+  );
+  const [zoneNameFormat, setZoneNameFormat] = useState<ZoneNameFormat>(
+    DEFAULT_GENERATOR_DRAFT.zoneNaming.format,
+  );
+  const [zonePrefix, setZonePrefix] = useState(DEFAULT_GENERATOR_DRAFT.zoneNaming.prefix);
+  const [officeWording, setOfficeWording] = useState<OfficeMethodWording>(
+    DEFAULT_GENERATOR_DRAFT.officeMethodWording,
+  );
+  const [officeCustomLabel, setOfficeCustomLabel] = useState("Office delivery");
+  const [methods, setMethods] = useState<ShippingMethodTemplate[]>(DEFAULT_GENERATOR_DRAFT.methods);
+  const [selectedCodes, setSelectedCodes] = useState<string[]>(
+    baseList.map((wilaya) => wilaya.code),
+  );
 
-  const steps = ["Dataset", "Methods", "Import", "Prices", "Review"] as const;
+  const steps = [
+    "Setup path",
+    "Dataset mode",
+    "Label/naming",
+    "Shipping methods",
+    "Default prices",
+    "Wilaya selection",
+    "Review draft",
+  ] as const;
   const next = () => setStep((current) => Math.min(current + 1, steps.length - 1));
   const back = () => setStep((current) => Math.max(current - 1, 0));
 
-  const buildDraft = (): Wilaya[] =>
-    baseList.map((wilaya) => {
-      const methods: Record<string, Method> = {};
-      methodDefs.forEach((method) => {
-        const price = rows[wilaya.code]?.[method.id];
-        methods[method.id] = {
-          id: method.id,
+  const setSetupPath = (nextSetupPath: SetupPath) => {
+    setSetupPathState(nextSetupPath);
+    if (nextSetupPath === "quick") {
+      setSelectedCodes(baseList.map((wilaya) => wilaya.code));
+    }
+  };
+
+  const activeMethodDefs = enabledMethodDefs(methods);
+  const selectedWilayaCount = selectedCodes.length;
+
+  const buildDraft = (): Wilaya[] => {
+    const selected = new Set(selectedCodes);
+
+    return baseList.map((wilaya) => {
+      const rowEnabled = selected.has(wilaya.code);
+      const formattedName = formatRegionLabel(
+        { nameFr: wilaya.name, nameAr: wilaya.ar },
+        labelFormat,
+      );
+      const draftMethods: Record<string, Method> = {};
+
+      methods.forEach((method) => {
+        if (!method.enabled) {
+          return;
+        }
+
+        const price = method.defaultPrice === null ? undefined : method.defaultPrice;
+        draftMethods[method.key] = {
+          id: method.key,
           label: method.label,
-          enabled: price !== undefined,
-          price: price ?? undefined,
+          enabled: rowEnabled && price !== undefined,
+          price,
         };
       });
 
       return {
         code: wilaya.code,
-        name: wilaya.name,
+        name: formattedName,
         ar: wilaya.ar,
-        enabled: true,
+        enabled: rowEnabled,
         status: "ready",
-        methods,
+        methods: draftMethods,
       };
     });
+  };
 
-  const useLocalDraft = () => onComplete(buildDraft(), methodDefs);
+  const useLocalDraft = () => onComplete(buildDraft(), activeMethodDefs);
 
   return (
     <div className="fixed inset-0 z-[100000] flex flex-col bg-background">
@@ -540,22 +607,48 @@ function GeneratorWizard({
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-5xl px-6 py-10">
-          {step === 0 && <StepDataset dataset={dataset} setDataset={setDataset} />}
-          {step === 1 && <StepMethods defs={methodDefs} setDefs={setMethodDefs} />}
+          {step === 0 && <StepSetupPath setupPath={setupPath} setSetupPath={setSetupPath} />}
+          {step === 1 && <StepDataset dataset={dataset} setDataset={setDataset} />}
           {step === 2 && (
-            <StepImport
-              mode={mode}
-              setMode={setMode}
-              methodDefs={methodDefs}
+            <StepLabelNaming
               baseList={baseList}
-              setRows={setRows}
+              labelFormat={labelFormat}
+              setLabelFormat={setLabelFormat}
+              zoneNameFormat={zoneNameFormat}
+              setZoneNameFormat={setZoneNameFormat}
+              zonePrefix={zonePrefix}
+              setZonePrefix={setZonePrefix}
             />
           )}
           {step === 3 && (
-            <StepPrices baseList={baseList} methodDefs={methodDefs} rows={rows} setRows={setRows} />
+            <StepMethods
+              methods={methods}
+              setMethods={setMethods}
+              officeWording={officeWording}
+              setOfficeWording={setOfficeWording}
+              officeCustomLabel={officeCustomLabel}
+              setOfficeCustomLabel={setOfficeCustomLabel}
+            />
           )}
-          {step === 4 && (
-            <StepReview baseList={baseList} methodDefs={methodDefs} rows={rows} dataset={dataset} />
+          {step === 4 && <StepDefaultPrices methods={methods} setMethods={setMethods} />}
+          {step === 5 && (
+            <StepWilayaSelection
+              baseList={baseList}
+              selectedCodes={selectedCodes}
+              setSelectedCodes={setSelectedCodes}
+            />
+          )}
+          {step === 6 && (
+            <StepReview
+              setupPath={setupPath}
+              baseList={baseList}
+              methods={methods}
+              dataset={dataset}
+              labelFormat={labelFormat}
+              zoneNameFormat={zoneNameFormat}
+              zonePrefix={zonePrefix}
+              selectedWilayaCount={selectedWilayaCount}
+            />
           )}
         </div>
       </div>
@@ -583,6 +676,57 @@ function GeneratorWizard({
   );
 }
 
+function StepSetupPath({
+  setupPath,
+  setSetupPath,
+}: {
+  setupPath: SetupPath;
+  setSetupPath: (setupPath: SetupPath) => void;
+}) {
+  return (
+    <div className="mx-auto max-w-3xl">
+      <h3 className="text-2xl font-semibold tracking-tight">Choose a setup path</h3>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Each path prepares a local draft only. WooCommerce preview and apply are later tasks.
+      </p>
+      <div className="mt-6 grid gap-3 md:grid-cols-3">
+        {SETUP_PATH_OPTIONS.map((option) => (
+          <ImportPathCard
+            key={option.value}
+            active={setupPath === option.value}
+            onClick={() => setSetupPath(option.value)}
+            icon={setupPathIcon(option.value)}
+            title={option.label}
+            desc={option.description ?? ""}
+          />
+        ))}
+      </div>
+      {setupPath === "csv" && (
+        <Alert className="mt-6 border-amber-200 bg-amber-50 text-amber-950">
+          <FileUp className="h-4 w-4" />
+          <AlertTitle>CSV backend is not connected yet</AlertTitle>
+          <AlertDescription>
+            This path is represented in the contract, but file upload and validation are future
+            backend work.
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+function setupPathIcon(setupPath: SetupPath): ReactNode {
+  if (setupPath === "quick") {
+    return <Wand2 className="h-4 w-4" />;
+  }
+
+  if (setupPath === "csv") {
+    return <FileSpreadsheet className="h-4 w-4" />;
+  }
+
+  return <Edit3 className="h-4 w-4" />;
+}
+
 function StepDataset({
   dataset,
   setDataset,
@@ -594,26 +738,30 @@ function StepDataset({
     <div className="mx-auto max-w-2xl">
       <h3 className="text-2xl font-semibold tracking-tight">Pick your wilaya dataset mode</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        The full dataset will be verified in TASK-002. Current inline data is mock/reference only.
+        Current mode is available. Legacy compatibility remains unavailable until mapping is
+        auditable.
       </p>
       <RadioGroup
         value={dataset}
-        onValueChange={(value) => setDataset(value as DatasetMode)}
+        onValueChange={(value) => {
+          const option = DATASET_MODE_OPTIONS.find((entry) => entry.mode === value);
+          if (option?.available) {
+            setDataset(option.mode);
+          }
+        }}
         className="mt-6 space-y-3"
       >
-        <DatasetCard
-          value="current"
-          current={dataset}
-          title="Current Algeria dataset"
-          desc="Use this for the future verified Algeria dataset after TASK-002 hardening."
-          badge="Recommended"
-        />
-        <DatasetCard
-          value="legacy_58"
-          current={dataset}
-          title="Legacy 58-compatible dataset"
-          desc="Keep compatibility with stores or files that still use the older wilaya coding model."
-        />
+        {DATASET_MODE_OPTIONS.map((option) => (
+          <DatasetCard
+            key={option.mode}
+            value={option.mode}
+            current={dataset}
+            title={option.label}
+            desc={option.reason ?? "Use the normalized current candidate dataset."}
+            badge={option.recommended ? "Recommended" : undefined}
+            disabled={!option.available}
+          />
+        ))}
       </RadioGroup>
     </div>
   );
@@ -625,12 +773,14 @@ function DatasetCard({
   title,
   desc,
   badge,
+  disabled,
 }: {
   value: DatasetMode;
   current: DatasetMode;
   title: string;
   desc: string;
   badge?: string;
+  disabled?: boolean;
 }) {
   const active = value === current;
   return (
@@ -638,9 +788,10 @@ function DatasetCard({
       className={cn(
         "flex cursor-pointer items-start gap-3 rounded-xl border p-5 transition-colors",
         active ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+        disabled && "cursor-not-allowed opacity-60 hover:border-border",
       )}
     >
-      <RadioGroupItem value={value} className="mt-1" />
+      <RadioGroupItem value={value} className="mt-1" disabled={disabled} />
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <div className="font-medium">{title}</div>
@@ -656,82 +807,89 @@ function DatasetCard({
   );
 }
 
-function StepMethods({
-  defs,
-  setDefs,
+function StepLabelNaming({
+  baseList,
+  labelFormat,
+  setLabelFormat,
+  zoneNameFormat,
+  setZoneNameFormat,
+  zonePrefix,
+  setZonePrefix,
 }: {
-  defs: MethodDef[];
-  setDefs: (defs: MethodDef[]) => void;
+  baseList: WilayaReference[];
+  labelFormat: RegionLabelFormat;
+  setLabelFormat: (format: RegionLabelFormat) => void;
+  zoneNameFormat: ZoneNameFormat;
+  setZoneNameFormat: (format: ZoneNameFormat) => void;
+  zonePrefix: string;
+  setZonePrefix: (prefix: string) => void;
 }) {
-  const [label, setLabel] = useState("");
-  const add = () => {
-    const cleanLabel = label.trim();
-    const nextCustomKey = (["custom_1", "custom_2"] as const).find(
-      (methodKey) => !defs.some((def) => def.id === methodKey),
-    );
-    if (!cleanLabel || !nextCustomKey) {
-      return;
-    }
-
-    setDefs([...defs, { id: nextCustomKey, label: cleanLabel }]);
-    setLabel("");
-  };
-
-  const remove = (id: string) => setDefs(defs.filter((def) => def.id !== id));
+  const sampleWilaya = baseList[0] ?? { code: "16", name: "Alger", ar: "الجزائر" };
+  const sampleLabel = formatRegionLabel(
+    { nameFr: sampleWilaya.name, nameAr: sampleWilaya.ar },
+    labelFormat,
+  );
+  const sampleZoneName = zoneNamePreview({
+    format: zoneNameFormat,
+    prefix: zonePrefix,
+    code: sampleWilaya.code,
+    name: sampleLabel,
+  });
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h3 className="text-2xl font-semibold tracking-tight">Define your shipping methods</h3>
+      <h3 className="text-2xl font-semibold tracking-tight">Choose label and zone naming</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        These methods are stored in the local draft only. The WooCommerce apply engine is not
-        connected yet.
+        These choices only affect local draft labels until settings persistence exists.
       </p>
       <Card className="mt-6">
-        <CardContent className="p-4">
-          <div className="space-y-2">
-            {defs.map((def) => (
-              <div
-                key={def.id}
-                className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground">
-                  <Package className="h-4 w-4" />
-                </div>
-                <Input
-                  value={def.label}
-                  onChange={(event) =>
-                    setDefs(
-                      defs.map((item) =>
-                        item.id === def.id ? { ...item, label: event.target.value } : item,
-                      ),
-                    )
-                  }
-                  className="h-8 min-w-48 flex-1"
-                />
-                <code className="rounded bg-muted px-2 py-1 text-[10px] text-muted-foreground">
-                  {def.id}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => remove(def.id)}
-                  disabled={defs.length <= 1}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <CardContent className="space-y-6 p-6">
+          <SettingRow label="Region label format" desc="Controls how wilayas appear in draft rows.">
+            <Select
+              value={labelFormat}
+              onValueChange={(value) => setLabelFormat(value as RegionLabelFormat)}
+            >
+              <SelectTrigger className="w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REGION_LABEL_FORMAT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+          <Separator />
+          <SettingRow label="Zone name format" desc="Draft naming only; no zones are written.">
+            <Select
+              value={zoneNameFormat}
+              onValueChange={(value) => setZoneNameFormat(value as ZoneNameFormat)}
+            >
+              <SelectTrigger className="w-72">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ZONE_NAMING_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+          <SettingRow label="Zone prefix" desc="Default local draft prefix.">
             <Input
-              placeholder="New method label (e.g. Express, Cash on delivery)"
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && add()}
+              value={zonePrefix}
+              onChange={(event) => setZonePrefix(event.target.value)}
+              className="w-44"
             />
-            <Button onClick={add} variant="outline">
-              <Plus className="h-4 w-4" /> Add
-            </Button>
+          </SettingRow>
+          <Separator />
+          <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
+            <div className="text-xs font-medium uppercase text-muted-foreground">Preview</div>
+            <div className="mt-2 font-medium">{sampleZoneName}</div>
           </div>
         </CardContent>
       </Card>
@@ -739,116 +897,164 @@ function StepMethods({
   );
 }
 
-function StepImport({
-  mode,
-  setMode,
-  methodDefs,
-  baseList,
-  setRows,
+function StepMethods({
+  methods,
+  setMethods,
+  officeWording,
+  setOfficeWording,
+  officeCustomLabel,
+  setOfficeCustomLabel,
 }: {
-  mode: ImportMode;
-  setMode: (mode: ImportMode) => void;
-  methodDefs: MethodDef[];
-  baseList: WilayaReference[];
-  setRows: Dispatch<SetStateAction<Record<string, Record<string, number | null | undefined>>>>;
+  methods: ShippingMethodTemplate[];
+  setMethods: Dispatch<SetStateAction<ShippingMethodTemplate[]>>;
+  officeWording: OfficeMethodWording;
+  setOfficeWording: (wording: OfficeMethodWording) => void;
+  officeCustomLabel: string;
+  setOfficeCustomLabel: (label: string) => void;
 }) {
-  const sampleCsv = useMemo(() => {
-    const head = ["code", "name", ...methodDefs.map((method) => method.id)].join(",");
-    const row1 = ["16", "Alger", ...methodDefs.map(() => "500")].join(",");
-    const row2 = ["31", "Oran", ...methodDefs.map(() => "800")].join(",");
-    return `${head}\n${row1}\n${row2}`;
-  }, [methodDefs]);
+  const updateMethod = (
+    key: ShippingMethodKey,
+    patch: Partial<Pick<ShippingMethodTemplate, "enabled" | "label">>,
+  ) => {
+    setMethods((previous) =>
+      previous.map((method) => (method.key === key ? { ...method, ...patch } : method)),
+    );
+  };
 
-  const seedAll = (price: number) => {
-    const next: Record<string, Record<string, number | null | undefined>> = {};
-    baseList.forEach((wilaya) => {
-      next[wilaya.code] = {};
-      methodDefs.forEach((method) => {
-        next[wilaya.code]![method.id] = price;
-      });
-    });
-    setRows(next);
+  const updateOfficeWording = (wording: OfficeMethodWording) => {
+    setOfficeWording(wording);
+    updateMethod("office_delivery", { label: officeLabelForWording(wording, officeCustomLabel) });
+  };
+
+  const updateOfficeCustomLabel = (label: string) => {
+    setOfficeCustomLabel(label);
+    if (officeWording === "custom") {
+      updateMethod("office_delivery", { label: officeLabelForWording("custom", label) });
+    }
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h3 className="text-2xl font-semibold tracking-tight">How will you bring in your prices?</h3>
+    <div className="mx-auto max-w-2xl">
+      <h3 className="text-2xl font-semibold tracking-tight">Define your shipping methods</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Manual entry works as a local draft. CSV validation and import backend are coming in a later
-        task.
+        Home delivery and office/stopdesk delivery are required. Two custom methods are available
+        for the MVP, but unlimited methods are not part of this contract.
       </p>
-
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
-        <ImportPathCard
-          active={mode === "manual"}
-          onClick={() => setMode("manual")}
-          icon={<Edit3 className="h-4 w-4" />}
-          title="Fill in the table"
-          desc="Type prices for every wilaya directly in the next step."
-        />
-        <ImportPathCard
-          active={mode === "csv"}
-          onClick={() => setMode("csv")}
-          icon={<FileSpreadsheet className="h-4 w-4" />}
-          title="Prepare CSV"
-          desc="Preview the CSV shape. Upload is not connected yet."
-        />
-      </div>
-
-      {mode === "manual" && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-base">Optional starting price</CardTitle>
-            <CardDescription>
-              Pre-fill every wilaya and method with the same draft price so you only edit the
-              differences.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Input
-              id="seed"
-              type="number"
-              placeholder="e.g. 700"
-              className="w-40"
-              onChange={(event) => event.target.value && seedAll(Number(event.target.value))}
-            />
-            <span className="text-xs text-muted-foreground">
-              Press Tab to apply to the local draft.
-            </span>
-          </CardContent>
-        </Card>
-      )}
-
-      {mode === "csv" && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-base">CSV format</CardTitle>
-            <CardDescription>
-              One row per wilaya. Columns:{" "}
-              <code className="rounded bg-muted px-1 py-0.5">code</code>,
-              <code className="ml-1 rounded bg-muted px-1 py-0.5">name</code>, plus one column per
-              method id.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 text-xs">
-              {sampleCsv}
-            </pre>
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-muted/40 px-6 py-10 text-center">
-              <FileUp className="h-6 w-6 text-muted-foreground" />
-              <div className="text-sm">CSV backend not connected yet</div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled>
-                  <Upload className="h-4 w-4" /> Select file
-                </Button>
-                <Button variant="ghost" size="sm" disabled>
-                  <Download className="h-4 w-4" /> Sample CSV
-                </Button>
+      <Card className="mt-6">
+        <CardContent className="space-y-6 p-6">
+          <SettingRow label="Office method wording" desc="Controls the office_delivery label.">
+            <Select
+              value={officeWording}
+              onValueChange={(value) => updateOfficeWording(value as OfficeMethodWording)}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OFFICE_METHOD_WORDING_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingRow>
+          {officeWording === "custom" && (
+            <SettingRow label="Office custom label" desc="Local draft label only.">
+              <Input
+                value={officeCustomLabel}
+                onChange={(event) => updateOfficeCustomLabel(event.target.value)}
+                className="w-56"
+              />
+            </SettingRow>
+          )}
+          <Separator />
+          <div className="space-y-2">
+            {methods.map((method) => (
+              <div
+                key={method.key}
+                className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground">
+                  <Package className="h-4 w-4" />
+                </div>
+                <Switch
+                  checked={method.enabled}
+                  disabled={method.locked}
+                  onCheckedChange={(enabled) => updateMethod(method.key, { enabled })}
+                />
+                <Input
+                  value={method.label}
+                  onChange={(event) => updateMethod(method.key, { label: event.target.value })}
+                  className="h-8 min-w-48 flex-1"
+                />
+                <code className="rounded bg-muted px-2 py-1 text-[10px] text-muted-foreground">
+                  {method.key}
+                </code>
+                {method.locked && <Badge variant="outline">Required</Badge>}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function StepDefaultPrices({
+  methods,
+  setMethods,
+}: {
+  methods: ShippingMethodTemplate[];
+  setMethods: Dispatch<SetStateAction<ShippingMethodTemplate[]>>;
+}) {
+  const setDefaultPrice = (key: ShippingMethodKey, rawValue: string) => {
+    const nextPrice = parseOptionalPrice(rawValue);
+    if (nextPrice === undefined) {
+      return;
+    }
+
+    setMethods((previous) =>
+      previous.map((method) =>
+        method.key === key ? { ...method, defaultPrice: nextPrice } : method,
+      ),
+    );
+  };
+
+  const visibleMethods = methods.filter((method) => method.locked || method.enabled);
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <h3 className="text-2xl font-semibold tracking-tight">Set default prices</h3>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Empty prices stay unset in the local draft. Negative values are rejected by the UI.
+      </p>
+      <Card className="mt-6">
+        <CardContent className="space-y-4 p-6">
+          {visibleMethods.map((method) => (
+            <SettingRow
+              key={method.key}
+              label={`${method.label} default price`}
+              desc={
+                method.locked ? "Required MVP method." : "Shown only while this method is enabled."
+              }
+            >
+              <Input
+                type="number"
+                min={0}
+                value={method.defaultPrice ?? ""}
+                placeholder="Unset"
+                onChange={(event) => setDefaultPrice(method.key, event.target.value)}
+                className="w-36"
+              />
+            </SettingRow>
+          ))}
+          <Separator />
+          <div className="text-sm text-muted-foreground">
+            Currency comes from WooCommerce. Fallback: DZD.
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -884,79 +1090,75 @@ function ImportPathCard({
   );
 }
 
-function StepPrices({
+function StepWilayaSelection({
   baseList,
-  methodDefs,
-  rows,
-  setRows,
+  selectedCodes,
+  setSelectedCodes,
 }: {
   baseList: WilayaReference[];
-  methodDefs: MethodDef[];
-  rows: Record<string, Record<string, number | null | undefined>>;
-  setRows: Dispatch<SetStateAction<Record<string, Record<string, number | null | undefined>>>>;
+  selectedCodes: string[];
+  setSelectedCodes: (selectedCodes: string[]) => void;
 }) {
-  const setVal = (code: string, methodId: string, raw: string) => {
-    setRows((previous) => {
-      const next = { ...previous, [code]: { ...(previous[code] ?? {}) } };
-      if (raw === "") {
-        next[code]![methodId] = undefined;
-      } else if (raw.toLowerCase() === "free") {
-        next[code]![methodId] = null;
-      } else {
-        next[code]![methodId] = Number(raw);
-      }
-
-      return next;
-    });
+  const selected = new Set(selectedCodes);
+  const toggleWilaya = (code: string, checked: boolean) => {
+    setSelectedCodes(
+      checked
+        ? [...selectedCodes, code]
+        : selectedCodes.filter((selectedCode) => selectedCode !== code),
+    );
   };
 
   return (
-    <div>
-      <h3 className="text-2xl font-semibold tracking-tight">Set prices per wilaya</h3>
+    <div className="mx-auto max-w-3xl">
+      <h3 className="text-2xl font-semibold tracking-tight">Select wilayas</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Leave a cell empty to skip that method for a wilaya. Type{" "}
-        <code className="rounded bg-muted px-1 py-0.5">free</code> for free shipping.
+        Selected wilayas are enabled in the local draft. Unselected rows remain visible but
+        disabled.
       </p>
-      <Card className="mt-6">
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setSelectedCodes(baseList.map((wilaya) => wilaya.code))}
+        >
+          Select all
+        </Button>
+        <Button variant="outline" onClick={() => setSelectedCodes([])}>
+          Clear selection
+        </Button>
+        <Badge variant="secondary" className="rounded-full">
+          {selectedCodes.length} selected
+        </Badge>
+      </div>
+      <Card className="mt-4 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">Use</TableHead>
               <TableHead className="w-16">Code</TableHead>
               <TableHead>Wilaya</TableHead>
-              {methodDefs.map((method) => (
-                <TableHead key={method.id} className="w-36">
-                  {method.label} (DZD)
-                </TableHead>
-              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {baseList.map((wilaya) => (
-              <TableRow key={wilaya.code}>
-                <TableCell className="font-mono text-xs text-muted-foreground">
-                  {wilaya.code}
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">{wilaya.name}</div>
-                  <div className="text-xs text-muted-foreground">{wilaya.ar}</div>
-                </TableCell>
-                {methodDefs.map((method) => {
-                  const value = rows[wilaya.code]?.[method.id];
-                  const display =
-                    value === null ? "free" : value === undefined ? "" : String(value);
-                  return (
-                    <TableCell key={method.id}>
-                      <Input
-                        value={display}
-                        placeholder="-"
-                        className="h-8"
-                        onChange={(event) => setVal(wilaya.code, method.id, event.target.value)}
-                      />
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
+            {baseList.map((wilaya) => {
+              const checked = selected.has(wilaya.code);
+              return (
+                <TableRow key={wilaya.code}>
+                  <TableCell>
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(value) => toggleWilaya(wilaya.code, Boolean(value))}
+                    />
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {wilaya.code}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{wilaya.name}</div>
+                    <div className="text-xs text-muted-foreground">{wilaya.ar}</div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </Card>
@@ -965,72 +1167,90 @@ function StepPrices({
 }
 
 function StepReview({
+  setupPath,
   baseList,
-  methodDefs,
-  rows,
+  methods,
   dataset,
+  labelFormat,
+  zoneNameFormat,
+  zonePrefix,
+  selectedWilayaCount,
 }: {
+  setupPath: SetupPath;
   baseList: WilayaReference[];
-  methodDefs: MethodDef[];
-  rows: Record<string, Record<string, number | null | undefined>>;
+  methods: ShippingMethodTemplate[];
   dataset: DatasetMode;
+  labelFormat: RegionLabelFormat;
+  zoneNameFormat: ZoneNameFormat;
+  zonePrefix: string;
+  selectedWilayaCount: number;
 }) {
-  let totalMethods = 0;
-  let priced = 0;
-  let free = 0;
-  let skipped = 0;
-  baseList.forEach((wilaya) => {
-    methodDefs.forEach((method) => {
-      const value = rows[wilaya.code]?.[method.id];
-      if (value === undefined) {
-        skipped++;
-      } else if (value === null) {
-        free++;
-        totalMethods++;
-      } else {
-        priced++;
-        totalMethods++;
-      }
-    });
+  const sampleWilaya = baseList[0] ?? { code: "16", name: "Alger", ar: "الجزائر" };
+  const enabledMethods = methods.filter((method) => method.enabled);
+  const pricedMethods = enabledMethods.filter((method) => method.defaultPrice !== null).length;
+  const sampleLabel = formatRegionLabel(
+    { nameFr: sampleWilaya.name, nameAr: sampleWilaya.ar },
+    labelFormat,
+  );
+  const sampleZoneName = zoneNamePreview({
+    format: zoneNameFormat,
+    prefix: zonePrefix,
+    code: sampleWilaya.code,
+    name: sampleLabel,
   });
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h3 className="text-2xl font-semibold tracking-tight">Preview local draft</h3>
+      <h3 className="text-2xl font-semibold tracking-tight">Review draft</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Nothing has been written to WooCommerce. Use this draft now, then TASK-002 and later backend
-        tasks will replace the mock data path.
+        This is a local draft. WooCommerce preview/apply will be added after diagnostics and preview
+        planner.
       </p>
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <PreviewStat label="Setup path" value={setupPathLabel(setupPath)} />
         <PreviewStat label="Dataset mode" value={dataset === "current" ? "Current" : "Legacy"} />
-        <PreviewStat label="Draft rows" value={String(baseList.length)} />
-        <PreviewStat label="Draft method prices" value={String(totalMethods)} />
-        <PreviewStat label="Methods skipped" value={String(skipped)} />
+        <PreviewStat label="Selected wilayas" value={String(selectedWilayaCount)} />
+        <PreviewStat label="Enabled methods" value={String(enabledMethods.length)} />
       </div>
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Breakdown</CardTitle>
-          <CardDescription>
-            Each row keeps only the methods you priced in this local draft.
-          </CardDescription>
+          <CardTitle className="text-base">Draft contract</CardTitle>
+          <CardDescription>No WooCommerce zone reads or writes are performed here.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span>Priced methods</span>
-            <Badge variant="outline">{priced}</Badge>
+            <span>Sample zone name</span>
+            <Badge variant="outline">{sampleZoneName}</Badge>
           </div>
           <div className="flex items-center justify-between">
-            <span>Free methods</span>
-            <Badge variant="outline">{free}</Badge>
+            <span>Methods with default prices</span>
+            <Badge variant="outline">{pricedMethods}</Badge>
           </div>
           <div className="flex items-center justify-between">
-            <span>Skipped (not offered)</span>
-            <Badge variant="outline">{skipped}</Badge>
+            <span>Locked safety rules</span>
+            <Badge variant="outline">{SAFETY_RULES.length}</Badge>
           </div>
         </CardContent>
       </Card>
     </div>
   );
+}
+
+function setupPathLabel(setupPath: SetupPath): string {
+  return SETUP_PATH_OPTIONS.find((option) => option.value === setupPath)?.label ?? "Manual setup";
+}
+
+function parseOptionalPrice(rawValue: string): number | null | undefined {
+  if (rawValue.trim() === "") {
+    return null;
+  }
+
+  const amount = Number(rawValue);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return undefined;
+  }
+
+  return amount;
 }
 
 function PreviewStat({ label, value, tone }: { label: string; value: string; tone?: "warn" }) {
@@ -1100,7 +1320,7 @@ function ZonesScreen({
   onLaunchWizard: () => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
-  const [targetMethod, setTargetMethod] = useState<string>(methodDefs[0]?.id ?? "home_delivery");
+  const [targetMethod, setTargetMethod] = useState<string>(methodDefs[0]?.key ?? "home_delivery");
   const [bulkPrice, setBulkPrice] = useState("");
   const [pct, setPct] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -1148,7 +1368,7 @@ function ZonesScreen({
                 [methodId]: {
                   ...(wilaya.methods[methodId] ?? {
                     id: methodId,
-                    label: methodDefs.find((method) => method.id === methodId)?.label ?? methodId,
+                    label: methodDefs.find((method) => method.key === methodId)?.label ?? methodId,
                     enabled: true,
                     price: undefined,
                   }),
@@ -1285,7 +1505,7 @@ function ZonesScreen({
               </SelectTrigger>
               <SelectContent>
                 {methodDefs.map((method) => (
-                  <SelectItem key={method.id} value={method.id}>
+                  <SelectItem key={method.key} value={method.key}>
                     {method.label}
                   </SelectItem>
                 ))}
@@ -1366,7 +1586,7 @@ function ZonesScreen({
               <TableHead>Wilaya</TableHead>
               <TableHead className="w-20">Enabled</TableHead>
               {methodDefs.map((method) => (
-                <TableHead key={method.id} className="w-36">
+                <TableHead key={method.key} className="w-36">
                   {method.label}
                 </TableHead>
               ))}
@@ -1404,12 +1624,12 @@ function ZonesScreen({
                     />
                   </TableCell>
                   {methodDefs.map((method) => {
-                    const value = wilaya.methods[method.id];
+                    const value = wilaya.methods[method.key];
                     return (
-                      <TableCell key={method.id}>
+                      <TableCell key={method.key}>
                         <MethodCell
                           method={value}
-                          onChange={(patch) => updateMethod(wilaya.code, method.id, patch)}
+                          onChange={(patch) => updateMethod(wilaya.code, method.key, patch)}
                         />
                       </TableCell>
                     );
@@ -1778,6 +1998,42 @@ function ExportRow({ title, desc }: { title: string; desc: string }) {
 }
 
 function SettingsScreen() {
+  const [settingsDraft, setSettingsDraft] = useState(DEFAULT_SETTINGS_DRAFT);
+  const [methods, setMethods] = useState(DEFAULT_SHIPPING_METHOD_TEMPLATES);
+  const [officeCustomLabel, setOfficeCustomLabel] = useState("Office delivery");
+
+  const updateSettingsDraft = (patch: Partial<typeof settingsDraft>) => {
+    setSettingsDraft((current) => ({ ...current, ...patch }));
+  };
+
+  const updateMethod = (
+    key: ShippingMethodKey,
+    patch: Partial<Pick<ShippingMethodTemplate, "enabled" | "label" | "defaultPrice">>,
+  ) => {
+    setMethods((current) =>
+      current.map((method) => (method.key === key ? { ...method, ...patch } : method)),
+    );
+  };
+
+  const updateOfficeWording = (wording: OfficeMethodWording) => {
+    updateSettingsDraft({ officeMethodWording: wording });
+    updateMethod("office_delivery", { label: officeLabelForWording(wording, officeCustomLabel) });
+  };
+
+  const updateOfficeCustomLabel = (label: string) => {
+    setOfficeCustomLabel(label);
+    if (settingsDraft.officeMethodWording === "custom") {
+      updateMethod("office_delivery", { label: officeLabelForWording("custom", label) });
+    }
+  };
+
+  const updateDefaultPrice = (key: ShippingMethodKey, rawValue: string) => {
+    const nextPrice = parseOptionalPrice(rawValue);
+    if (nextPrice !== undefined) {
+      updateMethod(key, { defaultPrice: nextPrice });
+    }
+  };
+
   return (
     <>
       <SectionHeader
@@ -1786,85 +2042,147 @@ function SettingsScreen() {
       />
       <Card>
         <CardContent className="space-y-6 p-6">
-          <SettingRow label="Dataset mode" desc="Current candidate data is loaded locally.">
-            <Select defaultValue="current">
+          <SettingRow label="Dataset mode" desc="Legacy mapping is not available yet.">
+            <Select
+              value={settingsDraft.datasetMode}
+              onValueChange={(value) => {
+                const option = DATASET_MODE_OPTIONS.find((entry) => entry.mode === value);
+                if (option?.available) {
+                  updateSettingsDraft({ datasetMode: option.mode });
+                }
+              }}
+            >
               <SelectTrigger className="w-64">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="current">Current Algeria dataset candidate</SelectItem>
-                <SelectItem value="legacy_58" disabled>
-                  Legacy 58-compatible dataset
-                </SelectItem>
+                {DATASET_MODE_OPTIONS.map((option) => (
+                  <SelectItem key={option.mode} value={option.mode} disabled={!option.available}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </SettingRow>
           <Separator />
-          <SettingRow label="Label format" desc="Controls future zone naming previews.">
-            <Select defaultValue="fr_ar">
+          <SettingRow label="Region label format" desc="Controls future zone naming previews.">
+            <Select
+              value={settingsDraft.regionLabelFormat}
+              onValueChange={(value) =>
+                updateSettingsDraft({ regionLabelFormat: value as RegionLabelFormat })
+              }
+            >
               <SelectTrigger className="w-64">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="fr">French</SelectItem>
-                <SelectItem value="ar">Arabic</SelectItem>
-                <SelectItem value="fr_ar">French - Arabic</SelectItem>
-                <SelectItem value="ar_fr">Arabic - French</SelectItem>
+                {REGION_LABEL_FORMAT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </SettingRow>
           <Separator />
           <SettingRow label="Zone name format" desc="Draft naming only; no zones are written.">
-            <Select defaultValue="{code} - {name_fr}">
+            <Select
+              value={settingsDraft.zoneNameFormat}
+              onValueChange={(value) =>
+                updateSettingsDraft({ zoneNameFormat: value as ZoneNameFormat })
+              }
+            >
               <SelectTrigger className="w-72">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="{code} - {name_fr}">Code - French name</SelectItem>
-                <SelectItem value="{name_fr}">French name</SelectItem>
-                <SelectItem value="{name_ar}">Arabic name</SelectItem>
-                <SelectItem value="{code} - {name_fr} / {name_ar}">
-                  Code - French / Arabic
-                </SelectItem>
+                {ZONE_NAMING_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </SettingRow>
-          <Separator />
-          <SettingRow label="Currency label" desc="Shown next to draft prices.">
-            <Input defaultValue="DZD" className="w-32" />
+          <SettingRow label="Zone prefix" desc="Default local draft prefix.">
+            <Input
+              value={settingsDraft.zonePrefix}
+              onChange={(event) => updateSettingsDraft({ zonePrefix: event.target.value })}
+              className="w-44"
+            />
           </SettingRow>
           <Separator />
-          <SettingRow label="Default home price" desc="Used only when creating a local draft.">
-            <Input type="number" defaultValue="700" className="w-32" />
+          <SettingRow label="Office method wording" desc="Controls the office_delivery label.">
+            <Select
+              value={settingsDraft.officeMethodWording}
+              onValueChange={(value) => updateOfficeWording(value as OfficeMethodWording)}
+            >
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OFFICE_METHOD_WORDING_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </SettingRow>
-          <SettingRow label="Default office price" desc="Used only when creating a local draft.">
-            <Input type="number" defaultValue="400" className="w-32" />
-          </SettingRow>
-          <SettingRow label="Custom method 1" desc="Optional local draft method.">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input defaultValue="Custom method 1" className="w-44" />
-              <Input type="number" placeholder="Price" className="w-28" />
-            </div>
-          </SettingRow>
-          <SettingRow label="Custom method 2" desc="Optional local draft method.">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input defaultValue="Custom method 2" className="w-44" />
-              <Input type="number" placeholder="Price" className="w-28" />
-            </div>
-          </SettingRow>
+          {settingsDraft.officeMethodWording === "custom" && (
+            <SettingRow label="Office custom label" desc="Local draft label only.">
+              <Input
+                value={officeCustomLabel}
+                onChange={(event) => updateOfficeCustomLabel(event.target.value)}
+                className="w-56"
+              />
+            </SettingRow>
+          )}
           <Separator />
-          <ToggleRow
-            label="Protect manual WooCommerce zones"
-            desc="Future apply engine must skip manual zones by default."
-            defaultChecked
-          />
-          <ToggleRow
-            label="Confirm before future apply engine"
-            desc="No writes exist yet; preview planning comes first."
-            defaultChecked
-          />
-          <ToggleRow label="Show Arabic names" defaultChecked />
-          <ToggleRow label="Show French names" defaultChecked />
+          <div className="text-sm text-muted-foreground">
+            Currency comes from WooCommerce. Fallback: DZD.
+          </div>
+          <Separator />
+          {methods.map((method) => (
+            <SettingRow
+              key={method.key}
+              label={method.label}
+              desc={method.locked ? "Required flat_rate method." : "Optional flat_rate method."}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Switch
+                  checked={method.enabled}
+                  disabled={method.locked}
+                  onCheckedChange={(enabled) => updateMethod(method.key, { enabled })}
+                />
+                <Input
+                  value={method.label}
+                  onChange={(event) => updateMethod(method.key, { label: event.target.value })}
+                  className="w-44"
+                />
+                {(method.locked || method.enabled) && (
+                  <Input
+                    type="number"
+                    min={0}
+                    value={method.defaultPrice ?? ""}
+                    placeholder="Unset"
+                    onChange={(event) => updateDefaultPrice(method.key, event.target.value)}
+                    className="w-28"
+                  />
+                )}
+              </div>
+            </SettingRow>
+          ))}
+          <Separator />
+          {SAFETY_RULES.map((rule) => (
+            <ToggleRow
+              key={rule.key}
+              label={rule.label}
+              desc="Required safety rule for the future apply engine."
+              checked
+              disabled
+            />
+          ))}
         </CardContent>
       </Card>
     </>
@@ -1894,15 +2212,17 @@ function SettingRow({
 function ToggleRow({
   label,
   desc,
-  defaultChecked,
+  checked,
+  disabled,
 }: {
   label: string;
   desc?: string;
-  defaultChecked?: boolean;
+  checked?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <SettingRow label={label} desc={desc}>
-      <Switch defaultChecked={defaultChecked} />
+      <Switch checked={checked} disabled={disabled} />
     </SettingRow>
   );
 }

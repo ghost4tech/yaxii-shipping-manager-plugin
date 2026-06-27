@@ -1,14 +1,17 @@
 import type { DatasetMode } from "./dataset";
-
-export type RegionLabelFormat = "fr" | "ar" | "fr_ar" | "ar_fr";
+import type { OfficeMethodWording, RegionLabelFormat, SetupPath, ZoneNameFormat } from "./settings";
 
 export type ShippingMethodKey = "home_delivery" | "office_delivery" | "custom_1" | "custom_2";
 
+export type ShippingMethodType = "flat_rate";
+
 export type ShippingMethodTemplate = {
   key: ShippingMethodKey;
-  label: string;
   enabled: boolean;
+  label: string;
   defaultPrice: number | null;
+  type: ShippingMethodType;
+  locked: boolean;
 };
 
 export type PricingMatrixRow = {
@@ -18,19 +21,25 @@ export type PricingMatrixRow = {
 };
 
 export type ZoneNamingTemplate = {
-  format: "{code} - {name_fr}" | "{name_fr}" | "{name_ar}" | "{code} - {name_fr} / {name_ar}";
+  format: ZoneNameFormat;
+  prefix: string;
 };
 
 export type ManualZoneProtectionPolicy = {
-  skipManualZones: true;
+  protectManualZones: true;
   requirePreviewBeforeApply: true;
+  skipConflictsByDefault: true;
+  neverDeleteManualZones: true;
 };
 
 export type GeneratorDraft = {
+  setupPath: SetupPath;
   datasetMode: DatasetMode;
   labelFormat: RegionLabelFormat;
   zoneNaming: ZoneNamingTemplate;
+  officeMethodWording: OfficeMethodWording;
   methods: ShippingMethodTemplate[];
   pricingRows: PricingMatrixRow[];
+  selectedWilayaCodes: string[];
   manualZoneProtection: ManualZoneProtectionPolicy;
 };
