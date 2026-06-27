@@ -12,10 +12,13 @@ use Yaxii\ShippingManager\Admin\AssetRegistrar;
 use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Rest\BootstrapController;
 use Yaxii\ShippingManager\Rest\DatasetController;
+use Yaxii\ShippingManager\Rest\DiagnosticsController;
 use Yaxii\ShippingManager\Rest\Routes;
 use Yaxii\ShippingManager\Rest\SettingsController;
 use Yaxii\ShippingManager\Settings\SettingsRepository;
 use Yaxii\ShippingManager\WooCommerce\AlgeriaStatesRegistrar;
+use Yaxii\ShippingManager\WooCommerce\ShippingDiagnosticsService;
+use Yaxii\ShippingManager\WooCommerce\ShippingZoneReader;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,12 +28,15 @@ final class Plugin {
 	 */
 	public function register(): void {
 		$woocommerce_active  = $this->is_woocommerce_active();
-		$datasets            = new DatasetRepository();
-		$settings            = new SettingsRepository();
-		$algeria_states      = new AlgeriaStatesRegistrar( $woocommerce_active, $datasets, $settings );
-		$bootstrap           = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
-		$dataset_controller  = new DatasetController( $woocommerce_active, $datasets );
-		$settings_controller = new SettingsController( $woocommerce_active, $settings );
+		$datasets               = new DatasetRepository();
+		$settings               = new SettingsRepository();
+		$algeria_states         = new AlgeriaStatesRegistrar( $woocommerce_active, $datasets, $settings );
+		$zone_reader            = new ShippingZoneReader( $woocommerce_active );
+		$diagnostics            = new ShippingDiagnosticsService( $woocommerce_active, $datasets, $settings, $zone_reader );
+		$bootstrap              = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
+		$dataset_controller     = new DatasetController( $woocommerce_active, $datasets );
+		$settings_controller    = new SettingsController( $woocommerce_active, $settings );
+		$diagnostics_controller = new DiagnosticsController( $woocommerce_active, $diagnostics );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
@@ -44,7 +50,7 @@ final class Plugin {
 
 		$algeria_states->register();
 
-		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller );
+		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller );
 		$routes->register();
 	}
 

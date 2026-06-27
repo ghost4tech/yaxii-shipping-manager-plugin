@@ -17,15 +17,18 @@ final class Routes {
 	private BootstrapController $bootstrap;
 	private DatasetController $dataset;
 	private SettingsController $settings;
+	private DiagnosticsController $diagnostics;
 
 	public function __construct(
 		BootstrapController $bootstrap,
 		DatasetController $dataset,
-		SettingsController $settings
+		SettingsController $settings,
+		DiagnosticsController $diagnostics
 	) {
-		$this->bootstrap = $bootstrap;
-		$this->dataset   = $dataset;
-		$this->settings  = $settings;
+		$this->bootstrap   = $bootstrap;
+		$this->dataset     = $dataset;
+		$this->settings    = $settings;
+		$this->diagnostics = $diagnostics;
 	}
 
 	/**
@@ -90,6 +93,16 @@ final class Routes {
 					'callback'            => array( $this->settings, 'update_settings' ),
 					'permission_callback' => array( $this->settings, 'can_update' ),
 				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/diagnostics',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this->diagnostics, 'get_diagnostics' ),
+				'permission_callback' => array( $this->diagnostics, 'can_access' ),
 			)
 		);
 	}

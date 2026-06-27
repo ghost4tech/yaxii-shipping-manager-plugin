@@ -29,6 +29,7 @@ import {
 
 import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
 import { fetchDatasetWilayas } from "../api/dataset-api";
+import { fetchDiagnostics } from "../api/diagnostics-api";
 import { fetchSettings, saveSettings } from "../api/settings-api";
 import {
   DATASET_MODE_OPTIONS,
@@ -46,6 +47,12 @@ import {
 import { formatRegionLabel } from "../domain/format-region-label";
 import { zoneNamePreview } from "../domain/zone-name-preview";
 import type { DatasetMode, WilayaDatasetRecord } from "../types/dataset";
+import type {
+  CheckoutFallbackRisk,
+  DiagnosticsResponse,
+  WilayaDiagnosticStatus,
+  ZoneDiagnostic,
+} from "../types/diagnostics";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
 import type {
   OfficeMethodWording,
@@ -131,6 +138,11 @@ type SettingsLoadState =
   | { status: "loading" }
   | { status: "ready"; response: SettingsResponse }
   | { status: "error"; message: string };
+type DiagnosticsLoadState =
+  | { status: "waiting" }
+  | { status: "loading" }
+  | { status: "ready"; response: DiagnosticsResponse }
+  | { status: "error"; message: string };
 
 export default function AdminApp({
   bootstrap,
@@ -142,6 +154,9 @@ export default function AdminApp({
   const [tab, setTabState] = useState<TabId>(getInitialTab);
   const [datasetState, setDatasetState] = useState<DatasetLoadState>({ status: "loading" });
   const [settingsState, setSettingsState] = useState<SettingsLoadState>({ status: "loading" });
+  const [diagnosticsState, setDiagnosticsState] = useState<DiagnosticsLoadState>({
+    status: "waiting",
+  });
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const [methodDefs, setMethodDefs] = useState<MethodDef[]>(DEFAULT_METHOD_DEFS);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -205,6 +220,7 @@ export default function AdminApp({
 
   useEffect(() => {
     if (datasetState.status !== "ready" || settingsState.status !== "ready") {
+      setDiagnosticsState({ status: "waiting" });
       return;
     }
 
@@ -212,6 +228,39 @@ export default function AdminApp({
     setMethodDefs(nextMethodDefs);
     setWilayas(datasetRecordsToWilayas(datasetState.records, nextMethodDefs));
   }, [datasetState, settingsState]);
+
+  useEffect(() => {
+    if (datasetState.status !== "ready" || settingsState.status !== "ready") {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadDiagnostics() {
+      setDiagnosticsState({ status: "loading" });
+
+      try {
+        const response = await fetchDiagnostics(config);
+        if (!cancelled) {
+          setDiagnosticsState({ status: "ready", response });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDiagnosticsState({
+            status: "error",
+            message:
+              error instanceof Error ? error.message : "Unable to load WooCommerce diagnostics.",
+          });
+        }
+      }
+    }
+
+    loadDiagnostics();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config, datasetState.status, settingsState.status]);
 
   useEffect(() => {
     const onHashChange = () => setTabState(getInitialTab());
@@ -262,7 +311,13 @@ export default function AdminApp({
             launchDisabled={!datasetReady || !settingsReady}
           />
         )}
-        {tab === "diagnostics" && <DiagnosticsScreen bootstrap={bootstrap} wilayas={wilayas} />}
+        {tab === "diagnostics" && (
+          <DiagnosticsScreen
+            bootstrap={bootstrap}
+            diagnosticsState={diagnosticsState}
+            wilayas={wilayas}
+          />
+        )}
         {tab === "import" && <ImportExportScreen />}
         {tab === "settings" && (
           <SettingsScreen settingsState={settingsState} onSave={savePersistedSettings} />
@@ -1803,138 +1858,121 @@ function MethodCell({
   );
 }
 
-type CheckResult = {
-  id: string;
-  label: string;
-  detail: string;
-  status: "ok" | "warn" | "fail";
-};
-
 function DiagnosticsScreen({
   bootstrap,
+  diagnosticsState,
   wilayas,
 }: {
   bootstrap: BootstrapPayload;
+  diagnosticsState: DiagnosticsLoadState;
   wilayas: Wilaya[];
 }) {
-  const [state, setState] = useState<"idle" | "done">("idle");
-  const [results, setResults] = useState<CheckResult[]>([]);
   const [sim, setSim] = useState<string | null>(null);
-
-  const run = () => {
-    const missing = wilayas.filter((wilaya) => !wilaya.enabled).length;
-    const conflicts = wilayas.filter((wilaya) => wilaya.status === "conflict").length;
-    setResults([
-      {
-        id: "backend",
-        label: "Diagnostics backend",
-        detail: "Backend not connected yet",
-        status: "warn",
-      },
-      {
-        id: "woo",
-        label: "WooCommerce status",
-        detail: "Read-only WooCommerce diagnostics are coming in a later task",
-        status: "warn",
-      },
-      {
-        id: "states",
-        label: "Algeria states",
-        detail: bootstrap.wooStatesStatus.active
-          ? `${bootstrap.wooStatesStatus.wilayaCount} wilayas loaded from the current dataset`
-          : "Algeria wilayas are not registered because WooCommerce is inactive or the dataset is unavailable",
-        status: bootstrap.wooStatesStatus.active ? "ok" : "warn",
-      },
-      {
-        id: "draft",
-        label: "Local draft rows",
-        detail: `${wilayas.length} local draft row(s) loaded`,
-        status: wilayas.length ? "ok" : "warn",
-      },
-      {
-        id: "missing",
-        label: "Disabled rows",
-        detail: missing ? `${missing} local row(s) disabled` : "No disabled local rows",
-        status: missing ? "warn" : "ok",
-      },
-      {
-        id: "conflict",
-        label: "Rows needing review",
-        detail: conflicts
-          ? `${conflicts} local row(s) marked for review`
-          : "No local rows marked for review",
-        status: conflicts ? "warn" : "ok",
-      },
-      {
-        id: "checkout",
-        label: "Checkout Protection",
-        detail: "Checkout backend coming in a later task",
-        status: "warn",
-      },
-    ]);
-    setState("done");
-  };
-
-  const summary = useMemo(() => {
-    const ok = results.filter((result) => result.status === "ok").length;
-    const warn = results.filter((result) => result.status === "warn").length;
-    const fail = results.filter((result) => result.status === "fail").length;
-    return { ok, warn, fail };
-  }, [results]);
+  const simulatedWilaya = sim ? wilayas.find((wilaya) => wilaya.code === sim) : undefined;
 
   return (
     <>
       <SectionHeader
         title="Checkout Protection"
-        description="Diagnostics backend coming in a later task. Current checks only inspect the local draft."
+        description="Read-only WooCommerce diagnostics inspect existing zones and shipping methods."
         action={
-          <Button onClick={run}>
-            <RefreshCw className="h-4 w-4" />
-            {state === "done" ? "Refresh draft check" : "Show draft check"}
+          <Button disabled>
+            <Lock className="h-4 w-4" />
+            Preview planner comes next.
           </Button>
         }
       />
 
       <StateRegistrationCard bootstrap={bootstrap} />
 
-      {state === "idle" && (
+      {(diagnosticsState.status === "waiting" || diagnosticsState.status === "loading") && (
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <div className="text-base font-semibold">Diagnostics backend not connected yet</div>
-            <p className="max-w-md text-sm text-muted-foreground">
-              Use the draft check to review local rows. Real WooCommerce diagnostics will be added
-              after the backend task.
-            </p>
-            <Button onClick={run}>
-              <Activity className="h-4 w-4" /> Show draft check
-            </Button>
+          <CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Loading read-only WooCommerce diagnostics...
           </CardContent>
         </Card>
       )}
 
-      {state === "done" && (
+      {diagnosticsState.status === "error" && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Diagnostics could not be loaded</AlertTitle>
+          <AlertDescription>{diagnosticsState.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {diagnosticsState.status === "ready" && !diagnosticsState.response.woocommerceActive && (
+        <Alert>
+          <PowerOff className="h-4 w-4" />
+          <AlertTitle>WooCommerce is inactive</AlertTitle>
+          <AlertDescription>
+            Activate WooCommerce to inspect shipping zones. No shipping configuration was changed.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {diagnosticsState.status === "ready" && diagnosticsState.response.woocommerceActive && (
         <>
+          {diagnosticsState.response.warnings.length > 0 && (
+            <Alert className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Read-only diagnostic warning</AlertTitle>
+              <AlertDescription>{diagnosticsState.response.warnings[0]}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="mb-4 grid gap-3 sm:grid-cols-3">
-            <SummaryStat label="Local checks" value={summary.ok} tone="ok" />
-            <SummaryStat label="Warnings" value={summary.warn} tone="warn" />
-            <SummaryStat label="Failures" value={summary.fail} tone="fail" />
+            <SummaryStat
+              label="Configured wilayas"
+              value={diagnosticsState.response.summary.configuredWilayas}
+              tone="ok"
+            />
+            <SummaryStat
+              label="Missing wilayas"
+              value={diagnosticsState.response.summary.missingWilayas}
+              tone={diagnosticsState.response.summary.missingWilayas > 0 ? "warn" : "ok"}
+            />
+            <SummaryStat
+              label="Conflicts"
+              value={diagnosticsState.response.summary.duplicateConflictCount}
+              tone={diagnosticsState.response.summary.duplicateConflictCount > 0 ? "fail" : "ok"}
+            />
+            <SummaryStat
+              label="Zones without methods"
+              value={diagnosticsState.response.summary.zonesWithoutMethods}
+              tone={diagnosticsState.response.summary.zonesWithoutMethods > 0 ? "warn" : "ok"}
+            />
+            <SummaryStat
+              label="Fallback risk"
+              value={fallbackRiskLabel(diagnosticsState.response.summary.checkoutFallbackRisk)}
+              tone={fallbackRiskTone(diagnosticsState.response.summary.checkoutFallbackRisk)}
+            />
+            <SummaryStat
+              label="Rest-of-world methods"
+              value={diagnosticsState.response.summary.restOfWorldHasMethods ? "Yes" : "No"}
+              tone={diagnosticsState.response.summary.restOfWorldHasMethods ? "ok" : "warn"}
+            />
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {results.map((result) => (
-              <HealthCard key={result.id} result={result} />
-            ))}
-          </div>
+
+          <Alert className="mb-6">
+            <ShieldCheck className="h-4 w-4" />
+            <AlertTitle>Recommended next action</AlertTitle>
+            <AlertDescription>
+              {diagnosticsState.response.summary.recommendedNextAction}
+            </AlertDescription>
+          </Alert>
+
+          <WilayaDiagnosticsTable response={diagnosticsState.response} />
+          <ZoneDiagnosticsPanel zones={diagnosticsState.response.zoneResults} />
 
           <Card className="mt-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <ShieldCheck className="h-4 w-4 text-primary" /> Draft checkout preview
+                <ShieldCheck className="h-4 w-4 text-primary" /> Local draft method simulator
               </CardTitle>
               <CardDescription>
-                Pick a wilaya to see which local draft methods would be offered.
+                Pick a wilaya to inspect local draft methods. This does not read or write checkout.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1950,7 +1988,7 @@ function DiagnosticsScreen({
                   ))}
                 </SelectContent>
               </Select>
-              {sim && <CheckoutSim wilaya={wilayas.find((wilaya) => wilaya.code === sim)!} />}
+              {simulatedWilaya && <CheckoutSim wilaya={simulatedWilaya} />}
             </CardContent>
           </Card>
         </>
@@ -1999,7 +2037,7 @@ function SummaryStat({
   tone,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   tone: "ok" | "warn" | "fail";
 }) {
   const color =
@@ -2012,29 +2050,113 @@ function SummaryStat({
   );
 }
 
-function HealthCard({ result }: { result: CheckResult }) {
-  const Icon =
-    result.status === "ok" ? CheckCircle2 : result.status === "warn" ? AlertTriangle : AlertCircle;
-  const tone =
-    result.status === "ok"
-      ? "text-emerald-600 bg-emerald-50 border-emerald-200"
-      : result.status === "warn"
-        ? "text-amber-700 bg-amber-50 border-amber-200"
-        : "text-red-700 bg-red-50 border-red-200";
-
+function WilayaDiagnosticsTable({ response }: { response: DiagnosticsResponse }) {
   return (
-    <Card>
-      <CardContent className="flex items-start gap-3 p-4">
-        <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg border", tone)}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <div>
-          <div className="text-sm font-medium">{result.label}</div>
-          <div className="text-xs text-muted-foreground">{result.detail}</div>
-        </div>
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-base">Wilaya coverage</CardTitle>
+        <CardDescription>
+          Status is based on existing WooCommerce zone locations matched to DZ state codes.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-20">Code</TableHead>
+              <TableHead>Wilaya</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Matched zones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {response.wilayaResults.map((wilaya) => (
+              <TableRow key={wilaya.code}>
+                <TableCell className="font-mono text-xs">{wilaya.code}</TableCell>
+                <TableCell>
+                  <div className="font-medium">{wilaya.nameFr}</div>
+                  <div className="text-xs text-muted-foreground">{wilaya.nameAr}</div>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={wilaya.status} />
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {wilaya.zoneNames.length > 0 ? wilaya.zoneNames.join(", ") : "None"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
+}
+
+function ZoneDiagnosticsPanel({ zones }: { zones: ZoneDiagnostic[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Existing WooCommerce zones</CardTitle>
+        <CardDescription>
+          Manual zones are not treated as errors. Yaxii-looking names are weak hints only.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {zones.length === 0 && (
+          <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
+            No WooCommerce shipping zones were returned.
+          </div>
+        )}
+        {zones.map((zone) => (
+          <div key={zone.zoneId} className="rounded-lg border border-border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-medium">{zone.name}</div>
+                <div className="text-xs text-muted-foreground">Zone ID {zone.zoneId}</div>
+              </div>
+              <Badge variant={zone.ownershipHint === "yaxii_hint" ? "default" : "secondary"}>
+                {zone.ownershipHint === "yaxii_hint" ? "Yaxii-looking" : "Manual or unknown"}
+              </Badge>
+            </div>
+            <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+              <div>Matched wilayas: {zone.matchedWilayaCodes.length}</div>
+              <div>Overlapping wilayas: {zone.overlapWilayaCodes.length}</div>
+              <div>
+                Methods: {zone.enabledMethodCount}/{zone.methodCount} enabled
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {zone.methodCount === 0 && <Badge variant="outline">No methods</Badge>}
+              {zone.disabledMethods > 0 && <Badge variant="outline">Disabled methods</Badge>}
+              {zone.hasHomeLikeMethod && <Badge variant="outline">Home-like method</Badge>}
+              {zone.hasOfficeLikeMethod && <Badge variant="outline">Office-like method</Badge>}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StatusBadge({ status }: { status: WilayaDiagnosticStatus }) {
+  const label =
+    status === "configured" ? "Configured" : status === "missing" ? "Missing" : "Conflict";
+  const variant =
+    status === "configured" ? "default" : status === "missing" ? "secondary" : "destructive";
+
+  return <Badge variant={variant}>{label}</Badge>;
+}
+
+function fallbackRiskLabel(risk: CheckoutFallbackRisk): string {
+  return risk === "low" ? "Low" : risk === "medium" ? "Medium" : "High";
+}
+
+function fallbackRiskTone(risk: CheckoutFallbackRisk): "ok" | "warn" | "fail" {
+  if (risk === "low") {
+    return "ok";
+  }
+
+  return risk === "medium" ? "warn" : "fail";
 }
 
 function CheckoutSim({ wilaya }: { wilaya: Wilaya }) {
