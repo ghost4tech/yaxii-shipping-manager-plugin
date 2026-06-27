@@ -16,10 +16,16 @@ final class Routes {
 
 	private BootstrapController $bootstrap;
 	private DatasetController $dataset;
+	private SettingsController $settings;
 
-	public function __construct( BootstrapController $bootstrap, DatasetController $dataset ) {
+	public function __construct(
+		BootstrapController $bootstrap,
+		DatasetController $dataset,
+		SettingsController $settings
+	) {
 		$this->bootstrap = $bootstrap;
 		$this->dataset   = $dataset;
+		$this->settings  = $settings;
 	}
 
 	/**
@@ -66,6 +72,23 @@ final class Routes {
 						'sanitize_callback' => array( DatasetController::class, 'sanitize_wilaya_code' ),
 						'validate_callback' => array( DatasetController::class, 'validate_wilaya_code' ),
 					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/settings',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this->settings, 'get_settings' ),
+					'permission_callback' => array( $this->settings, 'can_read' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( $this->settings, 'update_settings' ),
+					'permission_callback' => array( $this->settings, 'can_update' ),
 				),
 			)
 		);

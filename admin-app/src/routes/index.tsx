@@ -29,16 +29,18 @@ import {
 
 import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
 import { fetchDatasetWilayas } from "../api/dataset-api";
+import { fetchSettings, saveSettings } from "../api/settings-api";
 import {
   DATASET_MODE_OPTIONS,
   DEFAULT_GENERATOR_DRAFT,
-  DEFAULT_SETTINGS_DRAFT,
+  DEFAULT_SETTINGS,
   DEFAULT_SHIPPING_METHOD_TEMPLATES,
   OFFICE_METHOD_WORDING_OPTIONS,
   REGION_LABEL_FORMAT_OPTIONS,
   SAFETY_RULES,
   SETUP_PATH_OPTIONS,
   ZONE_NAMING_OPTIONS,
+  generatorDraftFromSettings,
   officeLabelForWording,
 } from "../data/default-settings";
 import { formatRegionLabel } from "../domain/format-region-label";
@@ -47,7 +49,9 @@ import type { DatasetMode, WilayaDatasetRecord } from "../types/dataset";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
 import type {
   OfficeMethodWording,
+  PersistedSettings,
   RegionLabelFormat,
+  SettingsResponse,
   SetupPath,
   ZoneNameFormat,
 } from "../types/settings";
@@ -123,6 +127,10 @@ type DatasetLoadState =
   | { status: "loading" }
   | { status: "ready"; metadataVersion: string; records: WilayaDatasetRecord[] }
   | { status: "error"; message: string };
+type SettingsLoadState =
+  | { status: "loading" }
+  | { status: "ready"; response: SettingsResponse }
+  | { status: "error"; message: string };
 
 export default function AdminApp({
   bootstrap,
@@ -133,6 +141,7 @@ export default function AdminApp({
 }) {
   const [tab, setTabState] = useState<TabId>(getInitialTab);
   const [datasetState, setDatasetState] = useState<DatasetLoadState>({ status: "loading" });
+  const [settingsState, setSettingsState] = useState<SettingsLoadState>({ status: "loading" });
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const [methodDefs, setMethodDefs] = useState<MethodDef[]>(DEFAULT_METHOD_DEFS);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -149,7 +158,6 @@ export default function AdminApp({
             metadataVersion: response.metadata.version ?? "current-candidate-2025",
             records: response.wilayas,
           });
-          setWilayas(datasetRecordsToWilayas(response.wilayas, DEFAULT_METHOD_DEFS));
         }
       } catch (error) {
         if (!cancelled) {
@@ -170,6 +178,42 @@ export default function AdminApp({
   }, [config]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadSettings() {
+      try {
+        const response = await fetchSettings(config);
+        if (!cancelled) {
+          setSettingsState({ status: "ready", response });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSettingsState({
+            status: "error",
+            message: error instanceof Error ? error.message : "Unable to load saved settings.",
+          });
+        }
+      }
+    }
+
+    loadSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config]);
+
+  useEffect(() => {
+    if (datasetState.status !== "ready" || settingsState.status !== "ready") {
+      return;
+    }
+
+    const nextMethodDefs = enabledMethodDefs(settingsState.response.settings.methods);
+    setMethodDefs(nextMethodDefs);
+    setWilayas(datasetRecordsToWilayas(datasetState.records, nextMethodDefs));
+  }, [datasetState, settingsState]);
+
+  useEffect(() => {
     const onHashChange = () => setTabState(getInitialTab());
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
@@ -180,18 +224,30 @@ export default function AdminApp({
     window.location.hash = `/${next}`;
   };
 
+  const savePersistedSettings = async (settings: PersistedSettings): Promise<SettingsResponse> => {
+    const response = await saveSettings(config, settings);
+    setSettingsState({ status: "ready", response });
+    return response;
+  };
+
   const datasetReady = datasetState.status === "ready";
+  const settingsReady = settingsState.status === "ready";
+  const activeSettings = settingsReady ? settingsState.response.settings : DEFAULT_SETTINGS;
 
   return (
     <div className="yaxii-shipping-manager-app min-h-screen bg-background text-foreground">
       <Header
         pluginVersion={bootstrap.pluginVersion}
         onLaunchWizard={() => setWizardOpen(true)}
-        launchDisabled={!datasetReady}
+        launchDisabled={!datasetReady || !settingsReady}
       />
       <TopNav tab={tab} setTab={setTab} />
       <main className="mx-auto w-full max-w-5xl px-6 py-10">
-        <RuntimeNotices bootstrap={bootstrap} datasetState={datasetState} />
+        <RuntimeNotices
+          bootstrap={bootstrap}
+          datasetState={datasetState}
+          settingsState={settingsState}
+        />
         {tab === "zones" && (
           <ZonesScreen
             wilayas={wilayas}
@@ -201,11 +257,16 @@ export default function AdminApp({
           />
         )}
         {tab === "generator" && (
-          <GeneratorHub onLaunch={() => setWizardOpen(true)} launchDisabled={!datasetReady} />
+          <GeneratorHub
+            onLaunch={() => setWizardOpen(true)}
+            launchDisabled={!datasetReady || !settingsReady}
+          />
         )}
         {tab === "diagnostics" && <DiagnosticsScreen wilayas={wilayas} />}
         {tab === "import" && <ImportExportScreen />}
-        {tab === "settings" && <SettingsScreen />}
+        {tab === "settings" && (
+          <SettingsScreen settingsState={settingsState} onSave={savePersistedSettings} />
+        )}
         {tab === "sync" && <SmartFormSyncScreen />}
       </main>
       <footer className="mx-auto max-w-5xl px-6 pb-10 text-center text-xs text-muted-foreground">
@@ -215,6 +276,7 @@ export default function AdminApp({
 
       {wizardOpen && (
         <GeneratorWizard
+          settings={activeSettings}
           baseList={wilayasToReference(wilayas)}
           onClose={() => setWizardOpen(false)}
           onComplete={(next, defs) => {
@@ -286,9 +348,11 @@ function wilayasToReference(wilayas: Wilaya[]): WilayaReference[] {
 function RuntimeNotices({
   bootstrap,
   datasetState,
+  settingsState,
 }: {
   bootstrap: BootstrapPayload;
   datasetState: DatasetLoadState;
+  settingsState: SettingsLoadState;
 }) {
   return (
     <div className="mb-6 space-y-3">
@@ -322,6 +386,29 @@ function RuntimeNotices({
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Dataset unavailable</AlertTitle>
           <AlertDescription>{datasetState.message}</AlertDescription>
+        </Alert>
+      )}
+      {settingsState.status === "loading" && (
+        <Alert className="border-primary/20 bg-primary/5">
+          <RefreshCw className="h-4 w-4" />
+          <AlertTitle>Loading saved settings</AlertTitle>
+          <AlertDescription>
+            Fetching the persisted plugin settings from WordPress.
+          </AlertDescription>
+        </Alert>
+      )}
+      {settingsState.status === "error" && (
+        <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Settings unavailable</AlertTitle>
+          <AlertDescription>{settingsState.message}</AlertDescription>
+        </Alert>
+      )}
+      {settingsState.status === "ready" && settingsState.response.warnings.length > 0 && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Settings normalized</AlertTitle>
+          <AlertDescription>{settingsState.response.warnings.join(" ")}</AlertDescription>
         </Alert>
       )}
       {datasetState.status === "ready" && (
@@ -470,29 +557,30 @@ function BulletItem({ children }: { children: ReactNode }) {
 }
 
 function GeneratorWizard({
+  settings,
   baseList,
   onClose,
   onComplete,
 }: {
+  settings: PersistedSettings;
   baseList: WilayaReference[];
   onClose: () => void;
   onComplete: (wilayas: Wilaya[], defs: MethodDef[]) => void;
 }) {
+  const initialDraft = useMemo(() => generatorDraftFromSettings(settings), [settings]);
   const [step, setStep] = useState(0);
-  const [setupPath, setSetupPathState] = useState<SetupPath>(DEFAULT_GENERATOR_DRAFT.setupPath);
-  const [dataset, setDataset] = useState<DatasetMode>(DEFAULT_GENERATOR_DRAFT.datasetMode);
-  const [labelFormat, setLabelFormat] = useState<RegionLabelFormat>(
-    DEFAULT_GENERATOR_DRAFT.labelFormat,
-  );
+  const [setupPath, setSetupPathState] = useState<SetupPath>(initialDraft.setupPath);
+  const [dataset, setDataset] = useState<DatasetMode>(initialDraft.datasetMode);
+  const [labelFormat, setLabelFormat] = useState<RegionLabelFormat>(initialDraft.labelFormat);
   const [zoneNameFormat, setZoneNameFormat] = useState<ZoneNameFormat>(
-    DEFAULT_GENERATOR_DRAFT.zoneNaming.format,
+    initialDraft.zoneNaming.format,
   );
-  const [zonePrefix, setZonePrefix] = useState(DEFAULT_GENERATOR_DRAFT.zoneNaming.prefix);
-  const [officeWording, setOfficeWording] = useState<OfficeMethodWording>(
-    DEFAULT_GENERATOR_DRAFT.officeMethodWording,
+  const [zonePrefix, setZonePrefix] = useState(initialDraft.zoneNaming.prefix);
+  const [officeWordingMode, setOfficeWordingMode] = useState<OfficeMethodWording>(
+    initialDraft.officeWordingMode,
   );
-  const [officeCustomLabel, setOfficeCustomLabel] = useState("Office delivery");
-  const [methods, setMethods] = useState<ShippingMethodTemplate[]>(DEFAULT_GENERATOR_DRAFT.methods);
+  const [officeCustomLabel, setOfficeCustomLabel] = useState(settings.officeCustomLabel);
+  const [methods, setMethods] = useState<ShippingMethodTemplate[]>(initialDraft.methods);
   const [selectedCodes, setSelectedCodes] = useState<string[]>(
     baseList.map((wilaya) => wilaya.code),
   );
@@ -624,8 +712,8 @@ function GeneratorWizard({
             <StepMethods
               methods={methods}
               setMethods={setMethods}
-              officeWording={officeWording}
-              setOfficeWording={setOfficeWording}
+              officeWordingMode={officeWordingMode}
+              setOfficeWordingMode={setOfficeWordingMode}
               officeCustomLabel={officeCustomLabel}
               setOfficeCustomLabel={setOfficeCustomLabel}
             />
@@ -900,15 +988,15 @@ function StepLabelNaming({
 function StepMethods({
   methods,
   setMethods,
-  officeWording,
-  setOfficeWording,
+  officeWordingMode,
+  setOfficeWordingMode,
   officeCustomLabel,
   setOfficeCustomLabel,
 }: {
   methods: ShippingMethodTemplate[];
   setMethods: Dispatch<SetStateAction<ShippingMethodTemplate[]>>;
-  officeWording: OfficeMethodWording;
-  setOfficeWording: (wording: OfficeMethodWording) => void;
+  officeWordingMode: OfficeMethodWording;
+  setOfficeWordingMode: (wording: OfficeMethodWording) => void;
   officeCustomLabel: string;
   setOfficeCustomLabel: (label: string) => void;
 }) {
@@ -922,13 +1010,13 @@ function StepMethods({
   };
 
   const updateOfficeWording = (wording: OfficeMethodWording) => {
-    setOfficeWording(wording);
+    setOfficeWordingMode(wording);
     updateMethod("office_delivery", { label: officeLabelForWording(wording, officeCustomLabel) });
   };
 
   const updateOfficeCustomLabel = (label: string) => {
     setOfficeCustomLabel(label);
-    if (officeWording === "custom") {
+    if (officeWordingMode === "custom") {
       updateMethod("office_delivery", { label: officeLabelForWording("custom", label) });
     }
   };
@@ -944,7 +1032,7 @@ function StepMethods({
         <CardContent className="space-y-6 p-6">
           <SettingRow label="Office method wording" desc="Controls the office_delivery label.">
             <Select
-              value={officeWording}
+              value={officeWordingMode}
               onValueChange={(value) => updateOfficeWording(value as OfficeMethodWording)}
             >
               <SelectTrigger className="w-56">
@@ -959,7 +1047,7 @@ function StepMethods({
               </SelectContent>
             </Select>
           </SettingRow>
-          {officeWording === "custom" && (
+          {officeWordingMode === "custom" && (
             <SettingRow label="Office custom label" desc="Local draft label only.">
               <Input
                 value={officeCustomLabel}
@@ -1997,32 +2085,87 @@ function ExportRow({ title, desc }: { title: string; desc: string }) {
   );
 }
 
-function SettingsScreen() {
-  const [settingsDraft, setSettingsDraft] = useState(DEFAULT_SETTINGS_DRAFT);
-  const [methods, setMethods] = useState(DEFAULT_SHIPPING_METHOD_TEMPLATES);
-  const [officeCustomLabel, setOfficeCustomLabel] = useState("Office delivery");
+function SettingsScreen({
+  settingsState,
+  onSave,
+}: {
+  settingsState: SettingsLoadState;
+  onSave: (settings: PersistedSettings) => Promise<SettingsResponse>;
+}) {
+  if (settingsState.status === "loading") {
+    return (
+      <>
+        <SectionHeader
+          title="Settings"
+          description="Loading saved plugin settings from WordPress."
+        />
+        <Card>
+          <CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground">
+            <RefreshCw className="h-4 w-4" />
+            Loading settings...
+          </CardContent>
+        </Card>
+      </>
+    );
+  }
 
-  const updateSettingsDraft = (patch: Partial<typeof settingsDraft>) => {
-    setSettingsDraft((current) => ({ ...current, ...patch }));
+  if (settingsState.status === "error") {
+    return (
+      <>
+        <SectionHeader title="Settings" description="Saved settings could not be loaded." />
+        <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Settings unavailable</AlertTitle>
+          <AlertDescription>{settingsState.message}</AlertDescription>
+        </Alert>
+      </>
+    );
+  }
+
+  return <SettingsForm response={settingsState.response} onSave={onSave} />;
+}
+
+function SettingsForm({
+  response,
+  onSave,
+}: {
+  response: SettingsResponse;
+  onSave: (settings: PersistedSettings) => Promise<SettingsResponse>;
+}) {
+  const [draft, setDraft] = useState<PersistedSettings>(response.settings);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveMessage, setSaveMessage] = useState("");
+
+  useEffect(() => {
+    setDraft(response.settings);
+  }, [response.settings]);
+
+  const updateDraft = (patch: Partial<PersistedSettings>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+    setSaveState("idle");
   };
 
   const updateMethod = (
     key: ShippingMethodKey,
     patch: Partial<Pick<ShippingMethodTemplate, "enabled" | "label" | "defaultPrice">>,
   ) => {
-    setMethods((current) =>
-      current.map((method) => (method.key === key ? { ...method, ...patch } : method)),
-    );
+    updateDraft({
+      methods: draft.methods.map((method) =>
+        method.key === key ? { ...method, ...patch } : method,
+      ),
+    });
   };
 
   const updateOfficeWording = (wording: OfficeMethodWording) => {
-    updateSettingsDraft({ officeMethodWording: wording });
-    updateMethod("office_delivery", { label: officeLabelForWording(wording, officeCustomLabel) });
+    updateDraft({ officeWordingMode: wording });
+    updateMethod("office_delivery", {
+      label: officeLabelForWording(wording, draft.officeCustomLabel),
+    });
   };
 
   const updateOfficeCustomLabel = (label: string) => {
-    setOfficeCustomLabel(label);
-    if (settingsDraft.officeMethodWording === "custom") {
+    updateDraft({ officeCustomLabel: label });
+    if (draft.officeWordingMode === "custom") {
       updateMethod("office_delivery", { label: officeLabelForWording("custom", label) });
     }
   };
@@ -2034,21 +2177,66 @@ function SettingsScreen() {
     }
   };
 
+  const saveDraft = async (settings: PersistedSettings) => {
+    setSaveState("saving");
+    setSaveMessage("");
+
+    try {
+      const savedResponse = await onSave(settings);
+      setDraft(savedResponse.settings);
+      setSaveState("saved");
+      setSaveMessage(
+        savedResponse.warnings.length ? savedResponse.warnings.join(" ") : "Settings saved.",
+      );
+    } catch (error) {
+      setSaveState("error");
+      setSaveMessage(error instanceof Error ? error.message : "Settings could not be saved.");
+    }
+  };
+
   return (
     <>
       <SectionHeader
         title="Settings"
-        description="Local defaults shown in the admin draft. Settings persistence is not connected yet."
+        description="Persisted plugin settings. WooCommerce zones are not read or written here."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => saveDraft(response.defaults)}
+              disabled={saveState === "saving"}
+            >
+              Reset to defaults
+            </Button>
+            <Button onClick={() => saveDraft(draft)} disabled={saveState === "saving"}>
+              {saveState === "saving" ? "Saving..." : "Save settings"}
+            </Button>
+          </div>
+        }
       />
+      {saveState === "saved" && (
+        <Alert className="mb-4 border-emerald-200 bg-emerald-50 text-emerald-950">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>Settings saved</AlertTitle>
+          <AlertDescription>{saveMessage}</AlertDescription>
+        </Alert>
+      )}
+      {saveState === "error" && (
+        <Alert variant="destructive" className="mb-4 border-red-200 bg-red-50 text-red-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Save failed</AlertTitle>
+          <AlertDescription>{saveMessage}</AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardContent className="space-y-6 p-6">
           <SettingRow label="Dataset mode" desc="Legacy mapping is not available yet.">
             <Select
-              value={settingsDraft.datasetMode}
+              value={draft.datasetMode}
               onValueChange={(value) => {
                 const option = DATASET_MODE_OPTIONS.find((entry) => entry.mode === value);
                 if (option?.available) {
-                  updateSettingsDraft({ datasetMode: option.mode });
+                  updateDraft({ datasetMode: option.mode });
                 }
               }}
             >
@@ -2067,9 +2255,9 @@ function SettingsScreen() {
           <Separator />
           <SettingRow label="Region label format" desc="Controls future zone naming previews.">
             <Select
-              value={settingsDraft.regionLabelFormat}
+              value={draft.regionLabelFormat}
               onValueChange={(value) =>
-                updateSettingsDraft({ regionLabelFormat: value as RegionLabelFormat })
+                updateDraft({ regionLabelFormat: value as RegionLabelFormat })
               }
             >
               <SelectTrigger className="w-64">
@@ -2087,10 +2275,8 @@ function SettingsScreen() {
           <Separator />
           <SettingRow label="Zone name format" desc="Draft naming only; no zones are written.">
             <Select
-              value={settingsDraft.zoneNameFormat}
-              onValueChange={(value) =>
-                updateSettingsDraft({ zoneNameFormat: value as ZoneNameFormat })
-              }
+              value={draft.zoneNameFormat}
+              onValueChange={(value) => updateDraft({ zoneNameFormat: value as ZoneNameFormat })}
             >
               <SelectTrigger className="w-72">
                 <SelectValue />
@@ -2106,15 +2292,15 @@ function SettingsScreen() {
           </SettingRow>
           <SettingRow label="Zone prefix" desc="Default local draft prefix.">
             <Input
-              value={settingsDraft.zonePrefix}
-              onChange={(event) => updateSettingsDraft({ zonePrefix: event.target.value })}
+              value={draft.zonePrefix}
+              onChange={(event) => updateDraft({ zonePrefix: event.target.value })}
               className="w-44"
             />
           </SettingRow>
           <Separator />
           <SettingRow label="Office method wording" desc="Controls the office_delivery label.">
             <Select
-              value={settingsDraft.officeMethodWording}
+              value={draft.officeWordingMode}
               onValueChange={(value) => updateOfficeWording(value as OfficeMethodWording)}
             >
               <SelectTrigger className="w-56">
@@ -2129,10 +2315,10 @@ function SettingsScreen() {
               </SelectContent>
             </Select>
           </SettingRow>
-          {settingsDraft.officeMethodWording === "custom" && (
+          {draft.officeWordingMode === "custom" && (
             <SettingRow label="Office custom label" desc="Local draft label only.">
               <Input
-                value={officeCustomLabel}
+                value={draft.officeCustomLabel}
                 onChange={(event) => updateOfficeCustomLabel(event.target.value)}
                 className="w-56"
               />
@@ -2143,7 +2329,7 @@ function SettingsScreen() {
             Currency comes from WooCommerce. Fallback: DZD.
           </div>
           <Separator />
-          {methods.map((method) => (
+          {draft.methods.map((method) => (
             <SettingRow
               key={method.key}
               label={method.label}

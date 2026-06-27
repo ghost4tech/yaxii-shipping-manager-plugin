@@ -9,7 +9,7 @@ import type {
   RegionLabelFormat,
   SafetyRuleKey,
   SelectOption,
-  SettingsDraft,
+  PersistedSettings,
   SetupPath,
   ZoneNameFormat,
 } from "../types/settings";
@@ -117,28 +117,46 @@ export const DEFAULT_SHIPPING_METHOD_TEMPLATES: ShippingMethodTemplate[] = [
   },
 ];
 
-export const DEFAULT_SETTINGS_DRAFT: SettingsDraft = {
+export const DEFAULT_SETTINGS: PersistedSettings = {
   datasetMode: "current",
   regionLabelFormat: "fr_ar",
   zoneNameFormat: "prefix_code_name",
   zonePrefix: "Yaxii",
-  officeMethodWording: "office_delivery",
+  officeWordingMode: "office_delivery",
+  officeCustomLabel: "",
+  methods: DEFAULT_SHIPPING_METHOD_TEMPLATES,
+  safetyPolicy: MANUAL_ZONE_PROTECTION_POLICY,
 };
 
 export const DEFAULT_GENERATOR_DRAFT: GeneratorDraft = {
   setupPath: "quick",
   datasetMode: "current",
-  labelFormat: DEFAULT_SETTINGS_DRAFT.regionLabelFormat,
+  labelFormat: DEFAULT_SETTINGS.regionLabelFormat,
   zoneNaming: {
-    format: DEFAULT_SETTINGS_DRAFT.zoneNameFormat,
-    prefix: DEFAULT_SETTINGS_DRAFT.zonePrefix,
+    format: DEFAULT_SETTINGS.zoneNameFormat,
+    prefix: DEFAULT_SETTINGS.zonePrefix,
   },
-  officeMethodWording: DEFAULT_SETTINGS_DRAFT.officeMethodWording,
+  officeWordingMode: DEFAULT_SETTINGS.officeWordingMode,
   methods: DEFAULT_SHIPPING_METHOD_TEMPLATES,
   pricingRows: [],
   selectedWilayaCodes: [],
   manualZoneProtection: MANUAL_ZONE_PROTECTION_POLICY,
 };
+
+export function generatorDraftFromSettings(settings: PersistedSettings): GeneratorDraft {
+  return {
+    ...DEFAULT_GENERATOR_DRAFT,
+    datasetMode: settings.datasetMode,
+    labelFormat: settings.regionLabelFormat,
+    zoneNaming: {
+      format: settings.zoneNameFormat,
+      prefix: settings.zonePrefix,
+    },
+    officeWordingMode: settings.officeWordingMode,
+    methods: settings.methods,
+    manualZoneProtection: settings.safetyPolicy,
+  };
+}
 
 export function officeLabelForWording(wording: OfficeMethodWording, customLabel: string): string {
   if (wording === "custom") {

@@ -1,4 +1,5 @@
 import type { DatasetMode } from "./dataset";
+import type { ManualZoneProtectionPolicy, ShippingMethodTemplate } from "./generator";
 
 export type SetupPath = "quick" | "manual" | "csv";
 
@@ -28,10 +29,35 @@ export type SelectOption<TValue extends string> = {
   description?: string;
 };
 
-export type SettingsDraft = {
+export type PersistedSettings = {
   datasetMode: DatasetMode;
   regionLabelFormat: RegionLabelFormat;
   zoneNameFormat: ZoneNameFormat;
   zonePrefix: string;
-  officeMethodWording: OfficeMethodWording;
+  officeWordingMode: OfficeMethodWording;
+  officeCustomLabel: string;
+  methods: ShippingMethodTemplate[];
+  safetyPolicy: ManualZoneProtectionPolicy;
+};
+
+export type SettingsOptionsMetadata = {
+  optionName: string;
+  datasetModes: DatasetMode[];
+  availableModes: DatasetMode[];
+  regionLabelFormats: RegionLabelFormat[];
+  zoneNameFormats: ZoneNameFormat[];
+  officeWordingModes: OfficeMethodWording[];
+  methodKeys: string[];
+  methodType: "flat_rate";
+  currency: {
+    editable: false;
+    fallback: "DZD";
+  };
+};
+
+export type SettingsResponse = {
+  settings: PersistedSettings;
+  defaults: PersistedSettings;
+  options: SettingsOptionsMetadata;
+  warnings: string[];
 };

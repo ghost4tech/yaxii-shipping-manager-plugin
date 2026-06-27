@@ -37,7 +37,7 @@ export type GeneratorDraft = {
   datasetMode: DatasetMode;
   labelFormat: RegionLabelFormat;
   zoneNaming: ZoneNamingTemplate;
-  officeMethodWording: OfficeMethodWording;
+  officeWordingMode: OfficeMethodWording;
   methods: ShippingMethodTemplate[];
   pricingRows: PricingMatrixRow[];
   selectedWilayaCodes: string[];

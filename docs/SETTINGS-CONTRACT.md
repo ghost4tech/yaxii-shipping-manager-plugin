@@ -2,33 +2,79 @@
 
 ## Current Position
 
-TASK-003A defines the MVP settings and wizard contract in the admin app only.
+TASK-003B persists the MVP settings contract in WordPress options and exposes read/write REST endpoints for the admin app.
 
-The settings shown in the UI are local draft state. They are not persisted to WordPress options yet, and they do not write to WooCommerce.
+The settings remain product-configuration draft data. They do not create, update, delete, or inspect WooCommerce shipping zones.
 
-## MVP Settings
+## Option Storage
 
-- Dataset mode: `current` or `legacy_58`
-- Region label format: `fr`, `ar`, `fr_ar`, `ar_fr`
-- Zone name format: `prefix_code_name`, `code_name`, `name_only`, `prefix_name`
-- Zone prefix: default `Yaxii`
-- Office method wording: Office delivery, Stopdesk, Bureau, or a custom label
-- Default home price
-- Default office/stopdesk price
-- Optional custom method 1 price
-- Optional custom method 2 price
+Settings are stored in one WordPress option:
 
-Currency is not user-editable in the MVP settings. Future persisted settings should read the WooCommerce currency when WooCommerce data is available. The draft UI uses `DZD` as the fallback display label.
+```text
+yaxii_shipping_manager_settings
+```
+
+Storage rules:
+
+- The option value is an array.
+- The option is created with autoload disabled.
+- Dataset rows are not stored in the option.
+- Raw source data is not stored in the option.
+- WooCommerce zone IDs are not stored yet.
+- Secrets are not stored.
+
+## REST Endpoints
+
+Settings endpoints use the existing plugin namespace:
+
+```text
+GET /wp-json/yaxii-shipping-manager/v1/settings
+PUT /wp-json/yaxii-shipping-manager/v1/settings
+```
+
+Access policy matches bootstrap and dataset access:
+
+- WooCommerce active: requires `manage_woocommerce`.
+- WooCommerce inactive: requires `manage_options`.
+- `PUT` also requires the WordPress REST nonce in `X-WP-Nonce`.
+
+The response includes:
+
+- `settings`: sanitized active settings.
+- `defaults`: plugin defaults.
+- `options`: settings metadata.
+- `warnings`: repair or forced-safety warnings.
+
+Unknown keys are rejected on save. Invalid enum values, duplicate method keys, negative prices, unsupported method types, and unavailable legacy mode are returned as REST errors.
+
+## Persisted MVP Settings
+
+- `datasetMode`: `current`
+- `regionLabelFormat`: `fr`, `ar`, `fr_ar`, or `ar_fr`
+- `zoneNameFormat`: `prefix_code_name`, `code_name`, `name_only`, or `prefix_name`
+- `zonePrefix`: string, default `Yaxii`
+- `officeWordingMode`: `office_delivery`, `stopdesk`, `bureau`, or `custom`
+- `officeCustomLabel`: string
+- `methods`: fixed method templates
+- `safetyPolicy`: locked safety rules
+
+Currency is not user-editable and is not persisted. The UI displays:
+
+```text
+Currency comes from WooCommerce. Fallback: DZD.
+```
 
 ## Dataset Modes
 
-Current mode is visible and available as `Current Algeria dataset`.
+Current mode is available as `Current Algeria dataset`.
 
-Legacy mode is visible but unavailable as `Legacy 58-compatible dataset` with the reason:
+Legacy mode remains visible in the UI but unavailable as `Legacy 58-compatible dataset` with the reason:
 
 ```text
 Legacy mapping is not available yet.
 ```
+
+Saving `datasetMode: legacy_58` is rejected until an auditable mapping exists. If an older stored option contains `legacy_58`, the repository normalizes it back to `current` and returns a warning.
 
 Do not guess a legacy 58 mapping.
 
@@ -59,29 +105,31 @@ MVP method keys are fixed:
 - `custom_1`
 - `custom_2`
 
-Home delivery and office/stopdesk delivery are required. Custom method 1 and custom method 2 are optional.
+Home delivery and office/stopdesk delivery are required and locked on. Custom method 1 and custom method 2 are optional.
 
 Unlimited custom methods are not in the MVP because the preview planner and safe apply engine need a small, auditable method contract before they write WooCommerce shipping methods.
 
 Each method template has:
 
-- key
-- enabled
-- label
-- default price
-- type: `flat_rate`
-- locked/system flag
+- `key`
+- `enabled`
+- `label`
+- `defaultPrice`
+- `type: flat_rate`
+- `locked`
+
+Default prices may be numbers or `null`. Negative prices are rejected locally and by the REST sanitizer.
 
 ## Locked Safety Policy
 
-These safety rules are locked on in the MVP:
+These safety rules are always locked on in the MVP:
 
-- Protect manual WooCommerce zones
-- Require preview before apply
-- Skip conflicts by default
-- Never delete manual zones
+- `protectManualZones`
+- `requirePreviewBeforeApply`
+- `skipConflictsByDefault`
+- `neverDeleteManualZones`
 
-The UI copy says these are required safety rules for the future apply engine. Users cannot disable them in TASK-003A.
+The REST sanitizer forces all safety rules back to `true`. The UI copy says these are required safety rules for the future apply engine.
 
 ## Wizard Contract
 
@@ -95,7 +143,7 @@ Wizard steps:
 6. Wilaya selection
 7. Review draft
 
-All wizard actions remain local draft only.
+The wizard initializes from persisted settings. Wilaya selection and per-wilaya draft prices remain local draft UI state.
 
 The review screen must say:
 
@@ -103,18 +151,25 @@ The review screen must say:
 This is a local draft. WooCommerce preview/apply will be added after diagnostics and preview planner.
 ```
 
+## Still Draft Or Local
+
+- Wizard state after launch.
+- Wilaya enabled/disabled choices.
+- Per-wilaya method prices.
+- CSV import/export flow.
+- Future preview/apply state.
+
 ## Not Implemented Yet
 
-TASK-003A does not implement:
+TASK-003B does not implement:
 
-- WordPress option persistence
-- WooCommerce zone reads or writes
-- WooCommerce diagnostics backend
-- Preview planner
-- Safe apply engine
-- CSV backend
-- YSF sync
-- Provider imports
-- Commune-level pricing
-- Unlimited custom shipping methods
-- Country expansion UI
+- WooCommerce zone reads or writes.
+- WooCommerce diagnostics backend.
+- Preview planner.
+- Safe apply engine.
+- CSV backend.
+- YSF sync.
+- Provider imports.
+- Commune-level pricing.
+- Unlimited custom shipping methods.
+- Country expansion UI.

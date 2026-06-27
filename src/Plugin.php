@@ -13,6 +13,8 @@ use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Rest\BootstrapController;
 use Yaxii\ShippingManager\Rest\DatasetController;
 use Yaxii\ShippingManager\Rest\Routes;
+use Yaxii\ShippingManager\Rest\SettingsController;
+use Yaxii\ShippingManager\Settings\SettingsRepository;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,10 +23,12 @@ final class Plugin {
 	 * Register WordPress hooks.
 	 */
 	public function register(): void {
-		$woocommerce_active = $this->is_woocommerce_active();
-		$datasets           = new DatasetRepository();
-		$bootstrap          = new BootstrapController( $woocommerce_active, $datasets );
-		$dataset_controller = new DatasetController( $woocommerce_active, $datasets );
+		$woocommerce_active  = $this->is_woocommerce_active();
+		$datasets            = new DatasetRepository();
+		$settings            = new SettingsRepository();
+		$bootstrap           = new BootstrapController( $woocommerce_active, $datasets );
+		$dataset_controller  = new DatasetController( $woocommerce_active, $datasets );
+		$settings_controller = new SettingsController( $woocommerce_active, $settings );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
@@ -36,7 +40,7 @@ final class Plugin {
 			$asset_registrar->register();
 		}
 
-		$routes = new Routes( $bootstrap, $dataset_controller );
+		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller );
 		$routes->register();
 	}
 
