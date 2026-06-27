@@ -1381,6 +1381,9 @@ function StepReview({
       <p className="mt-2 text-sm text-muted-foreground">
         This is a preview only. No WooCommerce changes were made.
       </p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Apply engine is not enabled yet. Yaxii will only apply reviewed plans in a later step.
+      </p>
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <PreviewStat label="Setup path" value={setupPathLabel(setupPath)} />
         <PreviewStat label="Dataset mode" value={dataset === "current" ? "Current" : "Legacy"} />
@@ -1544,6 +1547,11 @@ function PreviewPlanRow({ item }: { item: PreviewPlanItem }) {
     <div className="rounded-md bg-muted/30 px-3 py-2 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         {item.wilayaCode && <Badge variant="outline">{item.wilayaCode}</Badge>}
+        {item.ownershipSource && (
+          <Badge variant={item.ownershipSource === "manual_unknown" ? "secondary" : "outline"}>
+            {ownershipSourceLabel(item.ownershipSource)}
+          </Badge>
+        )}
         <span className="font-medium">{title}</span>
       </div>
       {details && <div className="mt-1 text-xs text-muted-foreground">{details}</div>}
@@ -1559,9 +1567,24 @@ function previewItemDetails(item: PreviewPlanItem): string {
     item.methodKey ? `Method ${item.methodKey}` : "",
     item.price !== undefined && item.price !== null ? `Price ${item.price} DZD` : "",
     item.zoneNames && item.zoneNames.length > 0 ? `Zones: ${item.zoneNames.join(", ")}` : "",
+    item.ownershipSources && item.ownershipSources.length > 0
+      ? `Ownership: ${item.ownershipSources.map(ownershipSourceLabel).join(", ")}`
+      : "",
   ];
 
   return details.filter(Boolean).join(" - ");
+}
+
+function ownershipSourceLabel(source: PreviewPlanItem["ownershipSource"]): string {
+  if (source === "managed_registry") {
+    return "Yaxii managed";
+  }
+
+  if (source === "yaxii_name_hint") {
+    return "Yaxii-looking";
+  }
+
+  return "Manual/unknown";
 }
 
 function setupPathLabel(setupPath: SetupPath): string {

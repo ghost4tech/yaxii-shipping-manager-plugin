@@ -7,6 +7,7 @@
 
 namespace Yaxii\ShippingManager\Preview;
 
+use Yaxii\ShippingManager\Apply\ManagedZoneRegistry;
 use Yaxii\ShippingManager\Data\DatasetMode;
 use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Settings\SettingsRepository;
@@ -18,15 +19,18 @@ final class PreviewPlanner {
 	private DatasetRepository $datasets;
 	private SettingsRepository $settings;
 	private ShippingDiagnosticsService $diagnostics;
+	private ManagedZoneRegistry $managed_registry;
 
 	public function __construct(
 		DatasetRepository $datasets,
 		SettingsRepository $settings,
-		ShippingDiagnosticsService $diagnostics
+		ShippingDiagnosticsService $diagnostics,
+		ManagedZoneRegistry $managed_registry
 	) {
-		$this->datasets    = $datasets;
-		$this->settings    = $settings;
-		$this->diagnostics = $diagnostics;
+		$this->datasets         = $datasets;
+		$this->settings         = $settings;
+		$this->diagnostics      = $diagnostics;
+		$this->managed_registry = $managed_registry;
 	}
 
 	/**
@@ -278,13 +282,14 @@ final class PreviewPlanner {
 	 */
 	private function create_zone_item( array $wilaya, array $context ): array {
 		return array(
-			'type'       => 'create_zone',
-			'wilayaCode' => (string) $wilaya['code'],
-			'wilayaName' => (string) $wilaya['name_fr'],
-			'zoneName'   => $this->zone_name( $wilaya, $context['settings'] ),
-			'location'   => 'DZ:' . (string) $wilaya['code'],
-			'methods'    => $this->desired_methods( $wilaya, $context ),
-			'reason'     => __( 'No direct WooCommerce zone exists for this wilaya.', 'yaxii-shipping-manager' ),
+			'type'            => 'create_zone',
+			'wilayaCode'      => (string) $wilaya['code'],
+			'wilayaName'      => (string) $wilaya['name_fr'],
+			'zoneName'        => $this->zone_name( $wilaya, $context['settings'] ),
+			'location'        => 'DZ:' . (string) $wilaya['code'],
+			'methods'         => $this->desired_methods( $wilaya, $context ),
+			'ownershipSource' => 'managed_registry',
+			'reason'          => __( 'No direct WooCommerce zone exists for this wilaya. A future apply engine would record it in the Yaxii managed registry.', 'yaxii-shipping-manager' ),
 		);
 	}
 
@@ -294,13 +299,14 @@ final class PreviewPlanner {
 	 */
 	private function update_zone_item( array $wilaya, array $zone, string $zone_name ): array {
 		return array(
-			'type'       => 'update_zone',
-			'wilayaCode' => (string) $wilaya['code'],
-			'wilayaName' => (string) $wilaya['name_fr'],
-			'zoneId'     => (int) $zone['zoneId'],
-			'currentName' => (string) $zone['name'],
-			'zoneName'   => $zone_name,
-			'reason'     => __( 'Existing Yaxii-looking zone name differs from the current draft.', 'yaxii-shipping-manager' ),
+			'type'            => 'update_zone',
+			'wilayaCode'      => (string) $wilaya['code'],
+			'wilayaName'      => (string) $wilaya['name_fr'],
+			'zoneId'          => (int) $zone['zoneId'],
+			'currentName'     => (string) $zone['name'],
+			'zoneName'        => $zone_name,
+			'ownershipSource' => $this->ownership_source( $zone ),
+			'reason'          => __( 'Existing Yaxii-managed or Yaxii-looking zone name differs from the current draft.', 'yaxii-shipping-manager' ),
 		);
 	}
 
@@ -311,14 +317,15 @@ final class PreviewPlanner {
 	 */
 	private function method_item( array $wilaya, array $zone, array $method, string $type ): array {
 		return array(
-			'type'       => $type,
-			'wilayaCode' => (string) $wilaya['code'],
-			'wilayaName' => (string) $wilaya['name_fr'],
-			'zoneId'     => (int) $zone['zoneId'],
-			'zoneName'   => (string) $zone['name'],
-			'methodKey'  => (string) $method['key'],
-			'label'      => (string) $method['label'],
-			'price'      => $method['price'],
+			'type'            => $type,
+			'wilayaCode'      => (string) $wilaya['code'],
+			'wilayaName'      => (string) $wilaya['name_fr'],
+			'zoneId'          => (int) $zone['zoneId'],
+			'zoneName'        => (string) $zone['name'],
+			'methodKey'       => (string) $method['key'],
+			'label'           => (string) $method['label'],
+			'price'           => $method['price'],
+			'ownershipSource' => $this->ownership_source( $zone ),
 		);
 	}
 
@@ -330,12 +337,14 @@ final class PreviewPlanner {
 	 */
 	private function conflict_item( array $wilaya, array $zones ): array {
 		return array(
-			'type'       => 'duplicate_zone',
-			'wilayaCode' => (string) $wilaya['code'],
-			'wilayaName' => (string) $wilaya['name_fr'],
-			'zoneIds'    => array_values( array_map( static fn( array $zone ): int => (int) $zone['zoneId'], $zones ) ),
-			'zoneNames'  => array_values( array_map( static fn( array $zone ): string => (string) $zone['name'], $zones ) ),
-			'reason'     => __( 'Multiple direct WooCommerce zones match this wilaya.', 'yaxii-shipping-manager' ),
+			'type'             => 'duplicate_zone',
+			'wilayaCode'       => (string) $wilaya['code'],
+			'wilayaName'       => (string) $wilaya['name_fr'],
+			'zoneIds'          => array_values( array_map( static fn( array $zone ): int => (int) $zone['zoneId'], $zones ) ),
+			'zoneNames'        => array_values( array_map( static fn( array $zone ): string => (string) $zone['name'], $zones ) ),
+			'ownershipSource'  => 'manual_unknown',
+			'ownershipSources' => array_values( array_unique( array_map( fn( array $zone ): string => $this->ownership_source( $zone ), $zones ) ) ),
+			'reason'           => __( 'Multiple direct WooCommerce zones match this wilaya.', 'yaxii-shipping-manager' ),
 		);
 	}
 
@@ -345,12 +354,13 @@ final class PreviewPlanner {
 	 */
 	private function manual_skip_item( array $wilaya, array $zone ): array {
 		return array(
-			'type'       => 'skip_manual_zone',
-			'wilayaCode' => (string) $wilaya['code'],
-			'wilayaName' => (string) $wilaya['name_fr'],
-			'zoneId'     => (int) $zone['zoneId'],
-			'zoneName'   => (string) $zone['name'],
-			'reason'     => __( 'Manual or unknown WooCommerce zone overlaps this wilaya and is protected by default.', 'yaxii-shipping-manager' ),
+			'type'            => 'skip_manual_zone',
+			'wilayaCode'      => (string) $wilaya['code'],
+			'wilayaName'      => (string) $wilaya['name_fr'],
+			'zoneId'          => (int) $zone['zoneId'],
+			'zoneName'        => (string) $zone['name'],
+			'ownershipSource' => $this->ownership_source( $zone ),
+			'reason'          => __( 'Manual or unknown WooCommerce zone overlaps this wilaya and is protected by default.', 'yaxii-shipping-manager' ),
 		);
 	}
 
@@ -360,12 +370,13 @@ final class PreviewPlanner {
 	 */
 	private function unchanged_item( array $wilaya, array $zone ): array {
 		return array(
-			'type'       => 'unchanged',
-			'wilayaCode' => (string) $wilaya['code'],
-			'wilayaName' => (string) $wilaya['name_fr'],
-			'zoneId'     => (int) $zone['zoneId'],
-			'zoneName'   => (string) $zone['name'],
-			'reason'     => __( 'Existing Yaxii-looking zone already matches the preview draft.', 'yaxii-shipping-manager' ),
+			'type'            => 'unchanged',
+			'wilayaCode'      => (string) $wilaya['code'],
+			'wilayaName'      => (string) $wilaya['name_fr'],
+			'zoneId'          => (int) $zone['zoneId'],
+			'zoneName'        => (string) $zone['name'],
+			'ownershipSource' => $this->ownership_source( $zone ),
+			'reason'          => __( 'Existing Yaxii-managed or Yaxii-looking zone already matches the preview draft.', 'yaxii-shipping-manager' ),
 		);
 	}
 
@@ -453,7 +464,7 @@ final class PreviewPlanner {
 	private function manual_zone_for_wilaya( string $code, array $zones ): ?array {
 		foreach ( $zones as $zone ) {
 			if (
-				'manual_unknown' === ( $zone['ownershipHint'] ?? '' )
+				'manual_unknown' === $this->ownership_source( $zone )
 				&& in_array( $code, $zone['overlapWilayaCodes'] ?? array(), true )
 			) {
 				return $zone;
@@ -461,6 +472,21 @@ final class PreviewPlanner {
 		}
 
 		return null;
+	}
+
+	/**
+	 * @param array<string,mixed> $zone Zone diagnostics.
+	 */
+	private function ownership_source( array $zone ): string {
+		if ( null !== $this->managed_registry->record_for_zone_id( (int) ( $zone['zoneId'] ?? 0 ) ) ) {
+			return 'managed_registry';
+		}
+
+		if ( 'yaxii_hint' === ( $zone['ownershipHint'] ?? '' ) ) {
+			return 'yaxii_name_hint';
+		}
+
+		return 'manual_unknown';
 	}
 
 	/**

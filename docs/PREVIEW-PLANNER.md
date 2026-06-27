@@ -55,10 +55,19 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
 }
 ```
 
+Preview items that involve WooCommerce zones include an ownership source:
+
+- `managed_registry`: the zone ID exists in the Yaxii managed registry.
+- `yaxii_name_hint`: the zone name only looks like a Yaxii zone.
+- `manual_unknown`: the zone is treated as manual or unknown and protected.
+
+For duplicate/conflict items, `ownershipSources` lists the ownership sources detected across the conflicting zones.
+
 ## Planning Rules
 
 - A selected wilaya with no direct `DZ:NN` zone becomes a `createZones` preview item.
-- A Yaxii-looking direct zone may receive preview-only zone or method updates.
+- A managed-registry direct zone may receive preview-only zone or method updates.
+- A Yaxii-looking direct zone may receive preview-only zone or method updates, but the hint is weak.
 - A manual or unknown zone that overlaps a wilaya is placed in `skipManualZones`.
 - Duplicate direct zones for the same wilaya are placed in `conflicts`.
 - Missing enabled methods become `addMethods`.
@@ -66,6 +75,12 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
 - Existing matching zones and methods become `unchanged`.
 
 The planner is deterministic. The same dataset, settings, diagnostics, and draft payload return the same plan groups.
+
+Ownership priority is:
+
+1. Managed registry.
+2. Yaxii name hint.
+3. Manual or unknown.
 
 ## Safety Rules
 

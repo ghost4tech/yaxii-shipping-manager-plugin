@@ -1,6 +1,8 @@
 import type { ShippingMethodKey, ShippingMethodTemplate } from "./generator";
 import type { RegionLabelFormat, ZoneNameFormat } from "./settings";
 
+export type PreviewOwnershipSource = "managed_registry" | "yaxii_name_hint" | "manual_unknown";
+
 export type PreviewRequest = {
   selectedWilayaCodes?: string[];
   pricingRows?: Array<{
@@ -32,6 +34,8 @@ export type PreviewPlanItem = {
     label: string;
     price: number | null;
   }>;
+  ownershipSource?: PreviewOwnershipSource;
+  ownershipSources?: PreviewOwnershipSource[];
   reason?: string;
   message?: string;
 };

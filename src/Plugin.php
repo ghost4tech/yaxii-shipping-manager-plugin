@@ -9,9 +9,12 @@ namespace Yaxii\ShippingManager;
 
 use Yaxii\ShippingManager\Admin\AdminPage;
 use Yaxii\ShippingManager\Admin\AssetRegistrar;
+use Yaxii\ShippingManager\Apply\ApplyContract;
+use Yaxii\ShippingManager\Apply\ManagedZoneRegistry;
 use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Preview\PreviewPlanner;
 use Yaxii\ShippingManager\Preview\PreviewRequestSanitizer;
+use Yaxii\ShippingManager\Rest\ApplyContractController;
 use Yaxii\ShippingManager\Rest\BootstrapController;
 use Yaxii\ShippingManager\Rest\DatasetController;
 use Yaxii\ShippingManager\Rest\DiagnosticsController;
@@ -33,15 +36,18 @@ final class Plugin {
 		$woocommerce_active  = $this->is_woocommerce_active();
 		$datasets               = new DatasetRepository();
 		$settings               = new SettingsRepository();
+		$managed_registry       = new ManagedZoneRegistry();
 		$algeria_states         = new AlgeriaStatesRegistrar( $woocommerce_active, $datasets, $settings );
 		$zone_reader            = new ShippingZoneReader( $woocommerce_active );
 		$diagnostics            = new ShippingDiagnosticsService( $woocommerce_active, $datasets, $settings, $zone_reader );
-		$preview_planner        = new PreviewPlanner( $datasets, $settings, $diagnostics );
+		$preview_planner        = new PreviewPlanner( $datasets, $settings, $diagnostics, $managed_registry );
+		$apply_contract         = new ApplyContract( $settings, $managed_registry );
 		$bootstrap              = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
 		$dataset_controller     = new DatasetController( $woocommerce_active, $datasets );
 		$settings_controller    = new SettingsController( $woocommerce_active, $settings );
 		$diagnostics_controller = new DiagnosticsController( $woocommerce_active, $diagnostics );
 		$preview_controller     = new PreviewController( $woocommerce_active, $preview_planner, new PreviewRequestSanitizer() );
+		$apply_controller       = new ApplyContractController( $woocommerce_active, $apply_contract );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
@@ -55,7 +61,7 @@ final class Plugin {
 
 		$algeria_states->register();
 
-		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller );
+		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller, $apply_controller );
 		$routes->register();
 	}
 

@@ -19,19 +19,22 @@ final class Routes {
 	private SettingsController $settings;
 	private DiagnosticsController $diagnostics;
 	private PreviewController $preview;
+	private ApplyContractController $apply_contract;
 
 	public function __construct(
 		BootstrapController $bootstrap,
 		DatasetController $dataset,
 		SettingsController $settings,
 		DiagnosticsController $diagnostics,
-		PreviewController $preview
+		PreviewController $preview,
+		ApplyContractController $apply_contract
 	) {
-		$this->bootstrap   = $bootstrap;
-		$this->dataset     = $dataset;
-		$this->settings    = $settings;
-		$this->diagnostics = $diagnostics;
-		$this->preview     = $preview;
+		$this->bootstrap      = $bootstrap;
+		$this->dataset        = $dataset;
+		$this->settings       = $settings;
+		$this->diagnostics    = $diagnostics;
+		$this->preview        = $preview;
+		$this->apply_contract = $apply_contract;
 	}
 
 	/**
@@ -116,6 +119,16 @@ final class Routes {
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this->preview, 'create_preview' ),
 				'permission_callback' => array( $this->preview, 'can_preview' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/apply-contract',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this->apply_contract, 'get_apply_contract' ),
+				'permission_callback' => array( $this->apply_contract, 'can_access' ),
 			)
 		);
 	}
