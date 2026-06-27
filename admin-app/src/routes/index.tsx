@@ -30,6 +30,7 @@ import {
 import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
 import { fetchDatasetWilayas } from "../api/dataset-api";
 import { fetchDiagnostics } from "../api/diagnostics-api";
+import { fetchPreview } from "../api/preview-api";
 import { fetchSettings, saveSettings } from "../api/settings-api";
 import {
   DATASET_MODE_OPTIONS,
@@ -54,6 +55,7 @@ import type {
   ZoneDiagnostic,
 } from "../types/diagnostics";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
+import type { PreviewPlanItem, PreviewRequest, PreviewResponse } from "../types/preview";
 import type {
   OfficeMethodWording,
   PersistedSettings,
@@ -331,6 +333,7 @@ export default function AdminApp({
 
       {wizardOpen && (
         <GeneratorWizard
+          config={config}
           settings={activeSettings}
           baseList={wilayasToReference(wilayas)}
           onClose={() => setWizardOpen(false)}
@@ -612,11 +615,13 @@ function BulletItem({ children }: { children: ReactNode }) {
 }
 
 function GeneratorWizard({
+  config,
   settings,
   baseList,
   onClose,
   onComplete,
 }: {
+  config: AdminBootstrapConfig;
   settings: PersistedSettings;
   baseList: WilayaReference[];
   onClose: () => void;
@@ -791,6 +796,8 @@ function GeneratorWizard({
               zoneNameFormat={zoneNameFormat}
               zonePrefix={zonePrefix}
               selectedWilayaCount={selectedWilayaCount}
+              selectedCodes={selectedCodes}
+              config={config}
             />
           )}
         </div>
@@ -1318,6 +1325,8 @@ function StepReview({
   zoneNameFormat,
   zonePrefix,
   selectedWilayaCount,
+  selectedCodes,
+  config,
 }: {
   setupPath: SetupPath;
   baseList: WilayaReference[];
@@ -1327,7 +1336,10 @@ function StepReview({
   zoneNameFormat: ZoneNameFormat;
   zonePrefix: string;
   selectedWilayaCount: number;
+  selectedCodes: string[];
+  config: AdminBootstrapConfig;
 }) {
+  const [previewState, setPreviewState] = useState<PreviewLoadState>({ status: "idle" });
   const sampleWilaya = baseList[0] ?? { code: "16", name: "Alger", ar: "الجزائر" };
   const enabledMethods = methods.filter((method) => method.enabled);
   const pricedMethods = enabledMethods.filter((method) => method.defaultPrice !== null).length;
@@ -1341,13 +1353,33 @@ function StepReview({
     code: sampleWilaya.code,
     name: sampleLabel,
   });
+  const previewRequest: PreviewRequest = {
+    selectedWilayaCodes: selectedCodes,
+    methods,
+    zoneNameFormat,
+    zonePrefix,
+    regionLabelFormat: labelFormat,
+  };
+
+  const loadPreview = async () => {
+    setPreviewState({ status: "loading" });
+
+    try {
+      const response = await fetchPreview(config, previewRequest);
+      setPreviewState({ status: "ready", response });
+    } catch (error) {
+      setPreviewState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Unable to generate preview.",
+      });
+    }
+  };
 
   return (
     <div className="mx-auto max-w-3xl">
       <h3 className="text-2xl font-semibold tracking-tight">Review draft</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        This is a local draft. WooCommerce preview/apply will be added after diagnostics and preview
-        planner.
+        This is a preview only. No WooCommerce changes were made.
       </p>
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <PreviewStat label="Setup path" value={setupPathLabel(setupPath)} />
@@ -1358,7 +1390,9 @@ function StepReview({
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="text-base">Draft contract</CardTitle>
-          <CardDescription>No WooCommerce zone reads or writes are performed here.</CardDescription>
+          <CardDescription>
+            The preview planner reads WooCommerce diagnostics and returns a dry-run plan.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
@@ -1375,8 +1409,159 @@ function StepReview({
           </div>
         </CardContent>
       </Card>
+
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button onClick={loadPreview} disabled={previewState.status === "loading"}>
+          <Activity className="h-4 w-4" />
+          {previewState.status === "loading" ? "Generating preview..." : "Preview changes"}
+        </Button>
+        <Button disabled variant="outline">
+          <Lock className="h-4 w-4" />
+          Apply engine comes next.
+        </Button>
+      </div>
+
+      {previewState.status === "error" && (
+        <Alert variant="destructive" className="mt-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Preview could not be generated</AlertTitle>
+          <AlertDescription>{previewState.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {previewState.status === "ready" && <PreviewPlanPanel response={previewState.response} />}
     </div>
   );
+}
+
+type PreviewLoadState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; response: PreviewResponse }
+  | { status: "error"; message: string };
+
+function PreviewPlanPanel({ response }: { response: PreviewResponse }) {
+  return (
+    <div className="mt-6 space-y-4">
+      <Alert>
+        <ShieldCheck className="h-4 w-4" />
+        <AlertTitle>This is a preview only. No WooCommerce changes were made.</AlertTitle>
+        <AlertDescription>{response.summary.recommendedAction}</AlertDescription>
+      </Alert>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <PreviewStat label="Zones to create" value={String(response.summary.createZones)} />
+        <PreviewStat label="Methods to add" value={String(response.summary.addMethods)} />
+        <PreviewStat label="Conflicts" value={String(response.summary.conflicts)} tone="warn" />
+        <PreviewStat label="Manual skips" value={String(response.summary.skipManualZones)} />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Preview plan</CardTitle>
+          <CardDescription>{response.canApplyLaterMessage}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <PreviewPlanGroup
+            title="Zones to create"
+            emptyLabel="No new zones proposed."
+            items={response.plan.createZones}
+          />
+          <PreviewPlanGroup
+            title="Zones to update"
+            emptyLabel="No zone updates proposed."
+            items={response.plan.updateZones}
+          />
+          <PreviewPlanGroup
+            title="Methods to add"
+            emptyLabel="No method additions proposed."
+            items={response.plan.addMethods}
+          />
+          <PreviewPlanGroup
+            title="Methods to update"
+            emptyLabel="No method updates proposed."
+            items={response.plan.updateMethods}
+          />
+          <PreviewPlanGroup
+            title="Manual zones skipped"
+            emptyLabel="No manual zones skipped."
+            items={response.plan.skipManualZones}
+          />
+          <PreviewPlanGroup
+            title="Conflicts"
+            emptyLabel="No conflicts found."
+            items={response.plan.conflicts}
+          />
+          <PreviewPlanGroup
+            title="Warnings"
+            emptyLabel="No warnings returned."
+            items={response.plan.warnings}
+          />
+          <PreviewPlanGroup
+            title="Unchanged"
+            emptyLabel="No unchanged wilayas in this preview."
+            items={response.plan.unchanged}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function PreviewPlanGroup({
+  title,
+  emptyLabel,
+  items,
+}: {
+  title: string;
+  emptyLabel: string;
+  items: PreviewPlanItem[];
+}) {
+  return (
+    <div className="rounded-lg border border-border">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="text-sm font-medium">{title}</div>
+        <Badge variant="secondary">{items.length}</Badge>
+      </div>
+      <div className="space-y-2 p-4">
+        {items.length === 0 && <div className="text-sm text-muted-foreground">{emptyLabel}</div>}
+        {items.map((item, index) => (
+          <PreviewPlanRow
+            key={`${item.type}-${item.wilayaCode ?? index}-${item.zoneId ?? index}`}
+            item={item}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PreviewPlanRow({ item }: { item: PreviewPlanItem }) {
+  const title = item.message ?? item.zoneName ?? item.label ?? item.wilayaName ?? item.type;
+  const details = previewItemDetails(item);
+
+  return (
+    <div className="rounded-md bg-muted/30 px-3 py-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        {item.wilayaCode && <Badge variant="outline">{item.wilayaCode}</Badge>}
+        <span className="font-medium">{title}</span>
+      </div>
+      {details && <div className="mt-1 text-xs text-muted-foreground">{details}</div>}
+    </div>
+  );
+}
+
+function previewItemDetails(item: PreviewPlanItem): string {
+  const details = [
+    item.reason,
+    item.location ? `Location ${item.location}` : "",
+    item.zoneId ? `Zone ID ${item.zoneId}` : "",
+    item.methodKey ? `Method ${item.methodKey}` : "",
+    item.price !== undefined && item.price !== null ? `Price ${item.price} DZD` : "",
+    item.zoneNames && item.zoneNames.length > 0 ? `Zones: ${item.zoneNames.join(", ")}` : "",
+  ];
+
+  return details.filter(Boolean).join(" - ");
 }
 
 function setupPathLabel(setupPath: SetupPath): string {

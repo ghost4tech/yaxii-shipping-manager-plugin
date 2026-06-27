@@ -18,17 +18,20 @@ final class Routes {
 	private DatasetController $dataset;
 	private SettingsController $settings;
 	private DiagnosticsController $diagnostics;
+	private PreviewController $preview;
 
 	public function __construct(
 		BootstrapController $bootstrap,
 		DatasetController $dataset,
 		SettingsController $settings,
-		DiagnosticsController $diagnostics
+		DiagnosticsController $diagnostics,
+		PreviewController $preview
 	) {
 		$this->bootstrap   = $bootstrap;
 		$this->dataset     = $dataset;
 		$this->settings    = $settings;
 		$this->diagnostics = $diagnostics;
+		$this->preview     = $preview;
 	}
 
 	/**
@@ -103,6 +106,16 @@ final class Routes {
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this->diagnostics, 'get_diagnostics' ),
 				'permission_callback' => array( $this->diagnostics, 'can_access' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/preview',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this->preview, 'create_preview' ),
+				'permission_callback' => array( $this->preview, 'can_preview' ),
 			)
 		);
 	}

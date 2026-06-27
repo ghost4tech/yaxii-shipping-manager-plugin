@@ -1,0 +1,94 @@
+# Preview Planner
+
+The preview planner generates a read-only dry-run plan for future WooCommerce shipping-zone changes.
+
+It exists between diagnostics and the safe apply engine. It lets a merchant inspect proposed creates, updates, skips, conflicts, and warnings before any WooCommerce write code exists.
+
+## Endpoint
+
+```text
+POST /wp-json/yaxii-shipping-manager/v1/preview
+```
+
+The endpoint accepts a draft payload, but it does not write to WooCommerce or WordPress settings.
+
+Access uses the same protected admin policy as settings and diagnostics:
+
+- WooCommerce active: `manage_woocommerce`
+- WooCommerce inactive: `manage_options`
+- `X-WP-Nonce` is required
+
+## Inputs
+
+If no request body is provided, the planner uses persisted settings and all current wilayas.
+
+Optional draft override fields:
+
+- `selectedWilayaCodes`
+- `pricingRows`
+- `methods`
+- `zoneNameFormat`
+- `zonePrefix`
+- `regionLabelFormat`
+
+Unknown fields are rejected. Invalid wilaya codes, method keys, method types, and negative prices are rejected.
+
+## Output Groups
+
+The response includes:
+
+- `createZones`
+- `updateZones`
+- `addMethods`
+- `updateMethods`
+- `skipManualZones`
+- `conflicts`
+- `warnings`
+- `unchanged`
+
+The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
+
+```json
+{
+  "canApplyLater": false,
+  "canApplyLaterMessage": "Apply engine is not implemented yet."
+}
+```
+
+## Planning Rules
+
+- A selected wilaya with no direct `DZ:NN` zone becomes a `createZones` preview item.
+- A Yaxii-looking direct zone may receive preview-only zone or method updates.
+- A manual or unknown zone that overlaps a wilaya is placed in `skipManualZones`.
+- Duplicate direct zones for the same wilaya are placed in `conflicts`.
+- Missing enabled methods become `addMethods`.
+- Method label or price differences become `updateMethods`.
+- Existing matching zones and methods become `unchanged`.
+
+The planner is deterministic. The same dataset, settings, diagnostics, and draft payload return the same plan groups.
+
+## Safety Rules
+
+The MVP safety policy remains locked on:
+
+- Protect manual WooCommerce zones.
+- Require preview before apply.
+- Skip conflicts by default.
+- Never delete manual zones.
+
+The planner never proposes deletes in the MVP.
+
+## What The Planner Does Not Do
+
+The planner does not:
+
+- Create WooCommerce shipping zones.
+- Update WooCommerce shipping zones.
+- Delete WooCommerce shipping zones.
+- Add shipping methods.
+- Update method prices.
+- Persist a preview plan.
+- Modify checkout fields.
+- Implement the safe apply engine.
+
+The safe apply engine comes later and must apply only an explicitly reviewed plan.

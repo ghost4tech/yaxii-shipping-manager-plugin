@@ -10,9 +10,12 @@ namespace Yaxii\ShippingManager;
 use Yaxii\ShippingManager\Admin\AdminPage;
 use Yaxii\ShippingManager\Admin\AssetRegistrar;
 use Yaxii\ShippingManager\Data\DatasetRepository;
+use Yaxii\ShippingManager\Preview\PreviewPlanner;
+use Yaxii\ShippingManager\Preview\PreviewRequestSanitizer;
 use Yaxii\ShippingManager\Rest\BootstrapController;
 use Yaxii\ShippingManager\Rest\DatasetController;
 use Yaxii\ShippingManager\Rest\DiagnosticsController;
+use Yaxii\ShippingManager\Rest\PreviewController;
 use Yaxii\ShippingManager\Rest\Routes;
 use Yaxii\ShippingManager\Rest\SettingsController;
 use Yaxii\ShippingManager\Settings\SettingsRepository;
@@ -33,10 +36,12 @@ final class Plugin {
 		$algeria_states         = new AlgeriaStatesRegistrar( $woocommerce_active, $datasets, $settings );
 		$zone_reader            = new ShippingZoneReader( $woocommerce_active );
 		$diagnostics            = new ShippingDiagnosticsService( $woocommerce_active, $datasets, $settings, $zone_reader );
+		$preview_planner        = new PreviewPlanner( $datasets, $settings, $diagnostics );
 		$bootstrap              = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
 		$dataset_controller     = new DatasetController( $woocommerce_active, $datasets );
 		$settings_controller    = new SettingsController( $woocommerce_active, $settings );
 		$diagnostics_controller = new DiagnosticsController( $woocommerce_active, $diagnostics );
+		$preview_controller     = new PreviewController( $woocommerce_active, $preview_planner, new PreviewRequestSanitizer() );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
@@ -50,7 +55,7 @@ final class Plugin {
 
 		$algeria_states->register();
 
-		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller );
+		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller );
 		$routes->register();
 	}
 
