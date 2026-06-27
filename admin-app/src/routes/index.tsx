@@ -55,7 +55,12 @@ import type {
   ZoneDiagnostic,
 } from "../types/diagnostics";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
-import type { PreviewPlanItem, PreviewRequest, PreviewResponse } from "../types/preview";
+import type {
+  ApplyReadiness,
+  PreviewPlanItem,
+  PreviewRequest,
+  PreviewResponse,
+} from "../types/preview";
 import type {
   OfficeMethodWording,
   PersistedSettings,
@@ -1452,6 +1457,8 @@ function PreviewPlanPanel({ response }: { response: PreviewResponse }) {
         <AlertDescription>{response.summary.recommendedAction}</AlertDescription>
       </Alert>
 
+      <ApplyReadinessPanel readiness={response.applyReadiness} />
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <PreviewStat label="Zones to create" value={String(response.summary.createZones)} />
         <PreviewStat label="Methods to add" value={String(response.summary.addMethods)} />
@@ -1509,6 +1516,68 @@ function PreviewPlanPanel({ response }: { response: PreviewResponse }) {
       </Card>
     </div>
   );
+}
+
+function ApplyReadinessPanel({ readiness }: { readiness: ApplyReadiness }) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle className="text-base">{readiness.title}</CardTitle>
+          <Badge variant={applyReadinessBadgeVariant(readiness.severity)}>
+            {applyReadinessSeverityLabel(readiness.severity)}
+          </Badge>
+        </div>
+        <CardDescription>{readiness.message}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <div className="text-muted-foreground">{readiness.recommendedAction}</div>
+        {readiness.blockingReasons.length > 0 && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
+            <div className="font-medium text-destructive">Blocking reasons</div>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
+              {readiness.blockingReasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <ReadinessCount label="Creates" value={readiness.counts.creates} />
+          <ReadinessCount label="Updates" value={readiness.counts.updates} />
+          <ReadinessCount label="Manual skips" value={readiness.counts.manualSkips} />
+          <ReadinessCount label="Conflicts" value={readiness.counts.conflicts} />
+          <ReadinessCount label="Method adds" value={readiness.counts.methodAdditions} />
+          <ReadinessCount label="Method updates" value={readiness.counts.methodUpdates} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReadinessCount({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-border px-3 py-2">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-lg font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function applyReadinessBadgeVariant(severity: ApplyReadiness["severity"]) {
+  if (severity === "blocked") {
+    return "destructive";
+  }
+
+  return severity === "ready" ? "outline" : "secondary";
+}
+
+function applyReadinessSeverityLabel(severity: ApplyReadiness["severity"]): string {
+  if (severity === "blocked") {
+    return "Blocked";
+  }
+
+  return severity === "ready" ? "Ready later" : "Needs review";
 }
 
 function PreviewPlanGroup({

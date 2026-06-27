@@ -65,9 +65,38 @@ export type PreviewSummary = {
   recommendedAction: string;
 };
 
+export type ApplyWorkflowState =
+  | "fresh_store"
+  | "partial_setup"
+  | "manual_zones_detected"
+  | "conflicts_detected"
+  | "methods_missing"
+  | "yaxii_managed_ready"
+  | "blocked";
+
+export type ApplyReadinessSeverity = "ready" | "attention" | "blocked";
+
+export type ApplyReadiness = {
+  state: ApplyWorkflowState;
+  severity: ApplyReadinessSeverity;
+  title: string;
+  message: string;
+  recommendedAction: string;
+  blockingReasons: string[];
+  counts: {
+    creates: number;
+    updates: number;
+    manualSkips: number;
+    conflicts: number;
+    methodAdditions: number;
+    methodUpdates: number;
+  };
+};
+
 export type PreviewResponse = {
   summary: PreviewSummary;
   plan: PreviewPlanGroups;
+  applyReadiness: ApplyReadiness;
   warnings: string[];
   generatedAt: string;
   safetyPolicy: {

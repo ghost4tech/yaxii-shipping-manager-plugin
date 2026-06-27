@@ -55,6 +55,8 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
 }
 ```
 
+The response also includes `applyReadiness`, a read-only UX state derived from diagnostics, the preview plan, the apply contract, and locked safety policy. It explains whether the store looks fresh, partial, manually configured, conflicted, missing methods, Yaxii-managed, or blocked.
+
 Preview items that involve WooCommerce zones include an ownership source:
 
 - `managed_registry`: the zone ID exists in the Yaxii managed registry.

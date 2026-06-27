@@ -1,5 +1,6 @@
 import type { AdminBootstrapConfig } from "../bootstrap";
 import type {
+  ApplyReadiness,
   PreviewPlanGroups,
   PreviewPlanItem,
   PreviewRequest,
@@ -37,6 +38,7 @@ function parsePreviewResponse(payload: unknown): PreviewResponse {
     !isObject(payload) ||
     !isPreviewSummary(payload.summary) ||
     !isPreviewPlanGroups(payload.plan) ||
+    !isApplyReadiness(payload.applyReadiness) ||
     !Array.isArray(payload.warnings) ||
     typeof payload.generatedAt !== "string" ||
     !isObject(payload.safetyPolicy) ||
@@ -49,12 +51,55 @@ function parsePreviewResponse(payload: unknown): PreviewResponse {
   return {
     summary: payload.summary,
     plan: payload.plan,
+    applyReadiness: payload.applyReadiness,
     warnings: payload.warnings.filter((warning): warning is string => typeof warning === "string"),
     generatedAt: payload.generatedAt,
     safetyPolicy: payload.safetyPolicy as PreviewResponse["safetyPolicy"],
     canApplyLater: false,
     canApplyLaterMessage: payload.canApplyLaterMessage,
   };
+}
+
+function isApplyReadiness(readiness: unknown): readiness is ApplyReadiness {
+  return (
+    isObject(readiness) &&
+    isApplyWorkflowState(readiness.state) &&
+    isApplyReadinessSeverity(readiness.severity) &&
+    typeof readiness.title === "string" &&
+    typeof readiness.message === "string" &&
+    typeof readiness.recommendedAction === "string" &&
+    Array.isArray(readiness.blockingReasons) &&
+    readiness.blockingReasons.every((reason) => typeof reason === "string") &&
+    isApplyReadinessCounts(readiness.counts)
+  );
+}
+
+function isApplyReadinessCounts(counts: unknown): counts is ApplyReadiness["counts"] {
+  return (
+    isObject(counts) &&
+    typeof counts.creates === "number" &&
+    typeof counts.updates === "number" &&
+    typeof counts.manualSkips === "number" &&
+    typeof counts.conflicts === "number" &&
+    typeof counts.methodAdditions === "number" &&
+    typeof counts.methodUpdates === "number"
+  );
+}
+
+function isApplyWorkflowState(state: unknown): state is ApplyReadiness["state"] {
+  return (
+    state === "fresh_store" ||
+    state === "partial_setup" ||
+    state === "manual_zones_detected" ||
+    state === "conflicts_detected" ||
+    state === "methods_missing" ||
+    state === "yaxii_managed_ready" ||
+    state === "blocked"
+  );
+}
+
+function isApplyReadinessSeverity(severity: unknown): severity is ApplyReadiness["severity"] {
+  return severity === "ready" || severity === "attention" || severity === "blocked";
 }
 
 function isPreviewSummary(summary: unknown): summary is PreviewSummary {

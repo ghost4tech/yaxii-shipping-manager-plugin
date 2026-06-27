@@ -83,6 +83,18 @@ The MVP safety policy remains locked on:
 
 Manual zones are protected by default even when they overlap Algeria wilayas.
 
+## Apply Readiness UX
+
+The preview response includes `applyReadiness`, a read-only display model that explains the current workflow state before the real apply engine exists.
+
+Readiness states are documented in:
+
+```text
+docs/APPLY-WORKFLOW.md
+```
+
+The readiness model does not change the apply contract. The apply engine still reports unavailable until a future task implements and audits WooCommerce writes.
+
 ## Future Apply Engine Requirements
 
 The future apply engine must:

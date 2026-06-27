@@ -7,6 +7,7 @@
 
 namespace Yaxii\ShippingManager\Preview;
 
+use Yaxii\ShippingManager\Apply\ApplyReadinessEvaluator;
 use Yaxii\ShippingManager\Apply\ManagedZoneRegistry;
 use Yaxii\ShippingManager\Data\DatasetMode;
 use Yaxii\ShippingManager\Data\DatasetRepository;
@@ -44,6 +45,7 @@ final class PreviewPlanner {
 		$wilayas          = $this->datasets->wilayas( DatasetMode::CURRENT );
 		$diagnostics      = $this->diagnostics->diagnostics();
 		$context          = $this->planning_context( $settings, $wilayas, $diagnostics, $overrides );
+		$selected_count   = count( $context['selectedCodes'] );
 		$plan_groups      = $this->empty_plan_groups();
 
 		foreach ( $context['wilayas'] as $wilaya ) {
@@ -55,8 +57,9 @@ final class PreviewPlanner {
 		$this->sort_plan_groups( $plan_groups );
 
 		return array(
-			'summary'              => $this->summary( $plan_groups, count( $context['selectedCodes'] ) ),
+			'summary'              => $this->summary( $plan_groups, $selected_count ),
 			'plan'                 => $plan_groups,
+			'applyReadiness'       => $this->apply_readiness( $plan_groups, $diagnostics, $settings['safetyPolicy'], $selected_count ),
 			'warnings'             => $warning_messages,
 			'generatedAt'          => gmdate( 'c' ),
 			'safetyPolicy'         => $settings['safetyPolicy'],
@@ -83,6 +86,39 @@ final class PreviewPlanner {
 		}
 
 		return $settings;
+	}
+
+	/**
+	 * @param array<string,array<int,array<string,mixed>>> $plan_groups Preview plan groups.
+	 * @param array<string,mixed>                          $diagnostics Diagnostics payload.
+	 * @param array<string,mixed>                          $safety_policy Locked safety policy.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function apply_readiness( array $plan_groups, array $diagnostics, array $safety_policy, int $selected_count ): array {
+		$evaluator = new ApplyReadinessEvaluator();
+
+		return $evaluator->evaluate(
+			array(
+				'planGroups'    => $plan_groups,
+				'diagnostics'   => $diagnostics,
+				'applyContract' => $this->apply_contract_payload(),
+				'safetyPolicy'  => $safety_policy,
+				'selectedCount' => $selected_count,
+			)
+		);
+	}
+
+	/**
+	 * @return array<string,mixed>
+	 */
+	private function apply_contract_payload(): array {
+		return array(
+			'applyEngineAvailable'     => false,
+			'managedRegistryAvailable' => true,
+			'managedRegistryOption'    => ManagedZoneRegistry::OPTION_NAME,
+			'managedZoneCount'         => $this->managed_registry->managed_zone_count(),
+		);
 	}
 
 	/**
