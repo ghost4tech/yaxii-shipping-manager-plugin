@@ -262,7 +262,7 @@ export default function AdminApp({
             launchDisabled={!datasetReady || !settingsReady}
           />
         )}
-        {tab === "diagnostics" && <DiagnosticsScreen wilayas={wilayas} />}
+        {tab === "diagnostics" && <DiagnosticsScreen bootstrap={bootstrap} wilayas={wilayas} />}
         {tab === "import" && <ImportExportScreen />}
         {tab === "settings" && (
           <SettingsScreen settingsState={settingsState} onSave={savePersistedSettings} />
@@ -1810,7 +1810,13 @@ type CheckResult = {
   status: "ok" | "warn" | "fail";
 };
 
-function DiagnosticsScreen({ wilayas }: { wilayas: Wilaya[] }) {
+function DiagnosticsScreen({
+  bootstrap,
+  wilayas,
+}: {
+  bootstrap: BootstrapPayload;
+  wilayas: Wilaya[];
+}) {
   const [state, setState] = useState<"idle" | "done">("idle");
   const [results, setResults] = useState<CheckResult[]>([]);
   const [sim, setSim] = useState<string | null>(null);
@@ -1830,6 +1836,14 @@ function DiagnosticsScreen({ wilayas }: { wilayas: Wilaya[] }) {
         label: "WooCommerce status",
         detail: "Read-only WooCommerce diagnostics are coming in a later task",
         status: "warn",
+      },
+      {
+        id: "states",
+        label: "Algeria states",
+        detail: bootstrap.wooStatesStatus.active
+          ? `${bootstrap.wooStatesStatus.wilayaCount} wilayas loaded from the current dataset`
+          : "Algeria wilayas are not registered because WooCommerce is inactive or the dataset is unavailable",
+        status: bootstrap.wooStatesStatus.active ? "ok" : "warn",
       },
       {
         id: "draft",
@@ -1880,6 +1894,8 @@ function DiagnosticsScreen({ wilayas }: { wilayas: Wilaya[] }) {
           </Button>
         }
       />
+
+      <StateRegistrationCard bootstrap={bootstrap} />
 
       {state === "idle" && (
         <Card>
@@ -1940,6 +1956,40 @@ function DiagnosticsScreen({ wilayas }: { wilayas: Wilaya[] }) {
         </>
       )}
     </>
+  );
+}
+
+function StateRegistrationCard({ bootstrap }: { bootstrap: BootstrapPayload }) {
+  const active = bootstrap.wooStatesStatus.active;
+
+  return (
+    <Card className="mb-4">
+      <CardContent className="flex items-start gap-3 p-4">
+        <div
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-lg border",
+            active
+              ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+              : "border-amber-200 bg-amber-50 text-amber-700",
+          )}
+        >
+          {active ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+        </div>
+        <div className="space-y-1">
+          <div className="text-sm font-medium">
+            {active
+              ? "Algeria wilayas are registered in WooCommerce."
+              : "Algeria wilayas are not registered in WooCommerce."}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {bootstrap.wooStatesStatus.wilayaCount} wilayas loaded from the current dataset.
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Legacy 58-compatible mode is not available yet.
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

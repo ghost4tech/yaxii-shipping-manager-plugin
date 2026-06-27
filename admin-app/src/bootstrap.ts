@@ -29,6 +29,13 @@ export type BootstrapPayload = {
     ysfSync: boolean;
   };
   datasetStatus: DatasetStatus;
+  wooStatesStatus: {
+    woocommerceActive: boolean;
+    active: boolean;
+    datasetMode: "current";
+    wilayaCount: number;
+    legacyAvailable: false;
+  };
 };
 
 declare global {
@@ -87,7 +94,8 @@ function parseBootstrapPayload(payload: unknown): BootstrapPayload {
     !isObject(payload.capabilities) ||
     !isObject(payload.adminUrls) ||
     !isObject(payload.featureFlags) ||
-    !isObject(payload.datasetStatus)
+    !isObject(payload.datasetStatus) ||
+    !isObject(payload.wooStatesStatus)
   ) {
     throw new Error("Bootstrap response did not match the expected contract.");
   }

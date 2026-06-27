@@ -11,16 +11,23 @@ use Yaxii\ShippingManager\Admin\AdminPage;
 use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Support\Capabilities;
 use Yaxii\ShippingManager\Support\JsonResponse;
+use Yaxii\ShippingManager\WooCommerce\AlgeriaStatesRegistrar;
 
 defined( 'ABSPATH' ) || exit;
 
 final class BootstrapController {
 	private bool $woocommerce_active;
 	private DatasetRepository $datasets;
+	private AlgeriaStatesRegistrar $algeria_states;
 
-	public function __construct( bool $woocommerce_active, DatasetRepository $datasets ) {
+	public function __construct(
+		bool $woocommerce_active,
+		DatasetRepository $datasets,
+		AlgeriaStatesRegistrar $algeria_states
+	) {
 		$this->woocommerce_active = $woocommerce_active;
 		$this->datasets           = $datasets;
+		$this->algeria_states     = $algeria_states;
 	}
 
 	/**
@@ -73,6 +80,7 @@ final class BootstrapController {
 				'ysfSync'         => false,
 			),
 			'datasetStatus'     => $this->datasets->dataset_status(),
+			'wooStatesStatus'   => $this->algeria_states->status(),
 		);
 	}
 

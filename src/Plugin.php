@@ -15,6 +15,7 @@ use Yaxii\ShippingManager\Rest\DatasetController;
 use Yaxii\ShippingManager\Rest\Routes;
 use Yaxii\ShippingManager\Rest\SettingsController;
 use Yaxii\ShippingManager\Settings\SettingsRepository;
+use Yaxii\ShippingManager\WooCommerce\AlgeriaStatesRegistrar;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,7 +27,8 @@ final class Plugin {
 		$woocommerce_active  = $this->is_woocommerce_active();
 		$datasets            = new DatasetRepository();
 		$settings            = new SettingsRepository();
-		$bootstrap           = new BootstrapController( $woocommerce_active, $datasets );
+		$algeria_states      = new AlgeriaStatesRegistrar( $woocommerce_active, $datasets, $settings );
+		$bootstrap           = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
 		$dataset_controller  = new DatasetController( $woocommerce_active, $datasets );
 		$settings_controller = new SettingsController( $woocommerce_active, $settings );
 
@@ -39,6 +41,8 @@ final class Plugin {
 			$asset_registrar = new AssetRegistrar( $bootstrap );
 			$asset_registrar->register();
 		}
+
+		$algeria_states->register();
 
 		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller );
 		$routes->register();
