@@ -1,6 +1,7 @@
 # Nested Git internals and preserved prototype backup.
 app/.git/
 app/.git-prototype-backup/
+.tmp/
 
 # Dependencies and build output.
 node_modules/
