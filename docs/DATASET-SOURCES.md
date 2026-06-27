@@ -32,6 +32,17 @@ This task does not claim final official verification. The source is treated as c
 - Add version metadata owned by Yaxii Shipping Manager.
 - Decide whether commune records are shipped as reference data, backend-only data, or a separately loaded admin asset.
 
+## Normalized Runtime Dataset
+
+TASK-002B generates the Yaxii-owned runtime dataset under `data/algeria/`.
+
+- Current runtime metadata: `data/algeria/current/metadata.json`
+- Current runtime wilayas: `data/algeria/current/wilayas.json`
+- Current runtime communes: `data/algeria/current/communes.json`
+- Legacy placeholder metadata: `data/algeria/legacy-58/metadata.json`
+
+See `docs/DATASET.md` for the runtime REST contract and frontend bundling rules.
+
 ## Frontend Bundling Rule
 
 The full source JSON should not be bundled into `assets/admin/*.js`. It is larger than the admin UI needs at initial load and should stay as dataset source material until a backend or build step creates the exact runtime payload required by the UI.

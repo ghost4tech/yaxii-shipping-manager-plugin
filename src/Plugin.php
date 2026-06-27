@@ -9,7 +9,9 @@ namespace Yaxii\ShippingManager;
 
 use Yaxii\ShippingManager\Admin\AdminPage;
 use Yaxii\ShippingManager\Admin\AssetRegistrar;
+use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Rest\BootstrapController;
+use Yaxii\ShippingManager\Rest\DatasetController;
 use Yaxii\ShippingManager\Rest\Routes;
 
 defined( 'ABSPATH' ) || exit;
@@ -20,7 +22,9 @@ final class Plugin {
 	 */
 	public function register(): void {
 		$woocommerce_active = $this->is_woocommerce_active();
-		$bootstrap         = new BootstrapController( $woocommerce_active );
+		$datasets           = new DatasetRepository();
+		$bootstrap          = new BootstrapController( $woocommerce_active, $datasets );
+		$dataset_controller = new DatasetController( $woocommerce_active, $datasets );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
@@ -32,7 +36,7 @@ final class Plugin {
 			$asset_registrar->register();
 		}
 
-		$routes = new Routes( $bootstrap );
+		$routes = new Routes( $bootstrap, $dataset_controller );
 		$routes->register();
 	}
 

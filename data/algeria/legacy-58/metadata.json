@@ -1,0 +1,7 @@
+{
+  "mode": "legacy_58",
+  "complete": false,
+  "verified": false,
+  "available": false,
+  "reason": "Legacy 58-compatible mapping is deferred until an auditable mapping/cross-source comparison is implemented."
+}

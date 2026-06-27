@@ -29,7 +29,10 @@ import {
   Zap,
 } from "lucide-react";
 
-import type { BootstrapPayload } from "../bootstrap";
+import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
+import { fetchDatasetWilayas } from "../api/dataset-api";
+import type { DatasetMode, WilayaDatasetRecord } from "../types/dataset";
+import type { ShippingMethodKey } from "../types/generator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,117 +86,14 @@ type Wilaya = {
   methods: Record<string, Method>;
 };
 
-type MethodDef = { id: string; label: string };
+type MethodDef = { id: ShippingMethodKey; label: string };
 
 const DEFAULT_METHOD_DEFS: MethodDef[] = [
-  { id: "home", label: "Home delivery" },
-  { id: "office", label: "Office / Stopdesk" },
+  { id: "home_delivery", label: "Home delivery" },
+  { id: "office_delivery", label: "Office / Stopdesk" },
+  { id: "custom_1", label: "Custom method 1" },
+  { id: "custom_2", label: "Custom method 2" },
 ];
-
-const SEED: Array<Omit<Wilaya, "methods"> & { home: number; office: number }> = [
-  {
-    code: "16",
-    name: "Alger",
-    ar: "Arabic label pending TASK-002",
-    enabled: true,
-    status: "managed",
-    home: 500,
-    office: 300,
-  },
-  {
-    code: "31",
-    name: "Oran",
-    ar: "Arabic label pending TASK-002",
-    enabled: true,
-    status: "ready",
-    home: 800,
-    office: 500,
-  },
-  {
-    code: "25",
-    name: "Constantine",
-    ar: "Arabic label pending TASK-002",
-    enabled: true,
-    status: "needs_update",
-    home: 700,
-    office: 450,
-  },
-  {
-    code: "09",
-    name: "Blida",
-    ar: "Arabic label pending TASK-002",
-    enabled: true,
-    status: "managed",
-    home: 550,
-    office: 350,
-  },
-  {
-    code: "06",
-    name: "Bejaia",
-    ar: "Arabic label pending TASK-002",
-    enabled: false,
-    status: "missing",
-    home: 900,
-    office: 600,
-  },
-  {
-    code: "05",
-    name: "Batna",
-    ar: "Arabic label pending TASK-002",
-    enabled: true,
-    status: "manual",
-    home: 850,
-    office: 550,
-  },
-  {
-    code: "19",
-    name: "Setif",
-    ar: "Arabic label pending TASK-002",
-    enabled: true,
-    status: "managed",
-    home: 800,
-    office: 500,
-  },
-  {
-    code: "35",
-    name: "Boumerdes",
-    ar: "Arabic label pending TASK-002",
-    enabled: true,
-    status: "ready",
-    home: 600,
-    office: 400,
-  },
-  {
-    code: "13",
-    name: "Tlemcen",
-    ar: "Arabic label pending TASK-002",
-    enabled: false,
-    status: "conflict",
-    home: 1100,
-    office: 750,
-  },
-  {
-    code: "23",
-    name: "Annaba",
-    ar: "Arabic label pending TASK-002",
-    enabled: true,
-    status: "managed",
-    home: 950,
-    office: 650,
-  },
-];
-
-const INITIAL_WILAYAS: Wilaya[] = SEED.map((seed) => ({
-  code: seed.code,
-  name: seed.name,
-  ar: seed.ar,
-  enabled: seed.enabled,
-  status: seed.status,
-  methods: {
-    home: { id: "home", label: "Home delivery", price: seed.home, enabled: true },
-    office: { id: "office", label: "Office / Stopdesk", price: seed.office, enabled: true },
-  },
-}));
 
 const TABS = [
   { id: "zones", label: "Shipping Zones", icon: Package },
@@ -205,75 +105,57 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
-type Dataset = "current" | "legacy";
 type ImportMode = "manual" | "csv";
+type WilayaReference = { code: string; name: string; ar: string };
+type DatasetLoadState =
+  | { status: "loading" }
+  | { status: "ready"; metadataVersion: string; records: WilayaDatasetRecord[] }
+  | { status: "error"; message: string };
 
-const WILAYA_REFERENCE: Array<{ code: string; name: string; ar: string }> = [
-  { code: "01", name: "Adrar", ar: "Arabic label pending TASK-002" },
-  { code: "02", name: "Chlef", ar: "Arabic label pending TASK-002" },
-  { code: "03", name: "Laghouat", ar: "Arabic label pending TASK-002" },
-  { code: "04", name: "Oum El Bouaghi", ar: "Arabic label pending TASK-002" },
-  { code: "05", name: "Batna", ar: "Arabic label pending TASK-002" },
-  { code: "06", name: "Bejaia", ar: "Arabic label pending TASK-002" },
-  { code: "07", name: "Biskra", ar: "Arabic label pending TASK-002" },
-  { code: "08", name: "Bechar", ar: "Arabic label pending TASK-002" },
-  { code: "09", name: "Blida", ar: "Arabic label pending TASK-002" },
-  { code: "10", name: "Bouira", ar: "Arabic label pending TASK-002" },
-  { code: "11", name: "Tamanrasset", ar: "Arabic label pending TASK-002" },
-  { code: "12", name: "Tebessa", ar: "Arabic label pending TASK-002" },
-  { code: "13", name: "Tlemcen", ar: "Arabic label pending TASK-002" },
-  { code: "14", name: "Tiaret", ar: "Arabic label pending TASK-002" },
-  { code: "15", name: "Tizi Ouzou", ar: "Arabic label pending TASK-002" },
-  { code: "16", name: "Alger", ar: "Arabic label pending TASK-002" },
-  { code: "17", name: "Djelfa", ar: "Arabic label pending TASK-002" },
-  { code: "18", name: "Jijel", ar: "Arabic label pending TASK-002" },
-  { code: "19", name: "Setif", ar: "Arabic label pending TASK-002" },
-  { code: "20", name: "Saida", ar: "Arabic label pending TASK-002" },
-  { code: "21", name: "Skikda", ar: "Arabic label pending TASK-002" },
-  { code: "22", name: "Sidi Bel Abbes", ar: "Arabic label pending TASK-002" },
-  { code: "23", name: "Annaba", ar: "Arabic label pending TASK-002" },
-  { code: "24", name: "Guelma", ar: "Arabic label pending TASK-002" },
-  { code: "25", name: "Constantine", ar: "Arabic label pending TASK-002" },
-  { code: "26", name: "Medea", ar: "Arabic label pending TASK-002" },
-  { code: "27", name: "Mostaganem", ar: "Arabic label pending TASK-002" },
-  { code: "28", name: "M'Sila", ar: "Arabic label pending TASK-002" },
-  { code: "29", name: "Mascara", ar: "Arabic label pending TASK-002" },
-  { code: "30", name: "Ouargla", ar: "Arabic label pending TASK-002" },
-  { code: "31", name: "Oran", ar: "Arabic label pending TASK-002" },
-  { code: "32", name: "El Bayadh", ar: "Arabic label pending TASK-002" },
-  { code: "33", name: "Illizi", ar: "Arabic label pending TASK-002" },
-  { code: "34", name: "Bordj Bou Arreridj", ar: "Arabic label pending TASK-002" },
-  { code: "35", name: "Boumerdes", ar: "Arabic label pending TASK-002" },
-  { code: "36", name: "El Tarf", ar: "Arabic label pending TASK-002" },
-  { code: "37", name: "Tindouf", ar: "Arabic label pending TASK-002" },
-  { code: "38", name: "Tissemsilt", ar: "Arabic label pending TASK-002" },
-  { code: "39", name: "El Oued", ar: "Arabic label pending TASK-002" },
-  { code: "40", name: "Khenchela", ar: "Arabic label pending TASK-002" },
-  { code: "41", name: "Souk Ahras", ar: "Arabic label pending TASK-002" },
-  { code: "42", name: "Tipaza", ar: "Arabic label pending TASK-002" },
-  { code: "43", name: "Mila", ar: "Arabic label pending TASK-002" },
-  { code: "44", name: "Ain Defla", ar: "Arabic label pending TASK-002" },
-  { code: "45", name: "Naama", ar: "Arabic label pending TASK-002" },
-  { code: "46", name: "Ain Temouchent", ar: "Arabic label pending TASK-002" },
-  { code: "47", name: "Ghardaia", ar: "Arabic label pending TASK-002" },
-  { code: "48", name: "Relizane", ar: "Arabic label pending TASK-002" },
-  { code: "49", name: "El M'Ghair", ar: "Arabic label pending TASK-002" },
-  { code: "50", name: "El Meniaa", ar: "Arabic label pending TASK-002" },
-  { code: "51", name: "Ouled Djellal", ar: "Arabic label pending TASK-002" },
-  { code: "52", name: "Bordj Baji Mokhtar", ar: "Arabic label pending TASK-002" },
-  { code: "53", name: "Beni Abbes", ar: "Arabic label pending TASK-002" },
-  { code: "54", name: "Timimoun", ar: "Arabic label pending TASK-002" },
-  { code: "55", name: "Touggourt", ar: "Arabic label pending TASK-002" },
-  { code: "56", name: "Djanet", ar: "Arabic label pending TASK-002" },
-  { code: "57", name: "In Salah", ar: "Arabic label pending TASK-002" },
-  { code: "58", name: "In Guezzam", ar: "Arabic label pending TASK-002" },
-];
-
-export default function AdminApp({ bootstrap }: { bootstrap: BootstrapPayload }) {
+export default function AdminApp({
+  bootstrap,
+  config,
+}: {
+  bootstrap: BootstrapPayload;
+  config: AdminBootstrapConfig;
+}) {
   const [tab, setTabState] = useState<TabId>(getInitialTab);
-  const [wilayas, setWilayas] = useState<Wilaya[]>(INITIAL_WILAYAS);
+  const [datasetState, setDatasetState] = useState<DatasetLoadState>({ status: "loading" });
+  const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const [methodDefs, setMethodDefs] = useState<MethodDef[]>(DEFAULT_METHOD_DEFS);
   const [wizardOpen, setWizardOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDataset() {
+      try {
+        const response = await fetchDatasetWilayas(config, "current");
+        if (!cancelled) {
+          setDatasetState({
+            status: "ready",
+            metadataVersion: response.metadata.version ?? "current-candidate-2025",
+            records: response.wilayas,
+          });
+          setWilayas(datasetRecordsToWilayas(response.wilayas, DEFAULT_METHOD_DEFS));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDatasetState({
+            status: "error",
+            message:
+              error instanceof Error ? error.message : "Unable to load the normalized dataset.",
+          });
+        }
+      }
+    }
+
+    loadDataset();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config]);
 
   useEffect(() => {
     const onHashChange = () => setTabState(getInitialTab());
@@ -286,12 +168,18 @@ export default function AdminApp({ bootstrap }: { bootstrap: BootstrapPayload })
     window.location.hash = `/${next}`;
   };
 
+  const datasetReady = datasetState.status === "ready";
+
   return (
     <div className="yaxii-shipping-manager-app min-h-screen bg-background text-foreground">
-      <Header pluginVersion={bootstrap.pluginVersion} onLaunchWizard={() => setWizardOpen(true)} />
+      <Header
+        pluginVersion={bootstrap.pluginVersion}
+        onLaunchWizard={() => setWizardOpen(true)}
+        launchDisabled={!datasetReady}
+      />
       <TopNav tab={tab} setTab={setTab} />
       <main className="mx-auto w-full max-w-5xl px-6 py-10">
-        <RuntimeNotices bootstrap={bootstrap} />
+        <RuntimeNotices bootstrap={bootstrap} datasetState={datasetState} />
         {tab === "zones" && (
           <ZonesScreen
             wilayas={wilayas}
@@ -300,7 +188,9 @@ export default function AdminApp({ bootstrap }: { bootstrap: BootstrapPayload })
             onLaunchWizard={() => setWizardOpen(true)}
           />
         )}
-        {tab === "generator" && <GeneratorHub onLaunch={() => setWizardOpen(true)} />}
+        {tab === "generator" && (
+          <GeneratorHub onLaunch={() => setWizardOpen(true)} launchDisabled={!datasetReady} />
+        )}
         {tab === "diagnostics" && <DiagnosticsScreen wilayas={wilayas} />}
         {tab === "import" && <ImportExportScreen />}
         {tab === "settings" && <SettingsScreen />}
@@ -313,6 +203,7 @@ export default function AdminApp({ bootstrap }: { bootstrap: BootstrapPayload })
 
       {wizardOpen && (
         <GeneratorWizard
+          baseList={wilayasToReference(wilayas)}
           onClose={() => setWizardOpen(false)}
           onComplete={(next, defs) => {
             setWilayas(next);
@@ -339,7 +230,43 @@ function isTabId(value: string): value is TabId {
   return TABS.some((tab) => tab.id === value);
 }
 
-function RuntimeNotices({ bootstrap }: { bootstrap: BootstrapPayload }) {
+function datasetRecordsToWilayas(
+  records: WilayaDatasetRecord[],
+  methodDefs: MethodDef[],
+): Wilaya[] {
+  return records.map((record) => {
+    const methods: Record<string, Method> = {};
+    methodDefs.forEach((method) => {
+      methods[method.id] = {
+        id: method.id,
+        label: method.label,
+        price: undefined,
+        enabled: false,
+      };
+    });
+
+    return {
+      code: record.code,
+      name: record.name_fr,
+      ar: record.name_ar,
+      enabled: record.supported,
+      status: "ready",
+      methods,
+    };
+  });
+}
+
+function wilayasToReference(wilayas: Wilaya[]): WilayaReference[] {
+  return wilayas.map((wilaya) => ({ code: wilaya.code, name: wilaya.name, ar: wilaya.ar }));
+}
+
+function RuntimeNotices({
+  bootstrap,
+  datasetState,
+}: {
+  bootstrap: BootstrapPayload;
+  datasetState: DatasetLoadState;
+}) {
   return (
     <div className="mb-6 space-y-3">
       {!bootstrap.woocommerceActive && (
@@ -356,10 +283,34 @@ function RuntimeNotices({ bootstrap }: { bootstrap: BootstrapPayload }) {
         <ShieldCheck className="h-4 w-4" />
         <AlertTitle>Local draft only</AlertTitle>
         <AlertDescription>
-          This screen does not write to WooCommerce. Dataset hardening, diagnostics, preview
-          planning, CSV import, and safe apply are later tasks.
+          This screen does not write to WooCommerce. Diagnostics, preview planning, CSV import, and
+          safe apply are later tasks.
         </AlertDescription>
       </Alert>
+      {datasetState.status === "loading" && (
+        <Alert className="border-primary/20 bg-primary/5">
+          <RefreshCw className="h-4 w-4" />
+          <AlertTitle>Loading normalized dataset</AlertTitle>
+          <AlertDescription>Fetching current wilayas from the local REST dataset.</AlertDescription>
+        </Alert>
+      )}
+      {datasetState.status === "error" && (
+        <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Dataset unavailable</AlertTitle>
+          <AlertDescription>{datasetState.message}</AlertDescription>
+        </Alert>
+      )}
+      {datasetState.status === "ready" && (
+        <Alert className="border-emerald-200 bg-emerald-50 text-emerald-950">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>Current candidate dataset loaded</AlertTitle>
+          <AlertDescription>
+            {datasetState.records.length} wilaya rows loaded from version{" "}
+            {datasetState.metadataVersion}. Verification remains pending.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }
@@ -367,9 +318,11 @@ function RuntimeNotices({ bootstrap }: { bootstrap: BootstrapPayload }) {
 function Header({
   pluginVersion,
   onLaunchWizard,
+  launchDisabled,
 }: {
   pluginVersion: string;
   onLaunchWizard: () => void;
+  launchDisabled: boolean;
 }) {
   return (
     <header className="border-b border-border bg-card">
@@ -384,7 +337,7 @@ function Header({
         <Badge variant="secondary" className="rounded-full">
           v{pluginVersion} - Free
         </Badge>
-        <Button onClick={onLaunchWizard} className="gap-2">
+        <Button onClick={onLaunchWizard} className="gap-2" disabled={launchDisabled}>
           <Wand2 className="h-4 w-4" /> Launch generator
         </Button>
       </div>
@@ -442,7 +395,13 @@ function SectionHeader({
   );
 }
 
-function GeneratorHub({ onLaunch }: { onLaunch: () => void }) {
+function GeneratorHub({
+  onLaunch,
+  launchDisabled,
+}: {
+  onLaunch: () => void;
+  launchDisabled: boolean;
+}) {
   return (
     <>
       <SectionHeader
@@ -467,7 +426,7 @@ function GeneratorHub({ onLaunch }: { onLaunch: () => void }) {
                 <BulletItem>CSV import path prepared, backend not connected yet</BulletItem>
                 <BulletItem>No WooCommerce changes are made yet</BulletItem>
               </ul>
-              <Button className="mt-6 gap-2" onClick={onLaunch}>
+              <Button className="mt-6 gap-2" onClick={onLaunch} disabled={launchDisabled}>
                 <Wand2 className="h-4 w-4" /> Start generator
               </Button>
             </div>
@@ -488,19 +447,20 @@ function BulletItem({ children }: { children: ReactNode }) {
 }
 
 function GeneratorWizard({
+  baseList,
   onClose,
   onComplete,
 }: {
+  baseList: WilayaReference[];
   onClose: () => void;
   onComplete: (wilayas: Wilaya[], defs: MethodDef[]) => void;
 }) {
   const [step, setStep] = useState(0);
-  const [dataset, setDataset] = useState<Dataset>("current");
+  const [dataset, setDataset] = useState<DatasetMode>("current");
   const [mode, setMode] = useState<ImportMode>("manual");
   const [methodDefs, setMethodDefs] = useState<MethodDef[]>(DEFAULT_METHOD_DEFS);
   const [rows, setRows] = useState<Record<string, Record<string, number | null | undefined>>>({});
 
-  const baseList = useMemo(() => WILAYA_REFERENCE, []);
   const steps = ["Dataset", "Methods", "Import", "Prices", "Review"] as const;
   const next = () => setStep((current) => Math.min(current + 1, steps.length - 1));
   const back = () => setStep((current) => Math.max(current - 1, 0));
@@ -627,8 +587,8 @@ function StepDataset({
   dataset,
   setDataset,
 }: {
-  dataset: Dataset;
-  setDataset: (dataset: Dataset) => void;
+  dataset: DatasetMode;
+  setDataset: (dataset: DatasetMode) => void;
 }) {
   return (
     <div className="mx-auto max-w-2xl">
@@ -638,7 +598,7 @@ function StepDataset({
       </p>
       <RadioGroup
         value={dataset}
-        onValueChange={(value) => setDataset(value as Dataset)}
+        onValueChange={(value) => setDataset(value as DatasetMode)}
         className="mt-6 space-y-3"
       >
         <DatasetCard
@@ -649,7 +609,7 @@ function StepDataset({
           badge="Recommended"
         />
         <DatasetCard
-          value="legacy"
+          value="legacy_58"
           current={dataset}
           title="Legacy 58-compatible dataset"
           desc="Keep compatibility with stores or files that still use the older wilaya coding model."
@@ -666,8 +626,8 @@ function DatasetCard({
   desc,
   badge,
 }: {
-  value: Dataset;
-  current: Dataset;
+  value: DatasetMode;
+  current: DatasetMode;
   title: string;
   desc: string;
   badge?: string;
@@ -706,15 +666,14 @@ function StepMethods({
   const [label, setLabel] = useState("");
   const add = () => {
     const cleanLabel = label.trim();
-    if (!cleanLabel) {
+    const nextCustomKey = (["custom_1", "custom_2"] as const).find(
+      (methodKey) => !defs.some((def) => def.id === methodKey),
+    );
+    if (!cleanLabel || !nextCustomKey) {
       return;
     }
 
-    const id = `${cleanLabel
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .slice(0, 24)}_${Math.random().toString(36).slice(2, 6)}`;
-    setDefs([...defs, { id, label: cleanLabel }]);
+    setDefs([...defs, { id: nextCustomKey, label: cleanLabel }]);
     setLabel("");
   };
 
@@ -790,7 +749,7 @@ function StepImport({
   mode: ImportMode;
   setMode: (mode: ImportMode) => void;
   methodDefs: MethodDef[];
-  baseList: Array<{ code: string; name: string; ar: string }>;
+  baseList: WilayaReference[];
   setRows: Dispatch<SetStateAction<Record<string, Record<string, number | null | undefined>>>>;
 }) {
   const sampleCsv = useMemo(() => {
@@ -931,7 +890,7 @@ function StepPrices({
   rows,
   setRows,
 }: {
-  baseList: Array<{ code: string; name: string; ar: string }>;
+  baseList: WilayaReference[];
   methodDefs: MethodDef[];
   rows: Record<string, Record<string, number | null | undefined>>;
   setRows: Dispatch<SetStateAction<Record<string, Record<string, number | null | undefined>>>>;
@@ -1011,10 +970,10 @@ function StepReview({
   rows,
   dataset,
 }: {
-  baseList: Array<{ code: string; name: string; ar: string }>;
+  baseList: WilayaReference[];
   methodDefs: MethodDef[];
   rows: Record<string, Record<string, number | null | undefined>>;
-  dataset: Dataset;
+  dataset: DatasetMode;
 }) {
   let totalMethods = 0;
   let priced = 0;
@@ -1141,7 +1100,7 @@ function ZonesScreen({
   onLaunchWizard: () => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
-  const [targetMethod, setTargetMethod] = useState<string>(methodDefs[0]?.id ?? "home");
+  const [targetMethod, setTargetMethod] = useState<string>(methodDefs[0]?.id ?? "home_delivery");
   const [bulkPrice, setBulkPrice] = useState("");
   const [pct, setPct] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -1827,20 +1786,71 @@ function SettingsScreen() {
       />
       <Card>
         <CardContent className="space-y-6 p-6">
-          <SettingRow label="Dataset mode" desc="Full dataset will be verified in TASK-002.">
+          <SettingRow label="Dataset mode" desc="Current candidate data is loaded locally.">
             <Select defaultValue="current">
               <SelectTrigger className="w-64">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="current">Current Algeria dataset</SelectItem>
-                <SelectItem value="legacy">Legacy 58-compatible dataset</SelectItem>
+                <SelectItem value="current">Current Algeria dataset candidate</SelectItem>
+                <SelectItem value="legacy_58" disabled>
+                  Legacy 58-compatible dataset
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </SettingRow>
+          <Separator />
+          <SettingRow label="Label format" desc="Controls future zone naming previews.">
+            <Select defaultValue="fr_ar">
+              <SelectTrigger className="w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fr">French</SelectItem>
+                <SelectItem value="ar">Arabic</SelectItem>
+                <SelectItem value="fr_ar">French - Arabic</SelectItem>
+                <SelectItem value="ar_fr">Arabic - French</SelectItem>
+              </SelectContent>
+            </Select>
+          </SettingRow>
+          <Separator />
+          <SettingRow label="Zone name format" desc="Draft naming only; no zones are written.">
+            <Select defaultValue="{code} - {name_fr}">
+              <SelectTrigger className="w-72">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="{code} - {name_fr}">Code - French name</SelectItem>
+                <SelectItem value="{name_fr}">French name</SelectItem>
+                <SelectItem value="{name_ar}">Arabic name</SelectItem>
+                <SelectItem value="{code} - {name_fr} / {name_ar}">
+                  Code - French / Arabic
+                </SelectItem>
               </SelectContent>
             </Select>
           </SettingRow>
           <Separator />
           <SettingRow label="Currency label" desc="Shown next to draft prices.">
             <Input defaultValue="DZD" className="w-32" />
+          </SettingRow>
+          <Separator />
+          <SettingRow label="Default home price" desc="Used only when creating a local draft.">
+            <Input type="number" defaultValue="700" className="w-32" />
+          </SettingRow>
+          <SettingRow label="Default office price" desc="Used only when creating a local draft.">
+            <Input type="number" defaultValue="400" className="w-32" />
+          </SettingRow>
+          <SettingRow label="Custom method 1" desc="Optional local draft method.">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input defaultValue="Custom method 1" className="w-44" />
+              <Input type="number" placeholder="Price" className="w-28" />
+            </div>
+          </SettingRow>
+          <SettingRow label="Custom method 2" desc="Optional local draft method.">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input defaultValue="Custom method 2" className="w-44" />
+              <Input type="number" placeholder="Price" className="w-28" />
+            </div>
           </SettingRow>
           <Separator />
           <ToggleRow

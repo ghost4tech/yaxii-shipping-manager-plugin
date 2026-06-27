@@ -8,6 +8,7 @@
 namespace Yaxii\ShippingManager\Rest;
 
 use Yaxii\ShippingManager\Admin\AdminPage;
+use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Support\Capabilities;
 use Yaxii\ShippingManager\Support\JsonResponse;
 
@@ -15,9 +16,11 @@ defined( 'ABSPATH' ) || exit;
 
 final class BootstrapController {
 	private bool $woocommerce_active;
+	private DatasetRepository $datasets;
 
-	public function __construct( bool $woocommerce_active ) {
+	public function __construct( bool $woocommerce_active, DatasetRepository $datasets ) {
 		$this->woocommerce_active = $woocommerce_active;
+		$this->datasets           = $datasets;
 	}
 
 	/**
@@ -69,11 +72,7 @@ final class BootstrapController {
 				'csvImportExport' => false,
 				'ysfSync'         => false,
 			),
-			'datasetStatus'     => array(
-				'currentDatasetAvailable' => false,
-				'legacyDatasetAvailable'  => false,
-				'communesAvailable'       => false,
-			),
+			'datasetStatus'     => $this->datasets->dataset_status(),
 		);
 	}
 

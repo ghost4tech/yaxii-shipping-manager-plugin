@@ -1,13 +1,18 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-import { fetchBootstrapPayload, readBootstrapConfig, type BootstrapPayload } from "./bootstrap";
+import {
+  fetchBootstrapPayload,
+  readBootstrapConfig,
+  type AdminBootstrapConfig,
+  type BootstrapPayload,
+} from "./bootstrap";
 import AdminApp from "./routes";
 import "./styles.css";
 
 type BootState =
   | { status: "loading" }
-  | { status: "ready"; payload: BootstrapPayload }
+  | { status: "ready"; config: AdminBootstrapConfig; payload: BootstrapPayload }
   | { status: "error"; message: string };
 
 const mount = document.getElementById("yaxii-shipping-manager-admin-app");
@@ -31,7 +36,7 @@ function WordPressAdminApp() {
         const config = readBootstrapConfig();
         const payload = await fetchBootstrapPayload(config);
         if (!cancelled) {
-          setState({ status: "ready", payload });
+          setState({ status: "ready", config, payload });
         }
       } catch (error) {
         if (!cancelled) {
@@ -70,7 +75,7 @@ function WordPressAdminApp() {
     );
   }
 
-  return <AdminApp bootstrap={state.payload} />;
+  return <AdminApp bootstrap={state.payload} config={state.config} />;
 }
 
 function ShellMessage({

@@ -1,0 +1,692 @@
+[
+  {
+    "code": "01",
+    "source_id": 1,
+    "name_fr": "Adrar",
+    "name_ar": "أدرار",
+    "label": "Adrar",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "02",
+    "source_id": 2,
+    "name_fr": "Chlef",
+    "name_ar": "الشلف",
+    "label": "Chlef",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "03",
+    "source_id": 3,
+    "name_fr": "Laghouat",
+    "name_ar": "الأغواط",
+    "label": "Laghouat",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "04",
+    "source_id": 4,
+    "name_fr": "Oum El Bouaghi",
+    "name_ar": "أم البواقي",
+    "label": "Oum El Bouaghi",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "05",
+    "source_id": 5,
+    "name_fr": "Batna",
+    "name_ar": "باتنة",
+    "label": "Batna",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "06",
+    "source_id": 6,
+    "name_fr": "Bejaia",
+    "name_ar": "بجاية",
+    "label": "Bejaia",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "07",
+    "source_id": 7,
+    "name_fr": "Biskra",
+    "name_ar": "بسكرة",
+    "label": "Biskra",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "08",
+    "source_id": 8,
+    "name_fr": "Bechar",
+    "name_ar": "بشار",
+    "label": "Bechar",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "09",
+    "source_id": 9,
+    "name_fr": "Blida",
+    "name_ar": "البليدة",
+    "label": "Blida",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "10",
+    "source_id": 10,
+    "name_fr": "Bouira",
+    "name_ar": "البويرة",
+    "label": "Bouira",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "11",
+    "source_id": 11,
+    "name_fr": "Tamanrasset",
+    "name_ar": "تمنراست",
+    "label": "Tamanrasset",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "12",
+    "source_id": 12,
+    "name_fr": "Tebessa",
+    "name_ar": "تبسة",
+    "label": "Tebessa",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "13",
+    "source_id": 13,
+    "name_fr": "Tlemcen",
+    "name_ar": "تلمسان",
+    "label": "Tlemcen",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "14",
+    "source_id": 14,
+    "name_fr": "Tiaret",
+    "name_ar": "تيارت",
+    "label": "Tiaret",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "15",
+    "source_id": 15,
+    "name_fr": "Tizi Ouzou",
+    "name_ar": "تيزي وزو",
+    "label": "Tizi Ouzou",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "16",
+    "source_id": 16,
+    "name_fr": "Alger",
+    "name_ar": "الجزائر",
+    "label": "Alger",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "17",
+    "source_id": 17,
+    "name_fr": "Djelfa",
+    "name_ar": "الجلفة",
+    "label": "Djelfa",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "18",
+    "source_id": 18,
+    "name_fr": "Jijel",
+    "name_ar": "جيجل",
+    "label": "Jijel",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "19",
+    "source_id": 19,
+    "name_fr": "Setif",
+    "name_ar": "سطيف",
+    "label": "Setif",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "20",
+    "source_id": 20,
+    "name_fr": "Saida",
+    "name_ar": "سعيدة",
+    "label": "Saida",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "21",
+    "source_id": 21,
+    "name_fr": "Skikda",
+    "name_ar": "سكيكدة",
+    "label": "Skikda",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "22",
+    "source_id": 22,
+    "name_fr": "Sidi Bel Abbes",
+    "name_ar": "سيدي بلعباس",
+    "label": "Sidi Bel Abbes",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "23",
+    "source_id": 23,
+    "name_fr": "Annaba",
+    "name_ar": "عنابة",
+    "label": "Annaba",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "24",
+    "source_id": 24,
+    "name_fr": "Guelma",
+    "name_ar": "قالمة",
+    "label": "Guelma",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "25",
+    "source_id": 25,
+    "name_fr": "Constantine",
+    "name_ar": "قسنطينة",
+    "label": "Constantine",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "26",
+    "source_id": 26,
+    "name_fr": "Medea",
+    "name_ar": "المدية",
+    "label": "Medea",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "27",
+    "source_id": 27,
+    "name_fr": "Mostaganem",
+    "name_ar": "مستغانم",
+    "label": "Mostaganem",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "28",
+    "source_id": 28,
+    "name_fr": "M'Sila",
+    "name_ar": "المسيلة",
+    "label": "M'Sila",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "29",
+    "source_id": 29,
+    "name_fr": "Mascara",
+    "name_ar": "معسكر",
+    "label": "Mascara",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "30",
+    "source_id": 30,
+    "name_fr": "Ouargla",
+    "name_ar": "ورقلة",
+    "label": "Ouargla",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "31",
+    "source_id": 31,
+    "name_fr": "Oran",
+    "name_ar": "وهران",
+    "label": "Oran",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "32",
+    "source_id": 32,
+    "name_fr": "El Bayadh",
+    "name_ar": "البيض",
+    "label": "El Bayadh",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "33",
+    "source_id": 33,
+    "name_fr": "Illizi",
+    "name_ar": "إليزي",
+    "label": "Illizi",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "34",
+    "source_id": 34,
+    "name_fr": "Bordj Bou Arreridj",
+    "name_ar": "برج بوعريريج",
+    "label": "Bordj Bou Arreridj",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "35",
+    "source_id": 35,
+    "name_fr": "Boumerdes",
+    "name_ar": "بومرداس",
+    "label": "Boumerdes",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "36",
+    "source_id": 36,
+    "name_fr": "El Tarf",
+    "name_ar": "الطارف",
+    "label": "El Tarf",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "37",
+    "source_id": 37,
+    "name_fr": "Tindouf",
+    "name_ar": "تندوف",
+    "label": "Tindouf",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "38",
+    "source_id": 38,
+    "name_fr": "Tissemsilt",
+    "name_ar": "تيسمسيلت",
+    "label": "Tissemsilt",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "39",
+    "source_id": 39,
+    "name_fr": "El Oued",
+    "name_ar": "الوادي",
+    "label": "El Oued",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "40",
+    "source_id": 40,
+    "name_fr": "Khenchela",
+    "name_ar": "خنشلة",
+    "label": "Khenchela",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "41",
+    "source_id": 41,
+    "name_fr": "Souk Ahras",
+    "name_ar": "سوق أهراس",
+    "label": "Souk Ahras",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "42",
+    "source_id": 42,
+    "name_fr": "Tipaza",
+    "name_ar": "تيبازة",
+    "label": "Tipaza",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "43",
+    "source_id": 43,
+    "name_fr": "Mila",
+    "name_ar": "ميلة",
+    "label": "Mila",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "44",
+    "source_id": 44,
+    "name_fr": "Ain Defla",
+    "name_ar": "عين الدفلى",
+    "label": "Ain Defla",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "45",
+    "source_id": 45,
+    "name_fr": "Naama",
+    "name_ar": "النعامة",
+    "label": "Naama",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "46",
+    "source_id": 46,
+    "name_fr": "Ain Temouchent",
+    "name_ar": "عين تموشنت",
+    "label": "Ain Temouchent",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "47",
+    "source_id": 47,
+    "name_fr": "Ghardaia",
+    "name_ar": "غرداية",
+    "label": "Ghardaia",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "48",
+    "source_id": 48,
+    "name_fr": "Relizane",
+    "name_ar": "غليزان",
+    "label": "Relizane",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "49",
+    "source_id": 49,
+    "name_fr": "Timimoun",
+    "name_ar": "تيميمون",
+    "label": "Timimoun",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "50",
+    "source_id": 50,
+    "name_fr": "Bordj Badji Mokhtar",
+    "name_ar": "برج باجي مختار",
+    "label": "Bordj Badji Mokhtar",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "51",
+    "source_id": 51,
+    "name_fr": "Ouled Djellal",
+    "name_ar": "أولاد جلال",
+    "label": "Ouled Djellal",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "52",
+    "source_id": 52,
+    "name_fr": "Beni Abbes",
+    "name_ar": "بني عباس",
+    "label": "Beni Abbes",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "53",
+    "source_id": 53,
+    "name_fr": "In Salah",
+    "name_ar": "عين صالح",
+    "label": "In Salah",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "54",
+    "source_id": 54,
+    "name_fr": "In Guezzam",
+    "name_ar": "عين قزام",
+    "label": "In Guezzam",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "55",
+    "source_id": 55,
+    "name_fr": "Touggourt",
+    "name_ar": "تقرت",
+    "label": "Touggourt",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "56",
+    "source_id": 56,
+    "name_fr": "Djanet",
+    "name_ar": "جانت",
+    "label": "Djanet",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "57",
+    "source_id": 57,
+    "name_fr": "El M'Ghair",
+    "name_ar": "المغير",
+    "label": "El M'Ghair",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "58",
+    "source_id": 58,
+    "name_fr": "El Meniaa",
+    "name_ar": "المنيعة",
+    "label": "El Meniaa",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "59",
+    "source_id": 59,
+    "name_fr": "Aflou",
+    "name_ar": "أفلو",
+    "label": "Aflou",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "60",
+    "source_id": 60,
+    "name_fr": "El Abiodh Sidi Cheikh",
+    "name_ar": "الأبيض سيدي الشيخ",
+    "label": "El Abiodh Sidi Cheikh",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "61",
+    "source_id": 61,
+    "name_fr": "El Aricha",
+    "name_ar": "العريشة",
+    "label": "El Aricha",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "62",
+    "source_id": 62,
+    "name_fr": "El Kantara",
+    "name_ar": "القنطرة",
+    "label": "El Kantara",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "63",
+    "source_id": 63,
+    "name_fr": "Barika",
+    "name_ar": "بريكة",
+    "label": "Barika",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "64",
+    "source_id": 64,
+    "name_fr": "Bou Saada",
+    "name_ar": "بوسعادة",
+    "label": "Bou Saada",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "65",
+    "source_id": 65,
+    "name_fr": "Bir El Ater",
+    "name_ar": "بير العاتر",
+    "label": "Bir El Ater",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "66",
+    "source_id": 66,
+    "name_fr": "Ksar El Boukhari",
+    "name_ar": "قصر البخاري",
+    "label": "Ksar El Boukhari",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "67",
+    "source_id": 67,
+    "name_fr": "Ksar Chellala",
+    "name_ar": "قصر الشلالة",
+    "label": "Ksar Chellala",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "68",
+    "source_id": 68,
+    "name_fr": "Ain Oussara",
+    "name_ar": "عين وسارة",
+    "label": "Ain Oussara",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  },
+  {
+    "code": "69",
+    "source_id": 69,
+    "name_fr": "Messaad",
+    "name_ar": "مسعد",
+    "label": "Messaad",
+    "mode": "current",
+    "supported": true,
+    "notes": []
+  }
+]

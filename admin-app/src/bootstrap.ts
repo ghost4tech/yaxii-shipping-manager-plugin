@@ -1,3 +1,5 @@
+import type { DatasetStatus } from "./types/dataset";
+
 export type AdminBootstrapConfig = {
   restUrl: string;
   nonce: string;
@@ -9,26 +11,24 @@ export type BootstrapPayload = {
   restUrl: string;
   nonce: string;
   capabilities: {
+    manageWooCommerce: boolean;
     manageOptions: boolean;
+    accessPlugin: boolean;
   };
   woocommerceActive: boolean;
   adminUrls: {
     pluginPage: string;
-    shippingZones: string;
+    woocommerceSettings: string;
+    plugins: string;
   };
   featureFlags: {
-    datasetReady: boolean;
-    diagnosticsReady: boolean;
-    previewPlannerReady: boolean;
-    applyEngineReady: boolean;
-    csvReady: boolean;
-    smartFormSyncReady: boolean;
+    diagnostics: boolean;
+    previewPlanner: boolean;
+    applyEngine: boolean;
+    csvImportExport: boolean;
+    ysfSync: boolean;
   };
-  dataset: {
-    currentVerified: boolean;
-    legacySupported: boolean;
-    version: string | null;
-  };
+  datasetStatus: DatasetStatus;
 };
 
 declare global {
@@ -66,9 +66,35 @@ export async function fetchBootstrapPayload(
     throw new Error(`Bootstrap request failed with HTTP ${response.status}.`);
   }
 
-  return response.json() as Promise<BootstrapPayload>;
+  const payload: unknown = await response.json();
+  return parseBootstrapPayload(payload);
 }
 
 function ensureTrailingSlash(value: string): string {
   return value.endsWith("/") ? value : `${value}/`;
+}
+
+function parseBootstrapPayload(payload: unknown): BootstrapPayload {
+  if (!isObject(payload)) {
+    throw new Error("Bootstrap response was not a JSON object.");
+  }
+  if (
+    typeof payload.pluginVersion !== "string" ||
+    typeof payload.restNamespace !== "string" ||
+    typeof payload.restUrl !== "string" ||
+    typeof payload.nonce !== "string" ||
+    typeof payload.woocommerceActive !== "boolean" ||
+    !isObject(payload.capabilities) ||
+    !isObject(payload.adminUrls) ||
+    !isObject(payload.featureFlags) ||
+    !isObject(payload.datasetStatus)
+  ) {
+    throw new Error("Bootstrap response did not match the expected contract.");
+  }
+
+  return payload as BootstrapPayload;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
