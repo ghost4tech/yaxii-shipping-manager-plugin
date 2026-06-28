@@ -124,10 +124,15 @@ The current plugin still returns:
 
 ```json
 {
+  "previewHash": "64-character sha256 hash",
+  "previewGeneratedAt": "2026-06-28T00:00:00+00:00",
+  "applyContractVersion": "apply-contract-v1",
   "canApplyLater": false,
   "canApplyLaterMessage": "Apply engine is not implemented yet."
 }
 ```
+
+The preview hash is a reference for a future confirmed apply request. It is not stored and does not allow apply by itself.
 
 ## Counts
 
@@ -155,3 +160,5 @@ The readiness model does not:
 - write the managed registry
 
 The future apply engine must still require an explicit reviewed preview and must protect manual zones by default.
+
+TASK-006A adds request validation for the future apply endpoint, but that endpoint remains disabled and returns `applyEngineAvailable: false`.

@@ -59,6 +59,9 @@ The endpoint returns:
 - `applyEngineAvailable: false`
 - `managedRegistryAvailable: true`
 - `managedRegistryOption`
+- `applyContractVersion`
+- `requiredConfirmationText`
+- `applyRequestFields`
 - `managedZoneCount`
 - locked `safetyPolicy`
 - `requiredNextSteps`
@@ -71,6 +74,49 @@ Access uses the same protected admin policy as diagnostics and preview:
 - WooCommerce inactive: `manage_options`
 
 The endpoint does not write to WooCommerce, settings, options, files, or datasets.
+
+## Disabled Apply Endpoint
+
+TASK-006A adds a disabled apply endpoint:
+
+```text
+POST /wp-json/yaxii-shipping-manager/v1/apply
+```
+
+The endpoint validates the future apply request contract, then returns:
+
+```json
+{
+  "applyEngineAvailable": false,
+  "message": "Apply engine is not enabled yet.",
+  "requestAccepted": true
+}
+```
+
+The endpoint is intentionally disabled and does not write to WooCommerce.
+
+Access policy:
+
+- WooCommerce active: `manage_woocommerce`
+- WooCommerce inactive: `manage_options`
+- `X-WP-Nonce` is required
+
+## Future Apply Request Contract
+
+Future apply requests must include:
+
+- `previewHash`: 64-character SHA-256 preview hash from the preview response.
+- `previewGeneratedAt`: preview timestamp from the preview response.
+- `selectedWilayaCodes`: selected two-digit wilaya codes.
+- `acceptedPlanSummary`: numeric summary counts accepted by the merchant.
+- `confirmed`: `true`.
+- `confirmationText`: `APPLY YAXII SHIPPING PLAN`.
+- `safetyPolicySnapshot`: all locked safety policy values set to `true`.
+- `applyContractVersion`: `apply-contract-v1`.
+
+Unknown request keys are rejected. Missing confirmation, stale preview metadata, invalid preview hash format, planned deletes, and disabled safety rules are rejected.
+
+The future real apply engine must re-read WooCommerce and regenerate/compare the preview before writing. A submitted preview hash is a contract reference, not proof that current WooCommerce state is unchanged.
 
 ## Safety Rules
 

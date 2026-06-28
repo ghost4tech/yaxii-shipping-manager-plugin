@@ -8,6 +8,7 @@
 namespace Yaxii\ShippingManager\Preview;
 
 use Yaxii\ShippingManager\Apply\ApplyReadinessEvaluator;
+use Yaxii\ShippingManager\Apply\ApplyRequestSanitizer;
 use Yaxii\ShippingManager\Apply\ManagedZoneRegistry;
 use Yaxii\ShippingManager\Data\DatasetMode;
 use Yaxii\ShippingManager\Data\DatasetRepository;
@@ -55,13 +56,19 @@ final class PreviewPlanner {
 		$warning_messages        = $this->plan_warnings( $diagnostics, $plan_groups );
 		$plan_groups['warnings'] = $this->warning_items( $warning_messages );
 		$this->sort_plan_groups( $plan_groups );
+		$summary                 = $this->summary( $plan_groups, $selected_count );
+		$generated_at            = gmdate( 'c' );
+		$preview_hash            = $this->preview_hash( $summary, $plan_groups, $context['selectedCodes'], $settings['safetyPolicy'] );
 
 		return array(
-			'summary'              => $this->summary( $plan_groups, $selected_count ),
+			'summary'              => $summary,
 			'plan'                 => $plan_groups,
 			'applyReadiness'       => $this->apply_readiness( $plan_groups, $diagnostics, $settings['safetyPolicy'], $selected_count ),
 			'warnings'             => $warning_messages,
-			'generatedAt'          => gmdate( 'c' ),
+			'generatedAt'          => $generated_at,
+			'previewGeneratedAt'   => $generated_at,
+			'previewHash'          => $preview_hash,
+			'applyContractVersion' => ApplyRequestSanitizer::CONTRACT_VERSION,
 			'safetyPolicy'         => $settings['safetyPolicy'],
 			'canApplyLater'        => false,
 			'canApplyLaterMessage' => __( 'Apply engine is not implemented yet.', 'yaxii-shipping-manager' ),
@@ -119,6 +126,24 @@ final class PreviewPlanner {
 			'managedRegistryOption'    => ManagedZoneRegistry::OPTION_NAME,
 			'managedZoneCount'         => $this->managed_registry->managed_zone_count(),
 		);
+	}
+
+	/**
+	 * @param array<string,mixed>                          $summary Preview summary.
+	 * @param array<string,array<int,array<string,mixed>>> $plan_groups Preview plan groups.
+	 * @param array<int,string>                            $selected_codes Selected wilaya codes.
+	 * @param array<string,mixed>                          $safety_policy Locked safety policy.
+	 */
+	private function preview_hash( array $summary, array $plan_groups, array $selected_codes, array $safety_policy ): string {
+		$hash_payload = array(
+			'applyContractVersion' => ApplyRequestSanitizer::CONTRACT_VERSION,
+			'selectedWilayaCodes'  => $selected_codes,
+			'summary'              => $summary,
+			'plan'                 => $plan_groups,
+			'safetyPolicy'         => $safety_policy,
+		);
+
+		return hash( 'sha256', (string) wp_json_encode( $hash_payload ) );
 	}
 
 	/**

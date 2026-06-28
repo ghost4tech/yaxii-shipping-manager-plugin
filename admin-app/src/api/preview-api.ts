@@ -41,6 +41,9 @@ function parsePreviewResponse(payload: unknown): PreviewResponse {
     !isApplyReadiness(payload.applyReadiness) ||
     !Array.isArray(payload.warnings) ||
     typeof payload.generatedAt !== "string" ||
+    typeof payload.previewGeneratedAt !== "string" ||
+    !isPreviewHash(payload.previewHash) ||
+    payload.applyContractVersion !== "apply-contract-v1" ||
     !isObject(payload.safetyPolicy) ||
     payload.canApplyLater !== false ||
     typeof payload.canApplyLaterMessage !== "string"
@@ -54,10 +57,17 @@ function parsePreviewResponse(payload: unknown): PreviewResponse {
     applyReadiness: payload.applyReadiness,
     warnings: payload.warnings.filter((warning): warning is string => typeof warning === "string"),
     generatedAt: payload.generatedAt,
+    previewGeneratedAt: payload.previewGeneratedAt,
+    previewHash: payload.previewHash,
+    applyContractVersion: "apply-contract-v1",
     safetyPolicy: payload.safetyPolicy as PreviewResponse["safetyPolicy"],
     canApplyLater: false,
     canApplyLaterMessage: payload.canApplyLaterMessage,
   };
+}
+
+function isPreviewHash(hash: unknown): hash is string {
+  return typeof hash === "string" && /^[a-f0-9]{64}$/.test(hash);
 }
 
 function isApplyReadiness(readiness: unknown): readiness is ApplyReadiness {

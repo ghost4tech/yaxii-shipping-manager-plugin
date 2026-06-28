@@ -1459,6 +1459,33 @@ function PreviewPlanPanel({ response }: { response: PreviewResponse }) {
 
       <ApplyReadinessPanel readiness={response.applyReadiness} />
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Apply confirmation contract</CardTitle>
+          <CardDescription>
+            Apply will be enabled after the safe apply engine is implemented.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>Preview reference</span>
+            <Badge variant="outline">{response.previewHash.slice(0, 12)}</Badge>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>Preview generated</span>
+            <Badge variant="secondary">{response.previewGeneratedAt}</Badge>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>Contract version</span>
+            <Badge variant="outline">{response.applyContractVersion}</Badge>
+          </div>
+          <Button disabled variant="outline" className="mt-2">
+            <Lock className="h-4 w-4" />
+            Apply disabled
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <PreviewStat label="Zones to create" value={String(response.summary.createZones)} />
         <PreviewStat label="Methods to add" value={String(response.summary.addMethods)} />

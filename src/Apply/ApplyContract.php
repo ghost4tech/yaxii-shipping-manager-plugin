@@ -30,6 +30,18 @@ final class ApplyContract {
 			'applyEngineAvailable'    => false,
 			'managedRegistryAvailable' => true,
 			'managedRegistryOption'    => ManagedZoneRegistry::OPTION_NAME,
+			'applyContractVersion'     => ApplyRequestSanitizer::CONTRACT_VERSION,
+			'requiredConfirmationText' => ApplyRequestSanitizer::CONFIRMATION_TEXT,
+			'applyRequestFields'       => array(
+				'previewHash',
+				'previewGeneratedAt',
+				'selectedWilayaCodes',
+				'acceptedPlanSummary',
+				'confirmed',
+				'confirmationText',
+				'safetyPolicySnapshot',
+				'applyContractVersion',
+			),
 			'managedZoneCount'         => $this->managed_registry->managed_zone_count(),
 			'safetyPolicy'             => $settings_payload['settings']['safetyPolicy'],
 			'requiredNextSteps'        => array(

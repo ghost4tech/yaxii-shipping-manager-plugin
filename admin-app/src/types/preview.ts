@@ -99,6 +99,9 @@ export type PreviewResponse = {
   applyReadiness: ApplyReadiness;
   warnings: string[];
   generatedAt: string;
+  previewGeneratedAt: string;
+  previewHash: string;
+  applyContractVersion: "apply-contract-v1";
   safetyPolicy: {
     protectManualZones: true;
     requirePreviewBeforeApply: true;

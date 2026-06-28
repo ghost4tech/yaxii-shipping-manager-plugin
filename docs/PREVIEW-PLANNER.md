@@ -50,10 +50,15 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
 
 ```json
 {
+  "previewHash": "64-character sha256 hash",
+  "previewGeneratedAt": "2026-06-28T00:00:00+00:00",
+  "applyContractVersion": "apply-contract-v1",
   "canApplyLater": false,
   "canApplyLaterMessage": "Apply engine is not implemented yet."
 }
 ```
+
+`previewHash` is deterministic for the selected wilayas, summary, plan groups, locked safety policy, and apply contract version. It is not persisted in TASK-006A.
 
 The response also includes `applyReadiness`, a read-only UX state derived from diagnostics, the preview plan, the apply contract, and locked safety policy. It explains whether the store looks fresh, partial, manually configured, conflicted, missing methods, Yaxii-managed, or blocked.
 
