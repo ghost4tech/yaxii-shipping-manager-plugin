@@ -587,7 +587,9 @@ function GeneratorHub({
                 <BulletItem>Current Algeria dataset</BulletItem>
                 <BulletItem>Legacy 58-compatible mode is not available yet</BulletItem>
                 <BulletItem>CSV import path prepared, backend not connected yet</BulletItem>
-                <BulletItem>Apply creates missing zones only after confirmation</BulletItem>
+                <BulletItem>
+                  Apply can create zones and add missing methods after confirmation
+                </BulletItem>
               </ul>
               <Button className="mt-6 gap-2" onClick={onLaunch} disabled={launchDisabled}>
                 <Wand2 className="h-4 w-4" /> Start generator
@@ -605,6 +607,7 @@ function GeneratorHub({
             previewRequest={latestPreview.request}
             onOpenDiagnostics={onOpenDiagnostics}
             onRefreshDiagnostics={onRefreshDiagnostics}
+            onDone={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           />
         </div>
       )}

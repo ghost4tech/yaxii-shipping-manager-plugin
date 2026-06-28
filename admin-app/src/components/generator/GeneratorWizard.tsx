@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Activity,
@@ -163,6 +163,7 @@ export function GeneratorWizard({
   const [officeCustomLabel, setOfficeCustomLabel] = useState(settings.officeCustomLabel);
   const [previewState, setPreviewState] = useState<PreviewLoadState>({ status: "idle" });
   const [previewContext, setPreviewContext] = useState<GeneratorPreviewContext | null>(null);
+  const [autoPreviewSignature, setAutoPreviewSignature] = useState<string | null>(null);
 
   const selectedCodeSet = useMemo(() => new Set(selectedCodes), [selectedCodes]);
   const filteredWilayas = useMemo(() => {
@@ -315,18 +316,6 @@ export function GeneratorWizard({
     }
   };
 
-  const buildPricingRows = () =>
-    selectedWilayas.map((wilaya) => ({
-      wilayaCode: wilaya.code,
-      enabled: true,
-      methods: Object.fromEntries(
-        enabledMethods.map((method) => [
-          method.key,
-          priceForWilaya(wilaya.code, method, priceOverrides),
-        ]),
-      ) as Partial<Record<ShippingMethodKey, number | null>>,
-    }));
-
   const buildDraft = (): Wilaya[] => {
     return baseList.map((wilaya) => {
       const rowEnabled = selectedCodeSet.has(wilaya.code);
@@ -357,30 +346,58 @@ export function GeneratorWizard({
     });
   };
 
-  const previewRequest = (): PreviewRequest => ({
-    selectedWilayaCodes: selectedCodes,
-    pricingRows: buildPricingRows(),
-    methods,
-    zoneNameFormat,
-    zonePrefix,
-    regionLabelFormat: labelFormat,
-  });
+  const currentPreviewRequest = useMemo<PreviewRequest>(
+    () => ({
+      selectedWilayaCodes: selectedCodes,
+      pricingRows: selectedWilayas.map((wilaya) => ({
+        wilayaCode: wilaya.code,
+        enabled: true,
+        methods: Object.fromEntries(
+          enabledMethods.map((method) => [
+            method.key,
+            priceForWilaya(wilaya.code, method, priceOverrides),
+          ]),
+        ) as Partial<Record<ShippingMethodKey, number | null>>,
+      })),
+      methods,
+      zoneNameFormat,
+      zonePrefix,
+      regionLabelFormat: labelFormat,
+    }),
+    [
+      enabledMethods,
+      labelFormat,
+      methods,
+      priceOverrides,
+      selectedCodes,
+      selectedWilayas,
+      zoneNameFormat,
+      zonePrefix,
+    ],
+  );
+  const currentPreviewSignature = useMemo(
+    () => JSON.stringify(currentPreviewRequest),
+    [currentPreviewRequest],
+  );
+  const currentPreviewContext = useMemo<GeneratorPreviewContext>(
+    () => ({
+      selectedWilayaCount: selectedCodes.length,
+      communeCoverageSummary: communeCoverageSummary(communeMode, selectedCodes, communesByWilaya),
+      enabledMethodLabels: enabledMethods.map((method) => method.label),
+      priceSummary: priceSummary(enabledMethods, selectedCodes, priceOverrides),
+    }),
+    [communeMode, communesByWilaya, enabledMethods, priceOverrides, selectedCodes],
+  );
+  const previewDraftValid = selectedCodes.length > 0 && enabledMethods.length > 0 && !priceError;
 
-  const buildPreviewContext = (): GeneratorPreviewContext => ({
-    selectedWilayaCount: selectedCodes.length,
-    communeCoverageSummary: communeCoverageSummary(communeMode, selectedCodes, communesByWilaya),
-    enabledMethodLabels: enabledMethods.map((method) => method.label),
-    priceSummary: priceSummary(enabledMethods, selectedCodes, priceOverrides),
-  });
-
-  const loadPreview = async () => {
+  const loadPreview = useCallback(async () => {
     setPreviewState({ status: "loading" });
     setPreviewContext(null);
 
     try {
-      const request = previewRequest();
+      const request = currentPreviewRequest;
       const response = await fetchPreview(config, request);
-      const context = buildPreviewContext();
+      const context = currentPreviewContext;
       setPreviewState({ status: "ready", response, request });
       setPreviewContext(context);
       onPreviewReady(response, context, request);
@@ -390,7 +407,20 @@ export function GeneratorWizard({
         message: error instanceof Error ? error.message : "Unable to generate preview.",
       });
     }
-  };
+  }, [config, currentPreviewContext, currentPreviewRequest, onPreviewReady]);
+
+  useEffect(() => {
+    if (step !== WIZARD_STEPS.length - 1 || !previewDraftValid) {
+      return;
+    }
+
+    if (autoPreviewSignature === currentPreviewSignature) {
+      return;
+    }
+
+    setAutoPreviewSignature(currentPreviewSignature);
+    void loadPreview();
+  }, [autoPreviewSignature, currentPreviewSignature, loadPreview, previewDraftValid, step]);
 
   const useDraftAndClose = () => {
     onComplete(buildDraft(), activeMethodDefs);
@@ -540,10 +570,12 @@ export function GeneratorWizard({
                 zonePrefix={zonePrefix}
                 config={config}
                 previewState={previewState}
-                previewContext={previewContext}
+                previewContext={previewContext ?? currentPreviewContext}
+                previewDraftValid={previewDraftValid}
                 loadPreview={loadPreview}
                 onOpenDiagnostics={onOpenDiagnostics}
                 onRefreshDiagnostics={onRefreshDiagnostics}
+                onDone={onClose}
               />
             )}
           </div>
@@ -561,7 +593,8 @@ export function GeneratorWizard({
           </Button>
           <div className="hidden text-xs text-muted-foreground md:block">
             <ShieldCheck className="mr-1 inline h-3 w-3" />
-            Preview first. Apply can create missing zones only after confirmation.
+            Preview first. Apply can create missing zones and add missing methods after
+            confirmation.
           </div>
           {step < WIZARD_STEPS.length - 1 ? (
             <Button
@@ -1605,9 +1638,11 @@ function StepPreview({
   config,
   previewState,
   previewContext,
+  previewDraftValid,
   loadPreview,
   onOpenDiagnostics,
   onRefreshDiagnostics,
+  onDone,
 }: {
   setupMode: SetupMode;
   dataset: DatasetMode;
@@ -1621,10 +1656,12 @@ function StepPreview({
   zonePrefix: string;
   config: AdminBootstrapConfig;
   previewState: PreviewLoadState;
-  previewContext: GeneratorPreviewContext | null;
+  previewContext: GeneratorPreviewContext;
+  previewDraftValid: boolean;
   loadPreview: () => Promise<void>;
   onOpenDiagnostics: () => void;
   onRefreshDiagnostics: () => void;
+  onDone: () => void;
 }) {
   const sampleWilaya = selectedWilayas[0];
   const sampleLabel = sampleWilaya
@@ -1638,32 +1675,17 @@ function StepPreview({
         name: sampleLabel,
       })
     : "Select a wilaya";
-  const currentContext: GeneratorPreviewContext = {
-    selectedWilayaCount: selectedWilayas.length,
-    communeCoverageSummary: communeCoverageSummary(
-      communeMode,
-      selectedWilayas.map((wilaya) => wilaya.code),
-      communesByWilaya,
-    ),
-    enabledMethodLabels: enabledMethods.map((method) => method.label),
-    priceSummary: priceSummary(
-      enabledMethods,
-      selectedWilayas.map((wilaya) => wilaya.code),
-      priceOverrides,
-    ),
-  };
-
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-2xl font-semibold tracking-tight">Preview plan</h3>
+          <h3 className="text-2xl font-semibold tracking-tight">Review and apply</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            This is a preview only. No WooCommerce changes were made.
+            Yaxii checks WooCommerce before apply and protects manual zones.
           </p>
         </div>
         <Badge variant="secondary" className="rounded-full">
-          Create zones only
+          Safe apply
         </Badge>
       </div>
 
@@ -1697,16 +1719,14 @@ function StepPreview({
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Draft review</CardTitle>
-            <CardDescription>
-              These choices are sent to the read-only preview endpoint.
-            </CardDescription>
+            <CardTitle className="text-sm">Setup summary</CardTitle>
+            <CardDescription>These choices are checked against WooCommerce.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <PreviewLine label="Setup mode" value={setupModeLabel(setupMode)} />
             <PreviewLine label="Sample zone" value={sampleZoneName} />
-            <PreviewLine label="Commune coverage" value={currentContext.communeCoverageSummary} />
-            <PreviewLine label="Prices" value={currentContext.priceSummary} />
+            <PreviewLine label="Commune coverage" value={previewContext.communeCoverageSummary} />
+            <PreviewLine label="Prices" value={previewContext.priceSummary} />
           </CardContent>
         </Card>
 
@@ -1728,24 +1748,43 @@ function StepPreview({
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button
+          variant="outline"
           onClick={() => void loadPreview()}
-          disabled={
-            previewState.status === "loading" ||
-            selectedWilayas.length === 0 ||
-            enabledMethods.length === 0
-          }
+          disabled={previewState.status === "loading" || !previewDraftValid}
         >
-          <Activity className="h-4 w-4" />
-          {previewState.status === "loading" ? "Generating preview..." : "Preview changes"}
-        </Button>
-        <Button disabled variant="outline">
-          <Lock className="h-4 w-4" />
-          Apply after preview below
+          <RefreshCw className="h-4 w-4" />
+          {previewState.status === "loading" ? "Checking setup..." : "Refresh preview"}
         </Button>
         <Button variant="outline" onClick={onOpenDiagnostics}>
-          Open diagnostics
+          Check diagnostics
         </Button>
       </div>
+
+      {previewState.status === "idle" && previewDraftValid && (
+        <Alert className="mt-6">
+          <Activity className="h-4 w-4" />
+          <AlertTitle>Checking your WooCommerce shipping setup...</AlertTitle>
+          <AlertDescription>The preview starts automatically on this final step.</AlertDescription>
+        </Alert>
+      )}
+
+      {previewState.status === "loading" && (
+        <Alert className="mt-6">
+          <Activity className="h-4 w-4 animate-spin" />
+          <AlertTitle>Checking your WooCommerce shipping setup...</AlertTitle>
+          <AlertDescription>
+            Yaxii is reading current zones before showing apply options.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!previewDraftValid && (
+        <Alert variant="destructive" className="mt-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Preview needs a valid draft</AlertTitle>
+          <AlertDescription>Select at least one wilaya and one delivery method.</AlertDescription>
+        </Alert>
+      )}
 
       {previewState.status === "error" && (
         <Alert variant="destructive" className="mt-6">
@@ -1758,11 +1797,12 @@ function StepPreview({
       {previewState.status === "ready" && (
         <PreviewPlanPanel
           response={previewState.response}
-          context={previewContext ?? currentContext}
+          context={previewContext}
           config={config}
           previewRequest={previewState.request}
           onOpenDiagnostics={onOpenDiagnostics}
           onRefreshDiagnostics={onRefreshDiagnostics}
+          onDone={onDone}
         />
       )}
     </div>

@@ -158,4 +158,20 @@ The readiness model does not:
 
 Zone creation, method creation, and registry writes happen only inside `POST /apply` after explicit confirmation and fresh preview revalidation.
 
+## Final Step UX
+
+The generator final step auto-runs preview once when the merchant reaches the step with a valid draft. The main view shows a short merchant summary:
+
+- wilayas selected
+- zones to create
+- methods to add
+- updates reserved for a later step
+- manual zones skipped
+- conflicts
+- enabled methods and price summary
+
+Large method lists, zone IDs, method keys, preview hash, contract version, generated timestamp, raw preview groups, and registry/ownership labels stay collapsed under `View affected wilayas` or `Advanced details`.
+
+For the current safe apply scope, the visible confirmation is a checkbox. The frontend submits the backend-required confirmation phrase internally only after the checkbox is checked. Typed confirmation remains a backend contract field and should be reserved in the UI for future dangerous actions such as deletes, manual-zone adoption, or overwrites.
+
 TASK-008B keeps manual zones protected, skips manual overlaps, and blocks conflicts.

@@ -128,6 +128,8 @@ Unknown request keys are rejected. Missing confirmation, stale preview metadata,
 
 The apply engine re-reads WooCommerce and regenerates the preview before writing. A submitted preview hash is a contract reference, not proof that current WooCommerce state is unchanged.
 
+The generator UI may show a checkbox confirmation for the current safe apply scope. That checkbox does not weaken the backend contract: the frontend still sends `confirmed: true` and the required confirmation phrase internally only after the merchant checks the box. Typed confirmation should be reserved in the UI for future dangerous actions such as deletes, manual-zone adoption, or overwrites.
+
 ## Safety Rules
 
 The MVP safety policy remains locked on:

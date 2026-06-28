@@ -23,7 +23,7 @@ Already connected to real backend contracts:
 - Settings initialize from persisted settings.
 - Current wilayas load through `GET /dataset?mode=current&include=wilayas`.
 - Preview calls `POST /preview`.
-- Preview output shows grouped plan results, readiness, preview hash, and disabled apply state.
+- Preview output shows a simplified merchant summary, grouped method additions, collapsed advanced details, readiness, and apply state.
 - Diagnostics uses `GET /diagnostics`.
 - Apply remains disabled through the apply contract.
 
@@ -220,20 +220,29 @@ The preview request should send:
 - zone prefix
 - region label format
 
-Show:
+Behavior:
+
+- Auto-run preview once when the merchant reaches the final step and the draft is valid.
+- Show `Checking your WooCommerce shipping setup...` while the preview request is running.
+- Keep `Refresh preview` as a secondary action.
+- Keep technical fields collapsed in `Advanced details`.
+
+Show in the main summary:
 
 - selected wilayas count
 - commune coverage summary
 - enabled methods
 - price summary
 - safety rules
-- preview groups
 - readiness state
-- preview hash and contract version
+- grouped methods/prices to add
+- short note for unsupported updates that will be handled later
 
 Recommended copy:
 
-> This is a preview only. No WooCommerce changes were made.
+> Yaxii checks WooCommerce before apply and protects manual zones.
+
+Advanced details may show the preview hash, contract version, generated timestamp, raw preview groups, zone IDs, method keys, and internal ownership labels.
 
 ### 9. Apply Managed Zones And Methods
 
@@ -243,7 +252,7 @@ Recommended copy:
 
 > Apply can create missing Yaxii-managed zones and add selected methods with prices to managed zones. Manual zones are not touched.
 
-The active apply button should appear only when a reviewed preview has missing zones or missing methods, no conflicts, and the required confirmation text is entered.
+The active apply button should appear only when a reviewed preview has missing zones or missing methods, no conflicts, and the merchant checks the confirmation checkbox. The frontend still submits the backend-required confirmation phrase internally for the current safe apply scope.
 
 ## UI Copy Recommendations
 
