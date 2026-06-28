@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -7,10 +7,9 @@ import {
   CheckCircle2,
   DollarSign,
   Download,
+  ExternalLink,
   Lock,
   Package,
-  Percent,
-  Power,
   PowerOff,
   RefreshCw,
   Settings as SettingsIcon,
@@ -24,6 +23,7 @@ import {
 import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
 import { fetchDatasetWilayas } from "../api/dataset-api";
 import { fetchDiagnostics } from "../api/diagnostics-api";
+import { fetchPreview } from "../api/preview-api";
 import { fetchSettings, saveSettings } from "../api/settings-api";
 import {
   DATASET_MODE_OPTIONS,
@@ -43,6 +43,7 @@ import type {
   ZoneDiagnostic,
 } from "../types/diagnostics";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
+import type { PreviewRequest, PreviewResponse } from "../types/preview";
 import type {
   OfficeMethodWording,
   PersistedSettings,
@@ -290,12 +291,16 @@ export default function AdminApp({
         />
         {tab === "zones" && (
           <ZonesScreen
+            config={config}
             wilayas={wilayas}
-            setWilayas={setWilayas}
             methodDefs={methodDefs}
             onLaunchWizard={() => setWizardOpen(true)}
             diagnosticsState={diagnosticsState}
             onOpenDiagnostics={() => setTab("diagnostics")}
+            onRefreshDiagnostics={() => setDiagnosticsReloadKey((current) => current + 1)}
+            onPreviewReady={(response, context, request) =>
+              setLatestPreview({ response, context, request })
+            }
           />
         )}
         {tab === "generator" && (
@@ -414,14 +419,6 @@ function RuntimeNotices({
           </AlertDescription>
         </Alert>
       )}
-      <Alert className="border-primary/20 bg-primary/5">
-        <ShieldCheck className="h-4 w-4" />
-        <AlertTitle>Preview before apply</AlertTitle>
-        <AlertDescription>
-          Settings, diagnostics, and preview are active. Apply can create missing managed zones, add
-          missing methods, and update Yaxii-managed method prices after confirmation.
-        </AlertDescription>
-      </Alert>
       {datasetState.status === "loading" && (
         <Alert className="border-primary/20 bg-primary/5">
           <RefreshCw className="h-4 w-4" />
@@ -457,16 +454,6 @@ function RuntimeNotices({
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Settings normalized</AlertTitle>
           <AlertDescription>{settingsState.response.warnings.join(" ")}</AlertDescription>
-        </Alert>
-      )}
-      {datasetState.status === "ready" && (
-        <Alert className="border-emerald-200 bg-emerald-50 text-emerald-950">
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertTitle>Current candidate dataset loaded</AlertTitle>
-          <AlertDescription>
-            {datasetState.records.length} wilaya rows loaded from version{" "}
-            {datasetState.metadataVersion}. Verification remains pending.
-          </AlertDescription>
         </Alert>
       )}
     </div>
@@ -644,19 +631,31 @@ type LiveZoneSummary = {
   zones: ZoneDiagnostic[];
 };
 
+type PendingPriceMap = Record<string, Partial<Record<string, number | null>>>;
+type ZoneReviewState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | {
+      status: "ready";
+      response: PreviewResponse;
+      context: GeneratorPreviewSnapshot["context"];
+      request: PreviewRequest;
+    }
+  | { status: "error"; message: string };
+
 const LIVE_STATUS_META: Record<LiveZoneStatus, { label: string; dot: string; pill: string }> = {
   managed: {
-    label: "Managed",
+    label: "Active",
     dot: "bg-emerald-500",
     pill: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   ready: {
-    label: "Ready",
+    label: "Not managed",
     dot: "bg-primary",
     pill: "border-primary/20 bg-primary/5 text-primary",
   },
   needs_methods: {
-    label: "Needs methods",
+    label: "Missing setup",
     dot: "bg-amber-500",
     pill: "border-amber-200 bg-amber-50 text-amber-700",
   },
@@ -666,12 +665,12 @@ const LIVE_STATUS_META: Record<LiveZoneStatus, { label: string; dot: string; pil
     pill: "border-amber-200 bg-amber-50 text-amber-700",
   },
   missing: {
-    label: "Missing",
+    label: "Missing setup",
     dot: "bg-amber-500",
     pill: "border-amber-200 bg-amber-50 text-amber-700",
   },
   manual: {
-    label: "Manual zone",
+    label: "Protected",
     dot: "bg-slate-400",
     pill: "border-slate-200 bg-slate-50 text-slate-700",
   },
@@ -708,27 +707,36 @@ function LiveStatusPill({ status }: { status: LiveZoneStatus }) {
 }
 
 function ZonesScreen({
+  config,
   wilayas,
-  setWilayas,
   methodDefs,
   onLaunchWizard,
   diagnosticsState,
   onOpenDiagnostics,
+  onRefreshDiagnostics,
+  onPreviewReady,
 }: {
+  config: AdminBootstrapConfig;
   wilayas: Wilaya[];
-  setWilayas: (wilayas: Wilaya[]) => void;
   methodDefs: MethodDef[];
   onLaunchWizard: () => void;
   diagnosticsState: DiagnosticsLoadState;
   onOpenDiagnostics: () => void;
+  onRefreshDiagnostics: () => void;
+  onPreviewReady: (
+    preview: PreviewResponse,
+    context: GeneratorPreviewSnapshot["context"],
+    request: PreviewRequest,
+  ) => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [targetMethod, setTargetMethod] = useState<string>(methodDefs[0]?.key ?? "home_delivery");
-  const [bulkPrice, setBulkPrice] = useState("");
-  const [pct, setPct] = useState("");
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pending, setPending] = useState<Wilaya[] | null>(null);
+  const [bulkPrice, setBulkPriceInput] = useState("");
+  const [pendingPrices, setPendingPrices] = useState<PendingPriceMap>({});
+  const [detailsOpen, setDetailsOpen] = useState<Record<string, boolean>>({});
+  const [reviewState, setReviewState] = useState<ZoneReviewState>({ status: "idle" });
   const liveSummary = shippingSetupSummary(diagnosticsState);
+  const pendingCount = pendingPriceCount(pendingPrices);
 
   if (wilayas.length === 0) {
     return (
@@ -748,7 +756,7 @@ function ZonesScreen({
               </p>
             </div>
             <Button onClick={onLaunchWizard}>
-              <Wand2 className="h-4 w-4" /> Open generator
+              <Wand2 className="h-4 w-4" /> Open Generator
             </Button>
           </CardContent>
         </Card>
@@ -759,153 +767,103 @@ function ZonesScreen({
   const hasSelection = selected.length > 0;
   const toggleAll = (value: boolean) =>
     setSelected(value ? wilayas.map((wilaya) => wilaya.code) : []);
-  const updateRow = (code: string, patch: Partial<Wilaya>) =>
-    setWilayas(wilayas.map((wilaya) => (wilaya.code === code ? { ...wilaya, ...patch } : wilaya)));
-  const updateMethod = (code: string, methodId: string, patch: Partial<Method>) =>
-    setWilayas(
-      wilayas.map((wilaya) =>
-        wilaya.code === code
-          ? {
-              ...wilaya,
-              methods: {
-                ...wilaya.methods,
-                [methodId]: {
-                  ...(wilaya.methods[methodId] ?? {
-                    id: methodId,
-                    label: methodDefs.find((method) => method.key === methodId)?.label ?? methodId,
-                    enabled: true,
-                    price: undefined,
-                  }),
-                  ...patch,
-                },
-              },
-            }
-          : wilaya,
-      ),
-    );
-  const buildPreview = (transform: (wilaya: Wilaya) => Wilaya): Wilaya[] =>
-    wilayas.map((wilaya) => (selected.includes(wilaya.code) ? transform(wilaya) : wilaya));
+  const selectedManagedCodes = selected.filter((code) => {
+    const wilaya = wilayas.find((row) => row.code === code);
+    return wilaya
+      ? canEditManagedMethod(
+          liveStatusForWilaya(wilaya, diagnosticsState, methodDefs),
+          targetMethod,
+        )
+      : false;
+  });
+  const protectedSelectionCount = selected.length - selectedManagedCodes.length;
 
-  const previewBulkPrice = () => {
+  const updatePendingPrice = (
+    wilaya: Wilaya,
+    liveZone: LiveZoneSummary,
+    methodKey: string,
+    price: number | null,
+  ) => {
+    const livePrice = livePriceForKey(liveZone, methodKey);
+    setPendingPrices((current) =>
+      withPendingPrice(current, wilaya.code, methodKey, livePrice === price ? undefined : price),
+    );
+    setReviewState({ status: "idle" });
+  };
+
+  const clearPendingChanges = () => {
+    setPendingPrices({});
+    setReviewState({ status: "idle" });
+  };
+
+  const applyBulkPrice = () => {
     const price = parseOptionalPrice(bulkPrice);
     if (price === undefined || bulkPrice.trim() === "") {
       return;
     }
 
-    setPending(
-      buildPreview((wilaya) => ({
-        ...wilaya,
-        methods: {
-          ...wilaya.methods,
-          [targetMethod]: {
-            ...(wilaya.methods[targetMethod] ?? {
-              id: targetMethod,
-              label: targetMethod,
-              enabled: true,
-              price,
-            }),
-            price,
-            enabled: true,
-          },
-        },
-      })),
-    );
-    setConfirmOpen(true);
+    setBulkPendingPrice(price);
+    setBulkPriceInput("");
   };
 
-  const previewPercent = () => {
-    const percent = Number(pct);
-    if (!percent) {
+  const setBulkPendingPrice = (price: number | null) => {
+    setPendingPrices((current) => {
+      let next = current;
+      selectedManagedCodes.forEach((code) => {
+        const wilaya = wilayas.find((row) => row.code === code);
+        if (!wilaya) {
+          return;
+        }
+        const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, methodDefs);
+        next = withPendingPrice(
+          next,
+          code,
+          targetMethod,
+          livePriceForKey(liveZone, targetMethod) === price ? undefined : price,
+        );
+      });
+      return next;
+    });
+    setReviewState({ status: "idle" });
+  };
+
+  const reviewPendingChanges = async () => {
+    const request = previewRequestFromPendingChanges(
+      wilayas,
+      methodDefs,
+      diagnosticsState,
+      pendingPrices,
+    );
+    if (!request) {
+      setReviewState({ status: "error", message: "No supported pending changes to review." });
       return;
     }
 
-    setPending(
-      buildPreview((wilaya) => {
-        const method = wilaya.methods[targetMethod];
-        if (!method || typeof method.price !== "number") {
-          return wilaya;
-        }
-
-        return {
-          ...wilaya,
-          methods: {
-            ...wilaya.methods,
-            [targetMethod]: { ...method, price: Math.round(method.price * (1 + percent / 100)) },
-          },
-        };
-      }),
-    );
-    setConfirmOpen(true);
-  };
-
-  const makeFree = () => {
-    setPending(
-      buildPreview((wilaya) => {
-        const method = wilaya.methods[targetMethod] ?? {
-          id: targetMethod,
-          label: targetMethod,
-          enabled: true,
-          price: 0,
-        };
-        return {
-          ...wilaya,
-          methods: { ...wilaya.methods, [targetMethod]: { ...method, price: 0, enabled: true } },
-        };
-      }),
-    );
-    setConfirmOpen(true);
-  };
-
-  const disableMethod = () => {
-    setPending(
-      buildPreview((wilaya) => {
-        const method = wilaya.methods[targetMethod];
-        if (!method) {
-          return wilaya;
-        }
-
-        return {
-          ...wilaya,
-          methods: { ...wilaya.methods, [targetMethod]: { ...method, enabled: false } },
-        };
-      }),
-    );
-    setConfirmOpen(true);
-  };
-
-  const setWilayaEnabled = (value: boolean) =>
-    setPending(buildPreview((wilaya) => ({ ...wilaya, enabled: value })));
-  const confirm = () => {
-    if (pending) {
-      setWilayas(pending);
+    setReviewState({ status: "loading" });
+    try {
+      const response = await fetchPreview(config, request);
+      const context = previewContextForPendingChanges(request, methodDefs, pendingPrices);
+      setReviewState({ status: "ready", response, context, request });
+      onPreviewReady(response, context, request);
+    } catch (error) {
+      setReviewState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Unable to review pending changes.",
+      });
     }
-    setPending(null);
-    setConfirmOpen(false);
-    setBulkPrice("");
-    setPct("");
+  };
+
+  const closeReviewPanel = () => {
+    clearPendingChanges();
+    onRefreshDiagnostics();
   };
 
   return (
     <>
       <SectionHeader
         title="Shipping Zones"
-        description="Live WooCommerce status with local draft planning. Writes go through Generator preview/apply."
-        action={
-          <Button variant="outline" onClick={onLaunchWizard}>
-            <Wand2 className="h-4 w-4" /> Open generator
-          </Button>
-        }
+        description="Manage supported Yaxii-owned method prices with live WooCommerce status and safe review."
       />
-
-      <Alert className="mb-4 border-primary/20 bg-primary/5">
-        <ShieldCheck className="h-4 w-4" />
-        <AlertTitle>Draft only - use Preview & Apply to update WooCommerce.</AlertTitle>
-        <AlertDescription>
-          Price, free shipping, enabled, and disabled controls on this screen update only the local
-          draft. Open Generator to preview selected prices and apply supported Yaxii-managed method
-          updates.
-        </AlertDescription>
-      </Alert>
 
       <Card className="mb-4">
         <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -914,31 +872,41 @@ function ZonesScreen({
             <p className="text-sm text-muted-foreground">{liveSummary.message}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={onLaunchWizard}>
+            <Button onClick={onLaunchWizard}>
               <Wand2 className="h-4 w-4" />
-              {liveSummary.generatorLabel}
+              Open Generator
             </Button>
-            <Button variant="outline" onClick={onOpenDiagnostics}>
+            <Button variant="secondary" onClick={onOpenDiagnostics}>
               <Activity className="h-4 w-4" /> Check diagnostics
             </Button>
             <Button
               variant="ghost"
               onClick={() => {
-                window.location.href = "admin.php?page=wc-settings&tab=shipping";
+                window.open(
+                  "admin.php?page=wc-settings&tab=shipping",
+                  "_blank",
+                  "noopener,noreferrer",
+                );
               }}
             >
-              <Package className="h-4 w-4" /> Open WooCommerce zones
+              <ExternalLink className="h-4 w-4" /> Open WooCommerce zones
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {hasSelection && (
-        <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
+      {(hasSelection || pendingCount > 0) && (
+        <div className="sticky top-14 z-10 mb-4 rounded-lg border border-primary/25 bg-card p-3 shadow-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="rounded-full">{selected.length} selected</Badge>
+            <Badge className="rounded-full">
+              {selected.length} selected
+              {pendingCount > 0 ? ` - ${pendingCount} pending` : ""}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              Changes will be reviewed before WooCommerce is updated.
+            </span>
             <Separator orientation="vertical" className="h-6" />
-            <span className="text-xs text-muted-foreground">Draft method:</span>
+            <span className="text-xs text-muted-foreground">Method:</span>
             <Select value={targetMethod} onValueChange={setTargetMethod}>
               <SelectTrigger className="h-8 w-44">
                 <SelectValue />
@@ -955,60 +923,56 @@ function ZonesScreen({
             <div className="flex items-center gap-1">
               <Input
                 type="text"
-                placeholder="Price or free"
+                placeholder="Price"
                 value={bulkPrice}
-                onChange={(event) => setBulkPrice(event.target.value)}
+                onChange={(event) => setBulkPriceInput(event.target.value)}
                 className="h-8 w-24"
               />
-              <Button size="sm" variant="outline" onClick={previewBulkPrice} disabled={!bulkPrice}>
-                <DollarSign className="h-4 w-4" /> Update draft price
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={applyBulkPrice}
+                disabled={!bulkPrice || selectedManagedCodes.length === 0}
+              >
+                <DollarSign className="h-4 w-4" /> Set price
               </Button>
             </div>
-            <div className="flex items-center gap-1">
-              <Input
-                type="number"
-                placeholder="%"
-                value={pct}
-                onChange={(event) => setPct(event.target.value)}
-                className="h-8 w-16"
-              />
-              <Button size="sm" variant="outline" onClick={previewPercent} disabled={!pct}>
-                <Percent className="h-4 w-4" /> Update draft %
-              </Button>
-            </div>
-            <Button size="sm" variant="outline" onClick={makeFree}>
-              Mark free in draft
-            </Button>
-            <Button size="sm" variant="outline" onClick={disableMethod}>
-              <PowerOff className="h-4 w-4" /> Disable in draft
-            </Button>
-            <Separator orientation="vertical" className="h-6" />
             <Button
               size="sm"
               variant="outline"
-              onClick={() => {
-                setWilayaEnabled(true);
-                setConfirmOpen(true);
-              }}
+              onClick={() => setBulkPendingPrice(0)}
+              disabled={selectedManagedCodes.length === 0}
             >
-              <Power className="h-4 w-4" /> Enable draft rows
+              Make free
             </Button>
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => {
-                setWilayaEnabled(false);
-                setConfirmOpen(true);
-              }}
+              onClick={reviewPendingChanges}
+              disabled={pendingCount === 0 || reviewState.status === "loading"}
             >
-              <PowerOff className="h-4 w-4" /> Disable draft rows
+              {reviewState.status === "loading" && <RefreshCw className="h-4 w-4 animate-spin" />}
+              Review changes
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={clearPendingChanges}
+              disabled={pendingCount === 0}
+            >
+              Clear changes
             </Button>
             <div className="ml-auto">
               <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
-                <X className="h-4 w-4" /> Clear
+                <X className="h-4 w-4" /> Clear selection
               </Button>
             </div>
           </div>
+          {protectedSelectionCount > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {protectedSelectionCount} selected row(s) are protected or not managed. Manual methods
+              are protected. Use WooCommerce to edit them.
+            </p>
+          )}
         </div>
       )}
 
@@ -1024,139 +988,327 @@ function ZonesScreen({
               </TableHead>
               <TableHead className="w-16">Code</TableHead>
               <TableHead>Wilaya</TableHead>
-              <TableHead className="w-36">WooCommerce status</TableHead>
-              <TableHead className="w-56">Live WooCommerce zone</TableHead>
-              <TableHead className="w-20">Draft row</TableHead>
-              {methodDefs.map((method) => (
-                <TableHead key={method.key} className="w-36">
-                  {method.label} draft
-                </TableHead>
-              ))}
+              <TableHead className="w-36">Status</TableHead>
+              <TableHead className="w-40">{methodDefs[0]?.label ?? "Home delivery"}</TableHead>
+              <TableHead className="w-40">{methodDefs[1]?.label ?? "Office delivery"}</TableHead>
+              <TableHead className="w-40">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {wilayas.map((wilaya) => {
               const isSelected = selected.includes(wilaya.code);
               const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, methodDefs);
+              const detailsVisible = Boolean(detailsOpen[wilaya.code]);
               return (
-                <TableRow key={wilaya.code} data-state={isSelected ? "selected" : undefined}>
-                  <TableCell>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(value) =>
-                        setSelected(
-                          value
-                            ? [...selected, wilaya.code]
-                            : selected.filter((code) => code !== wilaya.code),
-                        )
-                      }
-                    />
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {wilaya.code}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{wilaya.name}</div>
-                    <div className="text-xs text-muted-foreground">{wilaya.ar}</div>
-                  </TableCell>
-                  <TableCell>
-                    <LiveStatusPill status={liveZone.status} />
-                    <div className="mt-1 text-xs text-muted-foreground">{liveZone.message}</div>
-                  </TableCell>
-                  <TableCell>
-                    <LiveZoneDetails summary={liveZone} methodDefs={methodDefs} />
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={wilaya.enabled}
-                      onCheckedChange={(value) => updateRow(wilaya.code, { enabled: value })}
-                      aria-label={`${wilaya.name} local draft row enabled`}
-                    />
-                  </TableCell>
-                  {methodDefs.map((method) => {
-                    const value = wilaya.methods[method.key];
-                    return (
+                <Fragment key={wilaya.code}>
+                  <TableRow data-state={isSelected ? "selected" : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(value) =>
+                          setSelected(
+                            value
+                              ? [...selected, wilaya.code]
+                              : selected.filter((code) => code !== wilaya.code),
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {wilaya.code}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{wilaya.name}</div>
+                      <div className="text-xs text-muted-foreground">{wilaya.ar}</div>
+                    </TableCell>
+                    <TableCell>
+                      <LiveStatusPill status={liveZone.status} />
+                      <div className="mt-1 text-xs text-muted-foreground">{liveZone.message}</div>
+                    </TableCell>
+                    {methodDefs.slice(0, 2).map((method) => (
                       <TableCell key={method.key}>
                         <MethodCell
-                          method={value}
-                          onChange={(patch) => updateMethod(wilaya.code, method.key, patch)}
+                          wilaya={wilaya}
+                          methodDef={method}
+                          liveZone={liveZone}
+                          pendingPrice={pendingPrices[wilaya.code]?.[method.key]}
+                          onChange={(price) =>
+                            updatePendingPrice(wilaya, liveZone, method.key, price)
+                          }
                         />
                       </TableCell>
-                    );
-                  })}
-                </TableRow>
+                    ))}
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            setDetailsOpen((current) => ({
+                              ...current,
+                              [wilaya.code]: !detailsVisible,
+                            }))
+                          }
+                        >
+                          {detailsVisible ? "Hide details" : "Show details"}
+                        </Button>
+                        {methodDefs.slice(0, 2).map((method) => (
+                          <Button
+                            key={`${method.key}-free`}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!canEditManagedMethod(liveZone, method.key)}
+                            onClick={() => updatePendingPrice(wilaya, liveZone, method.key, 0)}
+                          >
+                            {method.key === "office_delivery" ? "Office free" : "Home free"}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        Enable/disable will be added later. Prices can be updated now.
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {detailsVisible && (
+                    <TableRow key={`${wilaya.code}-details`} className="bg-muted/20">
+                      <TableCell />
+                      <TableCell colSpan={6}>
+                        <LiveZoneDetails summary={liveZone} methodDefs={methodDefs} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
               );
             })}
           </TableBody>
         </Table>
       </Card>
 
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={(value) => {
-          setConfirmOpen(value);
-          if (!value) setPending(null);
-        }}
-        title="Update local draft only?"
-        description={
-          pending
-            ? `${selected.length} row(s) will be updated in the local draft. No WooCommerce zones are changed.`
-            : "No local draft changes to preview."
-        }
-        confirmLabel="Update draft only"
-        onConfirm={confirm}
-      />
+      {reviewState.status === "loading" && (
+        <Card className="mt-4">
+          <CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Reviewing pending changes...
+          </CardContent>
+        </Card>
+      )}
+      {reviewState.status === "error" && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Review could not be created</AlertTitle>
+          <AlertDescription>{reviewState.message}</AlertDescription>
+        </Alert>
+      )}
+      {reviewState.status === "ready" && (
+        <PreviewPlanPanel
+          response={reviewState.response}
+          context={reviewState.context}
+          config={config}
+          previewRequest={reviewState.request}
+          onOpenDiagnostics={onOpenDiagnostics}
+          onRefreshDiagnostics={onRefreshDiagnostics}
+          onRefreshPreview={reviewPendingChanges}
+          onDone={closeReviewPanel}
+        />
+      )}
     </>
   );
 }
 
+function pendingPriceCount(pendingPrices: PendingPriceMap): number {
+  return Object.values(pendingPrices).reduce(
+    (total, methodPrices) => total + Object.keys(methodPrices).length,
+    0,
+  );
+}
+
+function pendingWilayaCodes(pendingPrices: PendingPriceMap): string[] {
+  return Object.entries(pendingPrices)
+    .filter(([, methodPrices]) => Object.keys(methodPrices).length > 0)
+    .map(([wilayaCode]) => wilayaCode);
+}
+
+function withPendingPrice(
+  pendingPrices: PendingPriceMap,
+  wilayaCode: string,
+  methodKey: string,
+  pendingPrice: number | null | undefined,
+): PendingPriceMap {
+  const nextRow = { ...(pendingPrices[wilayaCode] ?? {}) };
+  if (pendingPrice === undefined) {
+    delete nextRow[methodKey];
+  } else {
+    nextRow[methodKey] = pendingPrice;
+  }
+
+  const nextPrices = { ...pendingPrices };
+  if (Object.keys(nextRow).length === 0) {
+    delete nextPrices[wilayaCode];
+  } else {
+    nextPrices[wilayaCode] = nextRow;
+  }
+
+  return nextPrices;
+}
+
+function canEditManagedMethod(liveZone: LiveZoneSummary, methodKey: string): boolean {
+  return liveZone.zones.some(
+    (zone) =>
+      zone.ownershipHint === "managed_registry" && Boolean(liveMethodForKey(zone, methodKey)),
+  );
+}
+
+function livePriceForKey(liveZone: LiveZoneSummary, methodKey: string): number | null {
+  for (const zone of liveZone.zones) {
+    if (zone.ownershipHint !== "managed_registry") {
+      continue;
+    }
+    const method = liveMethodForKey(zone, methodKey);
+    if (method) {
+      return priceNumberFromCost(method.cost);
+    }
+  }
+
+  return null;
+}
+
+function priceNumberFromCost(cost: string | null): number | null {
+  if (cost === null || cost.trim() === "") {
+    return null;
+  }
+
+  const price = Number(cost);
+  return Number.isFinite(price) ? price : null;
+}
+
+function previewRequestFromPendingChanges(
+  wilayas: Wilaya[],
+  methodDefs: MethodDef[],
+  diagnosticsState: DiagnosticsLoadState,
+  pendingPrices: PendingPriceMap,
+): PreviewRequest | null {
+  if (diagnosticsState.status !== "ready") {
+    return null;
+  }
+
+  const changedCodes = pendingWilayaCodes(pendingPrices);
+  if (changedCodes.length === 0) {
+    return null;
+  }
+
+  const selectedWilayas = wilayas.filter((wilaya) => changedCodes.includes(wilaya.code));
+  return {
+    selectedWilayaCodes: selectedWilayas.map((wilaya) => wilaya.code),
+    methods: methodTemplatesFromDefs(methodDefs),
+    pricingRows: selectedWilayas.map((wilaya) => {
+      const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, methodDefs);
+      return {
+        wilayaCode: wilaya.code,
+        enabled: true,
+        methods: Object.fromEntries(
+          methodDefs.map((methodDef) => [
+            methodDef.key,
+            pendingPrices[wilaya.code]?.[methodDef.key] ?? livePriceForKey(liveZone, methodDef.key),
+          ]),
+        ) as Partial<Record<ShippingMethodKey, number | null>>,
+      };
+    }),
+  };
+}
+
+function methodTemplatesFromDefs(methodDefs: MethodDef[]): ShippingMethodTemplate[] {
+  return methodDefs.map((methodDef) => ({
+    key: methodDef.key as ShippingMethodKey,
+    enabled: true,
+    label: methodDef.label,
+    defaultPrice: methodDef.defaultPrice,
+    type: "flat_rate",
+    locked: methodDef.locked,
+  }));
+}
+
+function previewContextForPendingChanges(
+  request: PreviewRequest,
+  methodDefs: MethodDef[],
+  pendingPrices: PendingPriceMap,
+): GeneratorPreviewSnapshot["context"] {
+  return {
+    selectedWilayaCount: request.selectedWilayaCodes?.length ?? 0,
+    communeCoverageSummary: "Wilaya-level WooCommerce shipping zones.",
+    enabledMethodLabels: methodDefs.map((method) => method.label),
+    priceSummary: `${pendingPriceCount(pendingPrices)} pending price change(s)`,
+  };
+}
+
 function MethodCell({
-  method,
+  wilaya,
+  methodDef,
+  liveZone,
+  pendingPrice,
   onChange,
 }: {
-  method?: Method;
-  onChange: (patch: Partial<Method>) => void;
+  wilaya: Wilaya;
+  methodDef: MethodDef;
+  liveZone: LiveZoneSummary;
+  pendingPrice?: number | null;
+  onChange: (price: number | null) => void;
 }) {
-  if (!method) {
+  const canEdit = canEditManagedMethod(liveZone, methodDef.key);
+  const livePrice = livePriceForKey(liveZone, methodDef.key);
+  const inputPrice = pendingPrice !== undefined ? pendingPrice : livePrice;
+  const changed = pendingPrice !== undefined;
+
+  if (!canEdit) {
     return (
-      <button
-        type="button"
-        onClick={() => onChange({ enabled: true, price: 0 })}
-        className="text-xs text-muted-foreground hover:text-foreground"
-      >
-        Add draft method
-      </button>
+      <div className="space-y-1">
+        <Input
+          type="text"
+          value={livePrice === null ? "" : String(livePrice)}
+          disabled
+          aria-label={`${wilaya.name} ${methodDef.label} protected price`}
+          className="h-8"
+        />
+        <div className="text-[11px] text-muted-foreground">
+          {liveZone.status === "manual" || liveZone.status === "conflict"
+            ? "Protected"
+            : "Not supported yet"}
+        </div>
+      </div>
     );
   }
-  if (!method.enabled) {
-    return (
-      <button
-        type="button"
-        onClick={() => onChange({ enabled: true })}
-        className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <PowerOff className="h-3 w-3" /> Draft off
-      </button>
-    );
-  }
+
   return (
-    <div className="flex items-center gap-1">
+    <div className="space-y-1">
       <Input
         type="number"
         min={0}
-        placeholder="Draft"
-        value={method.price ?? ""}
+        placeholder="Unset"
+        value={inputPrice ?? ""}
         onChange={(event) => {
+          if (event.target.value.trim() === "") {
+            onChange(livePrice);
+            return;
+          }
           const nextPrice = parseOptionalPrice(event.target.value);
           if (nextPrice !== undefined) {
-            onChange({ price: nextPrice });
+            onChange(nextPrice);
           }
         }}
+        aria-label={`${wilaya.name} ${methodDef.label} pending price`}
         className="h-8"
       />
-      <Badge variant="outline" className="text-[10px]">
-        {method.price === null || method.price === 0 ? "Free draft" : "Draft"}
-      </Badge>
+      <div className="flex items-center gap-1">
+        <span className="text-[11px] text-muted-foreground">
+          Live: {formatLiveCost(livePrice === null ? null : String(livePrice))}
+        </span>
+        {changed && (
+          <Badge variant="outline" className="border-amber-200 text-[10px] text-amber-700">
+            Changed
+          </Badge>
+        )}
+      </div>
     </div>
   );
 }
@@ -1164,13 +1316,11 @@ function MethodCell({
 function shippingSetupSummary(diagnosticsState: DiagnosticsLoadState): {
   title: string;
   message: string;
-  generatorLabel: string;
 } {
   if (diagnosticsState.status === "waiting" || diagnosticsState.status === "loading") {
     return {
       title: "Checking shipping setup",
       message: "Yaxii is reading WooCommerce zones and methods before showing live status.",
-      generatorLabel: "Open Generator",
     };
   }
 
@@ -1178,7 +1328,6 @@ function shippingSetupSummary(diagnosticsState: DiagnosticsLoadState): {
     return {
       title: "Shipping status needs refresh",
       message: diagnosticsState.message,
-      generatorLabel: "Open Generator",
     };
   }
 
@@ -1186,7 +1335,6 @@ function shippingSetupSummary(diagnosticsState: DiagnosticsLoadState): {
     return {
       title: "WooCommerce is inactive",
       message: "Activate WooCommerce to inspect live shipping zones and methods.",
-      generatorLabel: "Open Generator",
     };
   }
 
@@ -1196,7 +1344,6 @@ function shippingSetupSummary(diagnosticsState: DiagnosticsLoadState): {
       title: "Manual zones need review",
       message:
         "Conflicting or overlapping WooCommerce zones were found. Check diagnostics before applying changes.",
-      generatorLabel: "Open Generator",
     };
   }
 
@@ -1205,7 +1352,6 @@ function shippingSetupSummary(diagnosticsState: DiagnosticsLoadState): {
       title: "Some shipping setup is missing",
       message:
         "Use Generator preview/apply to create missing Yaxii-managed setup where it is safe.",
-      generatorLabel: "Preview missing setup",
     };
   }
 
@@ -1219,9 +1365,8 @@ function shippingSetupSummary(diagnosticsState: DiagnosticsLoadState): {
   return {
     title: "Shipping setup is active",
     message: allDirectZonesManaged
-      ? "WooCommerce checkout is using Yaxii-managed zones and methods."
+      ? "All selected wilayas have Yaxii-managed methods and prices."
       : "WooCommerce checkout has matching zones and methods. Review ownership before applying updates.",
-    generatorLabel: "Open Generator to update prices",
   };
 }
 
@@ -1248,14 +1393,14 @@ function liveStatusForWilaya(
     : [];
 
   if (!result || result.status === "missing") {
-    return { status: "missing", message: "No direct DZ zone", zones };
+    return { status: "missing", message: "Setup missing", zones };
   }
 
   if (result.status === "conflict") {
     const hasManualZone = zones.some((zone) => zone.ownershipHint === "manual_unknown");
     return {
       status: "conflict",
-      message: hasManualZone ? "Manual overlap protected" : "Duplicate zones found",
+      message: hasManualZone ? "Manual conflict protected" : "Duplicate zones found",
       zones,
     };
   }
@@ -1266,25 +1411,25 @@ function liveStatusForWilaya(
   }
 
   if (zone.ownershipHint === "manual_unknown") {
-    return { status: "manual", message: "Not Yaxii-owned", zones };
+    return { status: "manual", message: "Protected manual zone", zones };
   }
 
   if (zone.enabledMethodCount === 0 || !zone.hasHomeLikeMethod || !zone.hasOfficeLikeMethod) {
-    return { status: "needs_methods", message: "Missing required methods", zones };
+    return { status: "needs_methods", message: "Methods missing", zones };
   }
 
   if (
     zone.ownershipHint === "managed_registry" &&
     hasDraftPriceDifference(wilaya, zone, methodDefs)
   ) {
-    return { status: "needs_update", message: "Draft differs from live price", zones };
+    return { status: "needs_update", message: "Pending price change", zones };
   }
 
   if (zone.ownershipHint === "managed_registry") {
-    return { status: "managed", message: "Registry-owned zone", zones };
+    return { status: "managed", message: "Managed by Yaxii", zones };
   }
 
-  return { status: "ready", message: "Zone exists; ownership is name hint only", zones };
+  return { status: "ready", message: "Name match only", zones };
 }
 
 function hasDraftPriceDifference(

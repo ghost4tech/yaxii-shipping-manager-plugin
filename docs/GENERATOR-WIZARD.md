@@ -267,23 +267,30 @@ Preview-only setup mode hides the apply action and shows:
 
 The final wizard footer uses `Done`, not draft-oriented copy.
 
-## Shipping Zones Controls
+## Shipping Zones Management Center
 
-The Shipping Zones screen is a live status and local draft planning table, not a direct WooCommerce write surface.
+The Shipping Zones screen is a live status and supported pending-change management table, not a direct WooCommerce write surface.
 
 Current control classification:
 
-- WooCommerce status badges, zone names, ownership labels, method enabled state, and method prices: live read-only diagnostics.
-- Price inputs: draft/local only until the merchant reviews preview and applies supported Yaxii-managed method updates.
-- Bulk price and percent controls: draft/local only.
-- Free shipping and disabled/enabled actions: draft/local only.
-- `Open Generator to update prices`: opens the Generator preview/apply flow.
+- Status badges and live prices: read-only diagnostics.
+- Row details: collapsed technical zone, ownership, method enabled state, and method cost data.
+- Price inputs: pending changes for registry-owned Yaxii methods.
+- `Make free`: sets a supported pending price to `0`.
+- `Review changes`: calls the existing preview endpoint and displays the final preview/apply panel.
+- `Open Generator`: opens the full Generator flow.
 - `Check diagnostics`: opens the read-only diagnostics screen.
-- `Open WooCommerce zones`: opens WooCommerce's native shipping settings for inspection.
+- `Open WooCommerce zones`: opens WooCommerce's native shipping settings in a new browser tab.
 - `Save settings` in Settings: functional settings persistence only; it does not directly update WooCommerce zones or existing methods. Use wizard preview/apply for supported Yaxii-managed method price or label updates.
 - CSV import/export controls: coming soon and disabled.
 
-The UI must say local draft controls do not write WooCommerce until the merchant reviews and applies a supported preview. Unknown or manual WooCommerce method price and label updates remain out of scope.
+Unsupported controls:
+
+- Enable/disable method and row controls are not active until a safe method-status update task is scoped.
+- Manual or unknown WooCommerce method price and label updates remain out of scope.
+- Zone name updates remain out of scope for apply.
+
+The UI must say pending changes are reviewed before WooCommerce is updated.
 
 ## UI Copy Recommendations
 

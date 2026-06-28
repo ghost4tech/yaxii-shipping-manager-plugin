@@ -6,7 +6,7 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 
 1. Open `wp-admin/admin.php?page=yaxii-shipping-manager` as an administrator.
 2. Confirm the plugin admin page loads without console errors.
-3. Confirm Shipping Zones shows live WooCommerce status and says controls are local draft controls only.
+3. Confirm Shipping Zones shows live WooCommerce status and pending-change controls for supported prices.
 4. Open the generator.
 5. Confirm setup modes are distinct:
    - Fresh setup: create a new shipping setup for selected wilayas.
@@ -29,10 +29,13 @@ Expected result:
 
 - The table shows `Shipping setup is active` when diagnostics are low-risk and all selected Yaxii-managed zones/methods are present.
 - Each row shows live WooCommerce status from diagnostics, not only local draft state.
-- Managed zones show `Yaxii-managed`; weak name matches show `Name match only`; manual or unknown zones show `Manual or unknown`.
-- Home and office method summaries show enabled/disabled state and the live WooCommerce cost when the method is registry-owned.
-- Price, free, enable, and disable controls say draft-only and do not imply a direct WooCommerce write.
-- The screen routes merchants to Generator preview/apply for supported updates.
+- Technical zone and ownership details are hidden until `Show details` is opened.
+- Home and office price inputs show the live WooCommerce cost when the method is registry-owned.
+- Editing a managed price marks a pending change.
+- `Make free` sets a managed pending price to `0`.
+- `Review changes` opens the same preview/apply review panel used by the Generator.
+- Enable/disable controls are not active because method status updates are not implemented yet.
+- Manual or unknown rows cannot be edited through the table.
 
 ## Runtime Scenarios
 
@@ -105,4 +108,4 @@ TASK-009B local smoke result:
 - CSV import/export backend is not implemented.
 - Commune-specific pricing is not implemented.
 - Provider import and YSF sync are not implemented.
-- Shipping Zones table edits are local draft controls; WooCommerce writes go through the generator preview/apply flow only.
+- Shipping Zones price/free edits are pending changes; WooCommerce writes go through preview/apply only.
