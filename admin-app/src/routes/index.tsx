@@ -167,6 +167,8 @@ export default function AdminApp({
   const [wilayas, setWilayas] = useState<Wilaya[]>([]);
   const [methodDefs, setMethodDefs] = useState<MethodDef[]>(DEFAULT_METHOD_DEFS);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [diagnosticsReloadKey, setDiagnosticsReloadKey] = useState(0);
+  const [latestPreview, setLatestPreview] = useState<PreviewResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -267,7 +269,7 @@ export default function AdminApp({
     return () => {
       cancelled = true;
     };
-  }, [config, datasetState.status, settingsState.status]);
+  }, [config, datasetState.status, settingsState.status, diagnosticsReloadKey]);
 
   useEffect(() => {
     const onHashChange = () => setTabState(getInitialTab());
@@ -315,7 +317,9 @@ export default function AdminApp({
         {tab === "generator" && (
           <GeneratorHub
             onLaunch={() => setWizardOpen(true)}
+            onOpenDiagnostics={() => setTab("diagnostics")}
             launchDisabled={!datasetReady || !settingsReady}
+            latestPreview={latestPreview}
           />
         )}
         {tab === "diagnostics" && (
@@ -323,6 +327,7 @@ export default function AdminApp({
             bootstrap={bootstrap}
             diagnosticsState={diagnosticsState}
             wilayas={wilayas}
+            onRefresh={() => setDiagnosticsReloadKey((current) => current + 1)}
           />
         )}
         {tab === "import" && <ImportExportScreen />}
@@ -346,7 +351,12 @@ export default function AdminApp({
             setWilayas(next);
             setMethodDefs(defs);
             setWizardOpen(false);
-            setTab("zones");
+            setTab("generator");
+          }}
+          onPreviewReady={setLatestPreview}
+          onOpenDiagnostics={() => {
+            setWizardOpen(false);
+            setTab("diagnostics");
           }}
         />
       )}
@@ -433,8 +443,8 @@ function RuntimeNotices({
         <ShieldCheck className="h-4 w-4" />
         <AlertTitle>Local draft only</AlertTitle>
         <AlertDescription>
-          This screen does not write to WooCommerce. Diagnostics, preview planning, CSV import, and
-          safe apply are later tasks.
+          Settings, diagnostics, and preview are active. No WooCommerce changes are made; apply
+          remains disabled.
         </AlertDescription>
       </Alert>
       {datasetState.status === "loading" && (
@@ -570,16 +580,20 @@ function SectionHeader({
 
 function GeneratorHub({
   onLaunch,
+  onOpenDiagnostics,
   launchDisabled,
+  latestPreview,
 }: {
   onLaunch: () => void;
+  onOpenDiagnostics: () => void;
   launchDisabled: boolean;
+  latestPreview: PreviewResponse | null;
 }) {
   return (
     <>
       <SectionHeader
         title="Generator"
-        description="Prepare a local shipping-zone draft through a guided setup path."
+        description="Prepare a local draft, then generate a read-only WooCommerce preview."
       />
       <Card className="overflow-hidden border-primary/30">
         <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8">
@@ -591,11 +605,11 @@ function GeneratorHub({
               <h3 className="text-lg font-semibold">Guided shipping setup</h3>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                 Pick the dataset mode, choose how prices will be entered, define the methods you
-                ship with, and preview a local draft.
+                ship with, then preview the WooCommerce changes before apply exists.
               </p>
               <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                 <BulletItem>Current Algeria dataset</BulletItem>
-                <BulletItem>Legacy 58-compatible dataset</BulletItem>
+                <BulletItem>Legacy 58-compatible mode is not available yet</BulletItem>
                 <BulletItem>CSV import path prepared, backend not connected yet</BulletItem>
                 <BulletItem>No WooCommerce changes are made yet</BulletItem>
               </ul>
@@ -606,6 +620,11 @@ function GeneratorHub({
           </div>
         </div>
       </Card>
+      {latestPreview && (
+        <div className="mt-6">
+          <PreviewPlanPanel response={latestPreview} onOpenDiagnostics={onOpenDiagnostics} />
+        </div>
+      )}
     </>
   );
 }
@@ -625,12 +644,16 @@ function GeneratorWizard({
   baseList,
   onClose,
   onComplete,
+  onPreviewReady,
+  onOpenDiagnostics,
 }: {
   config: AdminBootstrapConfig;
   settings: PersistedSettings;
   baseList: WilayaReference[];
   onClose: () => void;
   onComplete: (wilayas: Wilaya[], defs: MethodDef[]) => void;
+  onPreviewReady: (preview: PreviewResponse) => void;
+  onOpenDiagnostics: () => void;
 }) {
   const initialDraft = useMemo(() => generatorDraftFromSettings(settings), [settings]);
   const [step, setStep] = useState(0);
@@ -803,6 +826,8 @@ function GeneratorWizard({
               selectedWilayaCount={selectedWilayaCount}
               selectedCodes={selectedCodes}
               config={config}
+              onPreviewReady={onPreviewReady}
+              onOpenDiagnostics={onOpenDiagnostics}
             />
           )}
         </div>
@@ -814,7 +839,7 @@ function GeneratorWizard({
             <ChevronLeft className="h-4 w-4" /> Back
           </Button>
           <div className="text-xs text-muted-foreground">
-            This wizard only updates the local admin draft.
+            This wizard prepares a local draft and read-only preview only.
           </div>
           {step < steps.length - 1 ? (
             <Button onClick={next}>
@@ -842,7 +867,7 @@ function StepSetupPath({
     <div className="mx-auto max-w-3xl">
       <h3 className="text-2xl font-semibold tracking-tight">Choose a setup path</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Each path prepares a local draft only. WooCommerce preview and apply are later tasks.
+        Each path prepares a local draft and a read-only preview. No WooCommerce changes are made.
       </p>
       <div className="mt-6 grid gap-3 md:grid-cols-3">
         {SETUP_PATH_OPTIONS.map((option) => (
@@ -995,7 +1020,7 @@ function StepLabelNaming({
     <div className="mx-auto max-w-2xl">
       <h3 className="text-2xl font-semibold tracking-tight">Choose label and zone naming</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        These choices only affect local draft labels until settings persistence exists.
+        These choices affect the local draft and the read-only preview plan.
       </p>
       <Card className="mt-6">
         <CardContent className="space-y-6 p-6">
@@ -1163,12 +1188,16 @@ function StepDefaultPrices({
   methods: ShippingMethodTemplate[];
   setMethods: Dispatch<SetStateAction<ShippingMethodTemplate[]>>;
 }) {
+  const [priceError, setPriceError] = useState("");
+
   const setDefaultPrice = (key: ShippingMethodKey, rawValue: string) => {
     const nextPrice = parseOptionalPrice(rawValue);
     if (nextPrice === undefined) {
+      setPriceError("Prices must be empty, zero, or higher.");
       return;
     }
 
+    setPriceError("");
     setMethods((previous) =>
       previous.map((method) =>
         method.key === key ? { ...method, defaultPrice: nextPrice } : method,
@@ -1184,6 +1213,13 @@ function StepDefaultPrices({
       <p className="mt-2 text-sm text-muted-foreground">
         Empty prices stay unset in the local draft. Negative values are rejected by the UI.
       </p>
+      {priceError && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Invalid price</AlertTitle>
+          <AlertDescription>{priceError}</AlertDescription>
+        </Alert>
+      )}
       <Card className="mt-6">
         <CardContent className="space-y-4 p-6">
           {visibleMethods.map((method) => (
@@ -1332,6 +1368,8 @@ function StepReview({
   selectedWilayaCount,
   selectedCodes,
   config,
+  onPreviewReady,
+  onOpenDiagnostics,
 }: {
   setupPath: SetupPath;
   baseList: WilayaReference[];
@@ -1343,11 +1381,21 @@ function StepReview({
   selectedWilayaCount: number;
   selectedCodes: string[];
   config: AdminBootstrapConfig;
+  onPreviewReady: (preview: PreviewResponse) => void;
+  onOpenDiagnostics: () => void;
 }) {
   const [previewState, setPreviewState] = useState<PreviewLoadState>({ status: "idle" });
+  const selectedWilayas = baseList.filter((wilaya) => selectedCodes.includes(wilaya.code));
   const sampleWilaya = baseList[0] ?? { code: "16", name: "Alger", ar: "الجزائر" };
   const enabledMethods = methods.filter((method) => method.enabled);
   const pricedMethods = enabledMethods.filter((method) => method.defaultPrice !== null).length;
+  const pricingRows = selectedWilayas.map((wilaya) => ({
+    wilayaCode: wilaya.code,
+    enabled: true,
+    methods: Object.fromEntries(
+      enabledMethods.map((method) => [method.key, method.defaultPrice]),
+    ) as Partial<Record<ShippingMethodKey, number | null>>,
+  }));
   const sampleLabel = formatRegionLabel(
     { nameFr: sampleWilaya.name, nameAr: sampleWilaya.ar },
     labelFormat,
@@ -1360,6 +1408,7 @@ function StepReview({
   });
   const previewRequest: PreviewRequest = {
     selectedWilayaCodes: selectedCodes,
+    pricingRows,
     methods,
     zoneNameFormat,
     zonePrefix,
@@ -1372,6 +1421,7 @@ function StepReview({
     try {
       const response = await fetchPreview(config, previewRequest);
       setPreviewState({ status: "ready", response });
+      onPreviewReady(response);
     } catch (error) {
       setPreviewState({
         status: "error",
@@ -1412,14 +1462,74 @@ function StepReview({
             <Badge variant="outline">{pricedMethods}</Badge>
           </div>
           <div className="flex items-center justify-between">
+            <span>Apply status</span>
+            <Badge variant="secondary">Apply engine is not enabled yet</Badge>
+          </div>
+          <div className="flex items-center justify-between">
             <span>Locked safety rules</span>
             <Badge variant="outline">{SAFETY_RULES.length}</Badge>
           </div>
         </CardContent>
       </Card>
 
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Selected wilayas</CardTitle>
+            <CardDescription>
+              These wilayas are sent to the read-only preview planner.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedWilayas.length === 0 ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No wilayas selected</AlertTitle>
+                <AlertDescription>
+                  Select at least one wilaya to create a useful preview.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {selectedWilayas.slice(0, 12).map((wilaya) => (
+                  <Badge key={wilaya.code} variant="outline">
+                    {wilaya.code} -{" "}
+                    {formatRegionLabel({ nameFr: wilaya.name, nameAr: wilaya.ar }, labelFormat)}
+                  </Badge>
+                ))}
+                {selectedWilayas.length > 12 && (
+                  <Badge variant="secondary">+{selectedWilayas.length - 12} more</Badge>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Method prices</CardTitle>
+            <CardDescription>
+              These default prices are included in the preview request.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {enabledMethods.map((method) => (
+              <div key={method.key} className="flex items-center justify-between gap-3">
+                <span>{method.label}</span>
+                <Badge variant={method.defaultPrice === null ? "secondary" : "outline"}>
+                  {method.defaultPrice === null ? "Unset" : `${method.defaultPrice} DZD`}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="mt-6 flex flex-wrap gap-3">
-        <Button onClick={loadPreview} disabled={previewState.status === "loading"}>
+        <Button
+          onClick={loadPreview}
+          disabled={previewState.status === "loading" || selectedWilayaCount === 0}
+        >
           <Activity className="h-4 w-4" />
           {previewState.status === "loading" ? "Generating preview..." : "Preview changes"}
         </Button>
@@ -1437,7 +1547,9 @@ function StepReview({
         </Alert>
       )}
 
-      {previewState.status === "ready" && <PreviewPlanPanel response={previewState.response} />}
+      {previewState.status === "ready" && (
+        <PreviewPlanPanel response={previewState.response} onOpenDiagnostics={onOpenDiagnostics} />
+      )}
     </div>
   );
 }
@@ -1448,7 +1560,13 @@ type PreviewLoadState =
   | { status: "ready"; response: PreviewResponse }
   | { status: "error"; message: string };
 
-function PreviewPlanPanel({ response }: { response: PreviewResponse }) {
+function PreviewPlanPanel({
+  response,
+  onOpenDiagnostics,
+}: {
+  response: PreviewResponse;
+  onOpenDiagnostics: () => void;
+}) {
   return (
     <div className="mt-6 space-y-4">
       <Alert>
@@ -1482,6 +1600,10 @@ function PreviewPlanPanel({ response }: { response: PreviewResponse }) {
           <Button disabled variant="outline" className="mt-2">
             <Lock className="h-4 w-4" />
             Apply disabled
+          </Button>
+          <Button variant="outline" className="mt-2" onClick={onOpenDiagnostics}>
+            <Activity className="h-4 w-4" />
+            Open diagnostics
           </Button>
         </CardContent>
       </Card>
@@ -2154,8 +2276,14 @@ function MethodCell({
     <div className="flex items-center gap-1">
       <Input
         type="number"
+        min={0}
         value={method.price ?? ""}
-        onChange={(event) => onChange({ price: Number(event.target.value) })}
+        onChange={(event) => {
+          const nextPrice = parseOptionalPrice(event.target.value);
+          if (nextPrice !== undefined) {
+            onChange({ price: nextPrice });
+          }
+        }}
         className="h-8"
       />
     </div>
@@ -2166,10 +2294,12 @@ function DiagnosticsScreen({
   bootstrap,
   diagnosticsState,
   wilayas,
+  onRefresh,
 }: {
   bootstrap: BootstrapPayload;
   diagnosticsState: DiagnosticsLoadState;
   wilayas: Wilaya[];
+  onRefresh: () => void;
 }) {
   const [sim, setSim] = useState<string | null>(null);
   const simulatedWilaya = sim ? wilayas.find((wilaya) => wilaya.code === sim) : undefined;
@@ -2180,9 +2310,15 @@ function DiagnosticsScreen({
         title="Checkout Protection"
         description="Read-only WooCommerce diagnostics inspect existing zones and shipping methods."
         action={
-          <Button disabled>
-            <Lock className="h-4 w-4" />
-            Preview planner comes next.
+          <Button
+            variant="outline"
+            onClick={onRefresh}
+            disabled={diagnosticsState.status === "loading"}
+          >
+            <RefreshCw
+              className={cn("h-4 w-4", diagnosticsState.status === "loading" && "animate-spin")}
+            />
+            Refresh diagnostics
           </Button>
         }
       />
@@ -2650,7 +2786,11 @@ function SettingsForm({
     const nextPrice = parseOptionalPrice(rawValue);
     if (nextPrice !== undefined) {
       updateMethod(key, { defaultPrice: nextPrice });
+      return;
     }
+
+    setSaveState("error");
+    setSaveMessage("Prices must be empty, zero, or higher.");
   };
 
   const saveDraft = async (settings: PersistedSettings) => {
