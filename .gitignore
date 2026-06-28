@@ -1,6 +1,7 @@
 # Nested Git internals and preserved prototype backup.
 app/.git/
 app/.git-prototype-backup/
+.agents/references/
 .tmp/
 
 # Dependencies and build output.

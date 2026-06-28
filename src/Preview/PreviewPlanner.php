@@ -680,7 +680,7 @@ final class PreviewPlanner {
 		}
 
 		if ( count( $plan_groups['skipManualZones'] ) > 0 ) {
-			return __( 'Review protected manual zones before applying future changes.', 'yaxii-shipping-manager' );
+			return __( 'Review protected manual zones before applying supported changes.', 'yaxii-shipping-manager' );
 		}
 
 		if ( count( $plan_groups['createZones'] ) > 0 && count( $plan_groups['addMethods'] ) > 0 ) {
@@ -691,7 +691,15 @@ final class PreviewPlanner {
 			return __( 'Review this preview. Apply can add missing methods and prices to Yaxii-managed zones.', 'yaxii-shipping-manager' );
 		}
 
-		return __( 'Review this preview. Apply can create missing Yaxii-managed zones.', 'yaxii-shipping-manager' );
+		if ( count( $plan_groups['updateMethods'] ) > 0 ) {
+			return __( 'Review this preview. Apply can update Yaxii-managed method prices and labels.', 'yaxii-shipping-manager' );
+		}
+
+		if ( count( $plan_groups['createZones'] ) > 0 ) {
+			return __( 'Review this preview. Apply can create missing Yaxii-managed zones.', 'yaxii-shipping-manager' );
+		}
+
+		return __( 'No supported shipping changes were found for this selection.', 'yaxii-shipping-manager' );
 	}
 
 	/**

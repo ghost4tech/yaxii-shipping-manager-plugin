@@ -263,6 +263,14 @@ export default function AdminApp({
     setTab("diagnostics");
   };
 
+  const closeWizardAndOpenDiagnostics = (refresh = false) => {
+    if (refresh) {
+      setDiagnosticsReloadKey((current) => current + 1);
+    }
+    setTab("diagnostics");
+    setWizardOpen(false);
+  };
+
   const datasetReady = datasetState.status === "ready";
   const settingsReady = settingsState.status === "ready";
   const activeSettings = settingsReady ? settingsState.response.settings : DEFAULT_SETTINGS;
@@ -314,7 +322,7 @@ export default function AdminApp({
         {tab === "sync" && <SmartFormSyncScreen />}
       </main>
       <footer className="mx-auto max-w-5xl px-6 pb-10 text-center text-xs text-muted-foreground">
-        Yaxii Shipping Manager - Preview first - Apply creates missing zones only
+        Yaxii Shipping Manager - Preview first - Manual zones are protected
       </footer>
       <div id="yaxii-shipping-manager-admin-portal" />
 
@@ -333,14 +341,8 @@ export default function AdminApp({
           onPreviewReady={(response, context, request) =>
             setLatestPreview({ response, context, request })
           }
-          onOpenDiagnostics={() => {
-            setWizardOpen(false);
-            setTab("diagnostics");
-          }}
-          onRefreshDiagnostics={() => {
-            setWizardOpen(false);
-            openAndRefreshDiagnostics();
-          }}
+          onOpenDiagnostics={() => closeWizardAndOpenDiagnostics()}
+          onRefreshDiagnostics={() => closeWizardAndOpenDiagnostics(true)}
         />
       )}
     </div>
@@ -415,8 +417,8 @@ function RuntimeNotices({
         <ShieldCheck className="h-4 w-4" />
         <AlertTitle>Preview before apply</AlertTitle>
         <AlertDescription>
-          Settings, diagnostics, and preview are active. Apply can create missing Yaxii-managed
-          zones only after confirmation.
+          Settings, diagnostics, and preview are active. Apply can create missing managed zones, add
+          missing methods, and update Yaxii-managed method prices after confirmation.
         </AlertDescription>
       </Alert>
       {datasetState.status === "loading" && (
@@ -581,14 +583,14 @@ function GeneratorHub({
               <h3 className="text-lg font-semibold">Guided shipping setup</h3>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                 Pick the dataset mode, choose how prices will be entered, define the methods you
-                ship with, then preview the WooCommerce changes before creating zones.
+                ship with, then preview supported WooCommerce changes before applying them.
               </p>
               <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                 <BulletItem>Current Algeria dataset</BulletItem>
                 <BulletItem>Legacy 58-compatible mode is not available yet</BulletItem>
                 <BulletItem>CSV import path prepared, backend not connected yet</BulletItem>
                 <BulletItem>
-                  Apply can create zones and add missing methods after confirmation
+                  Apply can create zones, add methods, and update Yaxii-managed prices
                 </BulletItem>
               </ul>
               <Button className="mt-6 gap-2" onClick={onLaunch} disabled={launchDisabled}>
@@ -845,7 +847,7 @@ function ZonesScreen({
     <>
       <SectionHeader
         title="Shipping Zones"
-        description="Manage wilaya shipping prices in a local draft. Method and price writes are not implemented yet."
+        description="Manage wilaya shipping prices in a local draft. Use the generator preview/apply flow for supported WooCommerce writes."
         action={
           <Button variant="outline" onClick={onLaunchWizard}>
             <Wand2 className="h-4 w-4" /> Open generator

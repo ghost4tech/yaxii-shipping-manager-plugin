@@ -4,19 +4,20 @@
 
 The Generator Wizard should help an Algerian WooCommerce merchant prepare a safe shipping setup before Yaxii writes anything to WooCommerce.
 
-The wizard is not the apply engine. It prepares a draft, shows read-only diagnostics and preview results, and keeps apply disabled until a future safe apply task implements reviewed WooCommerce writes.
+The wizard is not the apply engine. It prepares a draft, shows diagnostics and preview results, and enables safe apply only for supported Yaxii-managed writes after confirmation.
 
 ## Current Wizard Audit
 
-Current steps in `admin-app/src/routes/index.tsx`:
+Current steps in `admin-app/src/components/generator/GeneratorWizard.tsx`:
 
-1. Setup path
-2. Dataset mode
-3. Label/naming
-4. Shipping methods
-5. Default prices
-6. Wilaya selection
-7. Review draft
+1. Setup mode
+2. Wilaya coverage
+3. Commune coverage
+4. Delivery methods
+5. Shipping prices
+6. Names and labels
+7. Safety check
+8. Preview and apply
 
 Already connected to real backend contracts:
 
@@ -27,15 +28,12 @@ Already connected to real backend contracts:
 - Diagnostics uses `GET /diagnostics`.
 - Apply can create missing Yaxii-managed zones, add missing methods/prices, and update labels or prices for existing Yaxii-managed method instances after checkbox confirmation.
 
-Still prototype-like:
+Still limited:
 
-- The wizard starts with setup path choices instead of the merchant's real question: which wilayas and prices should be covered?
-- CSV appears as a selectable path even though the backend is not connected.
-- Label and naming appears before coverage and prices, which makes the flow feel like a UI configuration form instead of a shipping setup assistant.
-- Communes are not visible even though the dataset contains them.
-- Review does not summarize commune coverage.
-- The final action says local draft, while the real journey should point toward preview.
-- The current wizard lives in one large route module, so the next UI task should split it carefully without broad refactoring.
+- CSV appears as a disabled coming-later path because the backend is not connected.
+- Commune lists are read-only and informational; shipping zones remain wilaya-level.
+- Zone-name updates are previewed but not applied yet.
+- The wizard lives in one large component, so future structural cleanup should stay narrow and behavior-preserving.
 
 ## Proposed Wizard Flow
 
