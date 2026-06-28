@@ -178,9 +178,9 @@ final class ApplyReadinessEvaluator {
 				'recommendedAction' => __( 'Resolve conflicts in WooCommerce before applying.', 'yaxii-shipping-manager' ),
 			),
 			'methods_missing'        => array(
-				'title'             => __( 'Method changes need a later apply step', 'yaxii-shipping-manager' ),
-				'message'           => __( 'Some matching zones are missing required enabled shipping methods or need method updates.', 'yaxii-shipping-manager' ),
-				'recommendedAction' => __( 'This apply step creates missing zones only. Methods and prices are not changed.', 'yaxii-shipping-manager' ),
+				'title'             => __( 'Missing methods can be added to managed zones', 'yaxii-shipping-manager' ),
+				'message'           => __( 'Some Yaxii-managed zones are missing enabled shipping methods. Existing method updates still need a later apply step.', 'yaxii-shipping-manager' ),
+				'recommendedAction' => __( 'Review the missing methods and prices before applying.', 'yaxii-shipping-manager' ),
 			),
 			'yaxii_managed_ready'    => array(
 				'title'             => __( 'Yaxii-managed zones are already present', 'yaxii-shipping-manager' ),

@@ -74,8 +74,8 @@ final class PreviewPlanner {
 			'safetyPolicy'         => $settings['safetyPolicy'],
 			'canApplyLater'        => $can_apply_later,
 			'canApplyLaterMessage' => $can_apply_later
-				? __( 'Apply can create missing Yaxii-managed zones only. Methods and prices are not created yet.', 'yaxii-shipping-manager' )
-				: __( 'Apply is available only when the preview has missing zones to create and no blocking conflicts.', 'yaxii-shipping-manager' ),
+				? __( 'Apply can create missing Yaxii-managed zones and add missing methods with prices to managed zones.', 'yaxii-shipping-manager' )
+				: __( 'Apply is available only when the preview has missing zones or methods and no blocking conflicts.', 'yaxii-shipping-manager' ),
 		);
 	}
 
@@ -85,7 +85,7 @@ final class PreviewPlanner {
 	 */
 	private function can_apply_later( array $plan_groups, array $apply_readiness ): bool {
 		return 'blocked' !== ( $apply_readiness['severity'] ?? '' )
-			&& count( $plan_groups['createZones'] ) > 0
+			&& ( count( $plan_groups['createZones'] ) > 0 || count( $plan_groups['addMethods'] ) > 0 )
 			&& count( $plan_groups['conflicts'] ) === 0;
 	}
 
@@ -649,7 +649,15 @@ final class PreviewPlanner {
 			return __( 'Review protected manual zones before applying future changes.', 'yaxii-shipping-manager' );
 		}
 
-		return __( 'Review this preview. Apply can create missing Yaxii-managed zones only.', 'yaxii-shipping-manager' );
+		if ( count( $plan_groups['createZones'] ) > 0 && count( $plan_groups['addMethods'] ) > 0 ) {
+			return __( 'Review this preview. Apply can create missing Yaxii-managed zones and add missing methods.', 'yaxii-shipping-manager' );
+		}
+
+		if ( count( $plan_groups['addMethods'] ) > 0 ) {
+			return __( 'Review this preview. Apply can add missing methods and prices to Yaxii-managed zones.', 'yaxii-shipping-manager' );
+		}
+
+		return __( 'Review this preview. Apply can create missing Yaxii-managed zones.', 'yaxii-shipping-manager' );
 	}
 
 	/**

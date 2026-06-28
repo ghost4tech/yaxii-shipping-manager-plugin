@@ -27,11 +27,27 @@ export type ApplyResultZone = {
   reason?: string;
 };
 
+export type ApplyResultMethod = {
+  wilayaCode: string;
+  wilayaName?: string;
+  zoneId?: number | null;
+  zoneName?: string;
+  methodKey?: string;
+  methodId?: string;
+  instanceId?: number | null;
+  title?: string;
+  lastKnownCost?: string | null;
+  type?: string;
+  reason?: string;
+};
+
 export type ApplyResponse = {
   applyEngineAvailable: true;
   applied: boolean;
   createdZones: ApplyResultZone[];
+  createdMethods: ApplyResultMethod[];
   skippedZones: ApplyResultZone[];
+  skippedMethods: ApplyResultMethod[];
   blockedZones: ApplyResultZone[];
   conflicts: ApplyResultZone[];
   warnings: string[];

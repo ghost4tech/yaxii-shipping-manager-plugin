@@ -112,10 +112,9 @@ export function PreviewPlanPanel({
                     onCheckedChange={(checked) => setConfirmationChecked(Boolean(checked))}
                   />
                   <div className="space-y-2">
-                    <div className="font-medium">Create missing zones only</div>
+                    <div className="font-medium">{applyActionTitle(response)}</div>
                     <div className="text-xs text-muted-foreground">
-                      Yaxii will create {response.plan.createZones.length} missing zone(s). No
-                      methods or prices will be created.
+                      {applyActionDescription(response)}
                     </div>
                     <Input
                       value={confirmationText}
@@ -131,7 +130,9 @@ export function PreviewPlanPanel({
                       }
                     >
                       <ShieldCheck className="h-4 w-4" />
-                      {applyState.status === "loading" ? "Creating zones..." : "Create zones"}
+                      {applyState.status === "loading"
+                        ? "Applying reviewed plan..."
+                        : applyButtonLabel(response)}
                     </Button>
                   </div>
                 </div>
@@ -251,6 +252,9 @@ function PreviewContextPanel({ context }: { context: GeneratorPreviewContext }) 
 }
 
 function ApplyResultPanel({ response }: { response: ApplyResponse }) {
+  const hasCreatedZones = response.createdZones.length > 0;
+  const hasCreatedMethods = response.createdMethods.length > 0;
+
   return (
     <Alert className={response.wooCommerceChanged ? "border-emerald-200 bg-emerald-50" : ""}>
       {response.wooCommerceChanged ? (
@@ -258,12 +262,24 @@ function ApplyResultPanel({ response }: { response: ApplyResponse }) {
       ) : (
         <AlertCircle className="h-4 w-4" />
       )}
-      <AlertTitle>{response.wooCommerceChanged ? "Zones created" : "No zones created"}</AlertTitle>
+      <AlertTitle>{applyResultTitle(response)}</AlertTitle>
       <AlertDescription>
         <div>{response.message}</div>
+        {hasCreatedMethods && (
+          <div className="mt-1 text-xs text-muted-foreground">
+            Prices were applied to the new method instances only. Manual zones were not touched.
+          </div>
+        )}
+        {hasCreatedZones && hasCreatedMethods && (
+          <div className="mt-1 text-xs text-muted-foreground">
+            Missing zones were created before their selected methods were added.
+          </div>
+        )}
         <div className="mt-2 flex flex-wrap gap-2">
-          <Badge variant="outline">{response.createdZones.length} created</Badge>
+          <Badge variant="outline">{response.createdZones.length} zones created</Badge>
+          <Badge variant="outline">{response.createdMethods.length} methods added</Badge>
           <Badge variant="secondary">{response.skippedZones.length} skipped/manual</Badge>
+          <Badge variant="secondary">{response.skippedMethods.length} methods skipped</Badge>
           <Badge variant="secondary">{response.blockedZones.length} blocked</Badge>
           <Badge variant={response.registryUpdated ? "outline" : "secondary"}>
             Registry {response.registryUpdated ? "updated" : "not updated"}
@@ -355,15 +371,15 @@ function applyReadinessSeverityLabel(severity: ApplyReadiness["severity"]): stri
 function canApplyPreview(response: PreviewResponse): boolean {
   return (
     response.canApplyLater &&
-    response.plan.createZones.length > 0 &&
+    (response.plan.createZones.length > 0 || response.plan.addMethods.length > 0) &&
     response.applyReadiness.severity !== "blocked" &&
     response.plan.conflicts.length === 0
   );
 }
 
 function applyDisabledLabel(response: PreviewResponse): string {
-  if (response.plan.createZones.length === 0) {
-    return "No missing zones to create";
+  if (response.plan.createZones.length === 0 && response.plan.addMethods.length === 0) {
+    return "No missing zones or methods";
   }
 
   if (response.plan.conflicts.length > 0 || response.applyReadiness.severity === "blocked") {
@@ -371,6 +387,58 @@ function applyDisabledLabel(response: PreviewResponse): string {
   }
 
   return "Apply unavailable";
+}
+
+function applyActionTitle(response: PreviewResponse): string {
+  if (response.plan.createZones.length > 0 && response.plan.addMethods.length > 0) {
+    return "Create zones and add methods";
+  }
+
+  if (response.plan.addMethods.length > 0) {
+    return "Add methods to managed zones";
+  }
+
+  return "Create missing zones";
+}
+
+function applyActionDescription(response: PreviewResponse): string {
+  if (response.plan.createZones.length > 0 && response.plan.addMethods.length > 0) {
+    return `Yaxii will create ${response.plan.createZones.length} missing zone(s) and add ${response.plan.addMethods.length} method(s) to existing managed zones.`;
+  }
+
+  if (response.plan.addMethods.length > 0) {
+    return `Yaxii-managed zones already exist. This apply will add ${response.plan.addMethods.length} missing method(s) and prices.`;
+  }
+
+  return `Yaxii will create ${response.plan.createZones.length} missing zone(s), then add selected methods when prices are available.`;
+}
+
+function applyButtonLabel(response: PreviewResponse): string {
+  if (response.plan.addMethods.length > 0 && response.plan.createZones.length === 0) {
+    return "Add methods";
+  }
+
+  if (response.plan.addMethods.length > 0) {
+    return "Create zones and add methods";
+  }
+
+  return "Create zones";
+}
+
+function applyResultTitle(response: ApplyResponse): string {
+  if (response.createdZones.length > 0 && response.createdMethods.length > 0) {
+    return "Zones created and methods added";
+  }
+
+  if (response.createdMethods.length > 0) {
+    return "Methods added";
+  }
+
+  if (response.createdZones.length > 0) {
+    return "Zones created";
+  }
+
+  return "No zones or methods created";
 }
 
 function acceptedPlanSummary(response: PreviewResponse) {

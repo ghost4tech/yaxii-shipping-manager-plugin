@@ -166,7 +166,7 @@ TASK-003B does not implement:
 - WooCommerce zone reads or writes.
 - WooCommerce diagnostics backend.
 - Preview planner.
-- Safe apply updates beyond creating missing managed zones.
+- Safe apply updates beyond creating missing managed zones and adding methods to managed zones.
 - CSV backend.
 - YSF sync.
 - Provider imports.

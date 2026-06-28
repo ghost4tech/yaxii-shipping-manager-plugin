@@ -1,5 +1,10 @@
 import type { AdminBootstrapConfig } from "../bootstrap";
-import type { ApplyRequest, ApplyResponse, ApplyResultZone } from "../types/apply";
+import type {
+  ApplyRequest,
+  ApplyResponse,
+  ApplyResultMethod,
+  ApplyResultZone,
+} from "../types/apply";
 
 export async function fetchApply(
   config: AdminBootstrapConfig,
@@ -32,7 +37,9 @@ function parseApplyResponse(payload: unknown): ApplyResponse {
     payload.applyEngineAvailable !== true ||
     typeof payload.applied !== "boolean" ||
     !isApplyResultZones(payload.createdZones) ||
+    !isApplyResultMethods(payload.createdMethods) ||
     !isApplyResultZones(payload.skippedZones) ||
+    !isApplyResultMethods(payload.skippedMethods) ||
     !isApplyResultZones(payload.blockedZones) ||
     !isApplyResultZones(payload.conflicts) ||
     !Array.isArray(payload.warnings) ||
@@ -49,7 +56,9 @@ function parseApplyResponse(payload: unknown): ApplyResponse {
     applyEngineAvailable: true,
     applied: payload.applied,
     createdZones: payload.createdZones,
+    createdMethods: payload.createdMethods,
     skippedZones: payload.skippedZones,
+    skippedMethods: payload.skippedMethods,
     blockedZones: payload.blockedZones,
     conflicts: payload.conflicts,
     warnings: payload.warnings.filter((warning): warning is string => typeof warning === "string"),
@@ -65,8 +74,16 @@ function isApplyResultZones(zones: unknown): zones is ApplyResultZone[] {
   return Array.isArray(zones) && zones.every(isApplyResultZone);
 }
 
+function isApplyResultMethods(methods: unknown): methods is ApplyResultMethod[] {
+  return Array.isArray(methods) && methods.every(isApplyResultMethod);
+}
+
 function isApplyResultZone(zone: unknown): zone is ApplyResultZone {
   return isObject(zone);
+}
+
+function isApplyResultMethod(method: unknown): method is ApplyResultMethod {
+  return isObject(method);
 }
 
 function errorMessageFromPayload(payload: unknown, fallback: string): string {

@@ -54,7 +54,7 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
   "previewGeneratedAt": "2026-06-28T00:00:00+00:00",
   "applyContractVersion": "apply-contract-v1",
   "canApplyLater": false,
-  "canApplyLaterMessage": "Apply engine is not implemented yet."
+  "canApplyLaterMessage": "Apply can create missing Yaxii-managed zones and add missing methods with prices to managed zones."
 }
 ```
 
@@ -62,13 +62,13 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
 
 The response also includes `applyReadiness`, a UX state derived from diagnostics, the preview plan, the apply contract, and locked safety policy. It explains whether the store looks fresh, partial, manually configured, conflicted, missing methods, Yaxii-managed, or blocked.
 
-In TASK-008A, `canApplyLater` is `true` only when:
+In TASK-008B, `canApplyLater` is `true` only when:
 
-- the preview has at least one `createZones` item
+- the preview has at least one `createZones` or `addMethods` item
 - readiness is not blocked
 - conflicts are empty
 
-The apply endpoint still regenerates and compares the preview before creating any zone.
+The apply endpoint still regenerates and compares the preview before creating any zone or method.
 
 Preview items that involve WooCommerce zones include an ownership source:
 
@@ -115,10 +115,10 @@ The planner does not:
 - Create WooCommerce shipping zones.
 - Update WooCommerce shipping zones.
 - Delete WooCommerce shipping zones.
-- Add shipping methods.
-- Update method prices.
+- Add shipping methods by itself.
+- Update existing method prices.
 - Persist a preview plan.
 - Modify checkout fields.
-- Add shipping methods, update method prices, update existing zones, delete zones, or adopt manual zones.
+- Update existing zones, delete zones, delete methods, or adopt manual zones.
 
-TASK-008A safe apply can create missing Yaxii-managed zones only. Method creation, method price updates, existing zone updates, and deletes remain outside the planner's write scope.
+TASK-008B safe apply can create missing Yaxii-managed zones and add missing methods with prices to Yaxii-managed zones only. Existing method updates, existing zone updates, deletes, and manual-zone adoption remain outside the planner's write scope.

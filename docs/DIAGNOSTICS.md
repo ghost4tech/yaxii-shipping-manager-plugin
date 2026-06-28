@@ -38,4 +38,4 @@ Diagnostics do not prove checkout is fully safe. They only report what the read 
 
 ## Why Preview And Apply Are Separate
 
-Shipping zones are store configuration. Yaxii creates missing managed zones only after a separate preview planner shows proposed creates, skips, and conflicts, and the apply endpoint regenerates that preview immediately before writing.
+Shipping zones are store configuration. Yaxii creates missing managed zones and adds methods to managed zones only after a separate preview planner shows proposed creates, method additions, skips, and conflicts, and the apply endpoint regenerates that preview immediately before writing.

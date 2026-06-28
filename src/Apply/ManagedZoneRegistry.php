@@ -62,18 +62,7 @@ final class ManagedZoneRegistry {
 
 		$records = $this->records_without_created_zone( $sanitized );
 		$records[] = $sanitized;
-		$payload = array(
-			'schemaVersion' => self::SCHEMA_VERSION,
-			'records'       => $records,
-		);
-
-		$saved = update_option( self::OPTION_NAME, $payload, false );
-		if ( $saved || $payload === get_option( self::OPTION_NAME, array() ) ) {
-			$this->records = $records;
-			return true;
-		}
-
-		return false;
+		return $this->save_records( $records );
 	}
 
 	/**
@@ -94,6 +83,30 @@ final class ManagedZoneRegistry {
 	}
 
 	/**
+	 * @param array<string,mixed> $method_instance Created method instance record.
+	 */
+	public function record_method_instance( int $zone_id, array $method_instance ): bool {
+		$record = $this->record_for_zone_id( $zone_id );
+		if ( null === $record ) {
+			return false;
+		}
+
+		$sanitized_method = $this->sanitize_method_instance( $method_instance );
+		if ( null === $sanitized_method ) {
+			return false;
+		}
+
+		$record['methodInstances'] = $this->method_instances_without_key(
+			$record['methodInstances'],
+			(string) $sanitized_method['methodKey']
+		);
+		$record['methodInstances'][] = $sanitized_method;
+		$record['updatedAt']         = gmdate( 'c' );
+
+		return $this->save_records( $this->records_with_replacement( $record ) );
+	}
+
+	/**
 	 * @param array<string,mixed> $created_record Created zone record.
 	 *
 	 * @return array<int,array<string,mixed>>
@@ -108,6 +121,40 @@ final class ManagedZoneRegistry {
 				}
 			)
 		);
+	}
+
+	/**
+	 * @param array<string,mixed> $replacement Updated registry record.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function records_with_replacement( array $replacement ): array {
+		return array_values(
+			array_map(
+				static function ( array $record ) use ( $replacement ): array {
+					return (int) $record['zoneId'] === (int) $replacement['zoneId'] ? $replacement : $record;
+				},
+				$this->records()
+			)
+		);
+	}
+
+	/**
+	 * @param array<int,array<string,mixed>> $records Registry records.
+	 */
+	private function save_records( array $records ): bool {
+		$payload = array(
+			'schemaVersion' => self::SCHEMA_VERSION,
+			'records'       => $records,
+		);
+
+		$saved = update_option( self::OPTION_NAME, $payload, false );
+		if ( $saved || $payload === get_option( self::OPTION_NAME, array() ) ) {
+			$this->records = $records;
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -166,21 +213,49 @@ final class ManagedZoneRegistry {
 				continue;
 			}
 
-			$instance_id = (int) ( $method_instance['instanceId'] ?? 0 );
-			if ( $instance_id <= 0 ) {
-				continue;
+			$sanitized = $this->sanitize_method_instance( $method_instance );
+			if ( null !== $sanitized ) {
+				$instances[] = $sanitized;
 			}
-
-			$instances[] = array(
-				'methodKey'     => $this->sanitize_string( $method_instance['methodKey'] ?? '' ),
-				'instanceId'    => $instance_id,
-				'methodId'      => $this->sanitize_string( $method_instance['methodId'] ?? '' ),
-				'title'         => $this->sanitize_string( $method_instance['title'] ?? '' ),
-				'lastKnownCost' => isset( $method_instance['lastKnownCost'] ) ? $this->sanitize_string( $method_instance['lastKnownCost'] ) : null,
-			);
 		}
 
 		return $instances;
+	}
+
+	/**
+	 * @param array<string,mixed> $method_instance Stored method instance.
+	 *
+	 * @return array<string,mixed>|null
+	 */
+	private function sanitize_method_instance( array $method_instance ): ?array {
+		$instance_id = (int) ( $method_instance['instanceId'] ?? 0 );
+		$method_key  = $this->sanitize_string( $method_instance['methodKey'] ?? '' );
+
+		if ( $instance_id <= 0 || '' === $method_key ) {
+			return null;
+		}
+
+		return array(
+			'methodKey'     => $method_key,
+			'instanceId'    => $instance_id,
+			'methodId'      => $this->sanitize_string( $method_instance['methodId'] ?? '' ),
+			'title'         => $this->sanitize_string( $method_instance['title'] ?? '' ),
+			'lastKnownCost' => isset( $method_instance['lastKnownCost'] ) ? $this->sanitize_string( $method_instance['lastKnownCost'] ) : null,
+		);
+	}
+
+	/**
+	 * @param array<int,array<string,mixed>> $method_instances Stored method instances.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function method_instances_without_key( array $method_instances, string $method_key ): array {
+		return array_values(
+			array_filter(
+				$method_instances,
+				static fn( array $method_instance ): bool => (string) $method_instance['methodKey'] !== $method_key
+			)
+		);
 	}
 
 	private function sanitize_string( $value ): string {

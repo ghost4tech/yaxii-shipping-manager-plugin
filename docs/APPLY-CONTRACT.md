@@ -2,7 +2,7 @@
 
 The safe apply contract defines how Yaxii Shipping Manager identifies its own WooCommerce shipping zones without touching manual merchant zones by mistake.
 
-TASK-008A implements the first narrow apply engine step: create missing Yaxii-managed zones only from a freshly revalidated preview.
+TASK-008B implements the next narrow apply engine step: create missing Yaxii-managed zones and add enabled flat-rate methods with prices to Yaxii-managed zones only from a freshly revalidated preview.
 
 ## Managed Zone Registry
 
@@ -34,7 +34,7 @@ Method instance records support:
 - `title`
 - `lastKnownCost`
 
-If the option is missing or contains invalid records, the registry reader returns an empty or repaired in-memory registry. TASK-008A writes records only after WooCommerce returns a created zone ID.
+If the option is missing or contains invalid records, the registry reader returns an empty or repaired in-memory registry. Zone records are written only after WooCommerce returns a created zone ID. Method instance records are written only after WooCommerce returns a created method instance ID.
 
 ## Ownership Priority
 
@@ -77,30 +77,32 @@ The endpoint does not write to WooCommerce, settings, options, files, or dataset
 
 ## Apply Endpoint
 
-TASK-008A enables a create-only apply endpoint:
+TASK-008B enables a managed-zone-only apply endpoint:
 
 ```text
 POST /wp-json/yaxii-shipping-manager/v1/apply
 ```
 
-The endpoint validates the apply request contract, regenerates the preview immediately before writing, and creates only missing Yaxii-managed zones from the fresh `createZones` group.
+The endpoint validates the apply request contract, regenerates the preview immediately before writing, creates only missing Yaxii-managed zones from the fresh `createZones` group, and adds enabled flat-rate methods only to managed zones.
 
 ```json
 {
   "applyEngineAvailable": true,
   "applied": true,
   "createdZones": [],
+  "createdMethods": [],
   "skippedZones": [],
+  "skippedMethods": [],
   "blockedZones": [],
   "conflicts": [],
   "warnings": [],
   "registryUpdated": true,
   "wooCommerceChanged": true,
-  "message": "Created 1 Yaxii-managed zones. Manual zones skipped: 0. No methods or prices were created."
+  "message": "Added 2 shipping methods to Yaxii-managed zones. Manual zones skipped: 0."
 }
 ```
 
-The endpoint does not add shipping methods, update prices, update existing zones, delete zones, or touch manual zones.
+The endpoint does not update existing zones, update existing method instances, delete zones, delete methods, or touch manual zones.
 
 Access policy:
 
@@ -147,26 +149,27 @@ Readiness states are documented in:
 docs/APPLY-WORKFLOW.md
 ```
 
-The readiness model does not replace the apply contract. TASK-008A still requires explicit confirmation and fresh preview revalidation before creating zones.
+The readiness model does not replace the apply contract. TASK-008B still requires explicit confirmation and fresh preview revalidation before creating zones or methods.
 
 ## Apply Engine Rules
 
-The TASK-008A apply engine must:
+The TASK-008B apply engine must:
 
 - Apply only explicitly reviewed preview plans.
 - Write only missing zones that are about to be recorded in the managed registry.
+- Add methods only to zones already recorded in the managed registry or created and recorded in the same apply request.
 - Never overwrite manual/unknown zones by default.
 - Never delete zones in the MVP.
 - Re-read WooCommerce state immediately before applying.
-- Report every create, skip, conflict, unsupported update/method item, and failure.
-- Leave method and price changes for a later task.
+- Report every create, method add, skip, conflict, unsupported update item, and failure.
+- Leave existing zone and method updates for a later task.
 
 ## Not Implemented Yet
 
-TASK-008A does not:
+TASK-008B does not:
 
 - Update WooCommerce shipping zones.
 - Delete WooCommerce shipping zones.
-- Add shipping methods.
-- Update method prices.
+- Update existing shipping method labels or prices.
+- Delete shipping methods.
 - Persist preview plans.

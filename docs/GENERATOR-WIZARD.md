@@ -49,7 +49,7 @@ Recommended steps:
 6. Names and labels
 7. Safety check
 8. Preview
-9. Apply create-only when safe
+9. Apply managed zones and methods when safe
 
 ### 1. Setup Mode And Defaults
 
@@ -235,15 +235,15 @@ Recommended copy:
 
 > This is a preview only. No WooCommerce changes were made.
 
-### 9. Apply Create-Only
+### 9. Apply Managed Zones And Methods
 
 Purpose: make the current boundary obvious.
 
 Recommended copy:
 
-> Apply can create missing Yaxii-managed zones only. Methods and prices are not created yet.
+> Apply can create missing Yaxii-managed zones and add selected methods with prices to managed zones. Manual zones are not touched.
 
-The active apply button should appear only when a reviewed preview has missing zones to create, no conflicts, and the required confirmation text is entered.
+The active apply button should appear only when a reviewed preview has missing zones or missing methods, no conflicts, and the required confirmation text is entered.
 
 ## UI Copy Recommendations
 
@@ -267,9 +267,9 @@ Preview only:
 
 > This is a preview only. No WooCommerce changes were made.
 
-Apply create-only:
+Apply managed zones and methods:
 
-> Create missing zones only.
+> Create zones and add methods.
 
 Commune coverage:
 
@@ -291,11 +291,11 @@ Must implement next:
 - Improve selected wilaya and pricing review.
 - Move preview into the final wizard step.
 - Make safety copy clear before preview.
-- Enable apply only for the reviewed create-missing-zones path.
+- Enable apply only for the reviewed managed-zone path.
 
 Must not implement next:
 
-- WooCommerce zone updates, deletes, or method writes beyond creating missing managed zones.
+- WooCommerce zone updates, deletes, or method updates beyond adding methods to managed zones.
 - Commune-level pricing engine.
 - Checkout city field changes.
 - CSV backend.
