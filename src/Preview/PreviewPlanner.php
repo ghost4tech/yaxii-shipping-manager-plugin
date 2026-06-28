@@ -74,8 +74,8 @@ final class PreviewPlanner {
 			'safetyPolicy'         => $settings['safetyPolicy'],
 			'canApplyLater'        => $can_apply_later,
 			'canApplyLaterMessage' => $can_apply_later
-				? __( 'Apply can create missing Yaxii-managed zones and add missing methods with prices to managed zones.', 'yaxii-shipping-manager' )
-				: __( 'Apply is available only when the preview has missing zones or methods and no blocking conflicts.', 'yaxii-shipping-manager' ),
+				? __( 'Apply can create missing Yaxii-managed zones, add missing methods, or update Yaxii-managed method prices and labels.', 'yaxii-shipping-manager' )
+				: __( 'Apply is available only when the preview has supported Yaxii-managed work and no blocking conflicts.', 'yaxii-shipping-manager' ),
 		);
 	}
 
@@ -85,7 +85,7 @@ final class PreviewPlanner {
 	 */
 	private function can_apply_later( array $plan_groups, array $apply_readiness ): bool {
 		return 'blocked' !== ( $apply_readiness['severity'] ?? '' )
-			&& ( count( $plan_groups['createZones'] ) > 0 || count( $plan_groups['addMethods'] ) > 0 )
+			&& ( count( $plan_groups['createZones'] ) > 0 || count( $plan_groups['addMethods'] ) > 0 || count( $plan_groups['updateMethods'] ) > 0 )
 			&& count( $plan_groups['conflicts'] ) === 0;
 	}
 
@@ -266,7 +266,8 @@ final class PreviewPlanner {
 	 * @return array<string,string>
 	 */
 	private function method_change( array $zone, array $desired_method ): array {
-		$existing_method = $this->matching_method( $zone['methods'] ?? array(), $desired_method );
+		$existing_method = $this->registry_method( $zone, $desired_method )
+			?? $this->matching_method( $zone['methods'] ?? array(), $desired_method );
 		if ( null === $existing_method ) {
 			return array( 'action' => 'add' );
 		}
@@ -281,6 +282,39 @@ final class PreviewPlanner {
 		}
 
 		return array( 'action' => 'none' );
+	}
+
+	/**
+	 * @param array<string,mixed> $zone Zone diagnostics.
+	 * @param array<string,mixed> $desired_method Desired method.
+	 *
+	 * @return array<string,mixed>|null
+	 */
+	private function registry_method( array $zone, array $desired_method ): ?array {
+		$record = $this->managed_registry->record_for_zone_id( (int) ( $zone['zoneId'] ?? 0 ) );
+		if ( null === $record ) {
+			return null;
+		}
+
+		$instance_id = 0;
+		foreach ( $record['methodInstances'] as $method_instance ) {
+			if ( (string) $desired_method['key'] === (string) $method_instance['methodKey'] ) {
+				$instance_id = (int) $method_instance['instanceId'];
+				break;
+			}
+		}
+
+		if ( $instance_id <= 0 ) {
+			return null;
+		}
+
+		foreach ( $zone['methods'] ?? array() as $method ) {
+			if ( is_array( $method ) && $instance_id === (int) ( $method['instanceId'] ?? 0 ) ) {
+				return $method;
+			}
+		}
+
+		return null;
 	}
 
 	/**

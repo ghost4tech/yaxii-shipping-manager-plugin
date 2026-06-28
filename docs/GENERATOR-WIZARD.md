@@ -25,7 +25,7 @@ Already connected to real backend contracts:
 - Preview calls `POST /preview` automatically on the final step when the draft is valid.
 - Preview output shows one merchant action card, one setup summary, grouped method additions, collapsed advanced details, and a safe apply action only when supported work exists.
 - Diagnostics uses `GET /diagnostics`.
-- Apply can create missing Yaxii-managed zones and add missing methods/prices after checkbox confirmation. Existing method price/label updates remain reserved for the next task.
+- Apply can create missing Yaxii-managed zones, add missing methods/prices, and update labels or prices for existing Yaxii-managed method instances after checkbox confirmation.
 
 Still prototype-like:
 
@@ -231,7 +231,8 @@ Show in the main action card:
 
 - `Ready to prepare shipping` when safe creates or method additions are available.
 - `Shipping setup already exists` when no missing zones or methods are found.
-- `Setup exists. Updates are coming next.` when only existing method/price/label updates remain for TASK-008C.
+- `Ready to update prices` when registry-owned method price or label updates can be applied safely.
+- `Setup exists. Updates are coming next.` when only unsupported zone name updates remain for a later task.
 - `Needs review before applying` only for real blockers.
 
 Show in the setup summary:
@@ -243,7 +244,8 @@ Show in the setup summary:
 - safety rules
 - readiness state
 - grouped methods/prices to add
-- short note for unsupported updates that will be handled later
+- grouped method price/label updates
+- short note for unsupported zone name updates that will be handled later
 
 Recommended copy:
 
@@ -257,9 +259,9 @@ Purpose: make the current boundary obvious.
 
 Recommended copy:
 
-> Apply can create missing Yaxii-managed zones and add selected methods with prices to managed zones. Manual zones are not touched.
+> Apply can create missing Yaxii-managed zones, add selected methods with prices, and update Yaxii-managed method prices or labels. Manual zones are not touched.
 
-The active apply button should appear only when a reviewed preview has missing zones or missing methods, no conflicts, and the merchant checks the confirmation checkbox. The frontend still submits the backend-required confirmation phrase internally for the current safe apply scope.
+The active apply button should appear only when a reviewed preview has supported work, no conflicts, and the merchant checks the confirmation checkbox. Supported work means missing zones, missing methods, or registry-owned method price/label updates. The frontend still submits the backend-required confirmation phrase internally for the current safe apply scope.
 
 Preview-only setup mode hides the apply action and shows:
 
@@ -273,13 +275,13 @@ The Shipping Zones screen is a local draft editor, not a WooCommerce write surfa
 
 Current control classification:
 
-- Price inputs: draft/local only.
+- Price inputs: draft/local only until the merchant reviews preview and applies supported Yaxii-managed method updates.
 - Bulk price and percent controls: draft/local only.
 - Free shipping and disabled/enabled actions: draft/local only.
-- `Save settings` in Settings: functional settings persistence only; it does not update WooCommerce zones or existing methods.
+- `Save settings` in Settings: functional settings persistence only; it does not directly update WooCommerce zones or existing methods. Use wizard preview/apply for supported Yaxii-managed method price or label updates.
 - CSV import/export controls: coming soon and disabled.
 
-The UI must say local draft controls do not write WooCommerce. Existing WooCommerce method price and label updates remain for TASK-008C.
+The UI must say local draft controls do not write WooCommerce until the merchant reviews and applies a supported preview. Unknown or manual WooCommerce method price and label updates remain out of scope.
 
 ## UI Copy Recommendations
 
@@ -331,7 +333,7 @@ Must implement next:
 
 Must not implement next:
 
-- WooCommerce zone updates, deletes, or method updates beyond adding methods to managed zones.
+- WooCommerce zone updates, deletes, reset/wipe tools, manual-zone adoption, or unknown method updates.
 - Commune-level pricing engine.
 - Checkout city field changes.
 - CSV backend.

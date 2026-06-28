@@ -37,6 +37,8 @@ export type ApplyResultMethod = {
   instanceId?: number | null;
   title?: string;
   lastKnownCost?: string | null;
+  titleUpdated?: boolean;
+  priceUpdated?: boolean;
   type?: string;
   reason?: string;
 };
@@ -46,8 +48,10 @@ export type ApplyResponse = {
   applied: boolean;
   createdZones: ApplyResultZone[];
   createdMethods: ApplyResultMethod[];
+  updatedMethods: ApplyResultMethod[];
   skippedZones: ApplyResultZone[];
   skippedMethods: ApplyResultMethod[];
+  skippedMethodUpdates: ApplyResultMethod[];
   blockedZones: ApplyResultZone[];
   conflicts: ApplyResultZone[];
   warnings: string[];
