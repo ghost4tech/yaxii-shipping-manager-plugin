@@ -1,6 +1,6 @@
 <?php
 /**
- * Read-only safe apply contract summary.
+ * Safe apply contract summary.
  *
  * @package YaxiiShippingManager
  */
@@ -27,7 +27,7 @@ final class ApplyContract {
 		$settings_payload = $this->settings->read();
 
 		return array(
-			'applyEngineAvailable'    => false,
+			'applyEngineAvailable'     => true,
 			'managedRegistryAvailable' => true,
 			'managedRegistryOption'    => ManagedZoneRegistry::OPTION_NAME,
 			'applyContractVersion'     => ApplyRequestSanitizer::CONTRACT_VERSION,
@@ -41,16 +41,17 @@ final class ApplyContract {
 				'confirmationText',
 				'safetyPolicySnapshot',
 				'applyContractVersion',
+				'previewRequest',
 			),
 			'managedZoneCount'         => $this->managed_registry->managed_zone_count(),
 			'safetyPolicy'             => $settings_payload['settings']['safetyPolicy'],
 			'requiredNextSteps'        => array(
-				__( 'Review WooCommerce diagnostics.', 'yaxii-shipping-manager' ),
-				__( 'Generate and review a preview plan.', 'yaxii-shipping-manager' ),
-				__( 'Implement and audit the safe apply engine before any WooCommerce writes.', 'yaxii-shipping-manager' ),
+				__( 'Generate and review a fresh preview plan.', 'yaxii-shipping-manager' ),
+				__( 'Confirm the exact apply phrase before creating zones.', 'yaxii-shipping-manager' ),
+				__( 'Create missing Yaxii-managed zones only. Methods and prices remain unchanged.', 'yaxii-shipping-manager' ),
 			),
 			'warnings'                 => array(
-				__( 'Apply engine is not implemented yet.', 'yaxii-shipping-manager' ),
+				__( 'This apply step creates missing zones only.', 'yaxii-shipping-manager' ),
 				__( 'Manual WooCommerce zones remain protected by default.', 'yaxii-shipping-manager' ),
 			),
 			'generatedAt'              => gmdate( 'c' ),

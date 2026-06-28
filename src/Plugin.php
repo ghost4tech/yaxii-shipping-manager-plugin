@@ -11,8 +11,8 @@ use Yaxii\ShippingManager\Admin\AdminPage;
 use Yaxii\ShippingManager\Admin\AssetRegistrar;
 use Yaxii\ShippingManager\Apply\ApplyContract;
 use Yaxii\ShippingManager\Apply\ApplyRequestSanitizer;
-use Yaxii\ShippingManager\Apply\ApplySafetyValidator;
 use Yaxii\ShippingManager\Apply\ManagedZoneRegistry;
+use Yaxii\ShippingManager\Apply\SafeApplyEngine;
 use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Preview\PreviewPlanner;
 use Yaxii\ShippingManager\Preview\PreviewRequestSanitizer;
@@ -44,6 +44,7 @@ final class Plugin {
 		$zone_reader            = new ShippingZoneReader( $woocommerce_active );
 		$diagnostics            = new ShippingDiagnosticsService( $woocommerce_active, $datasets, $settings, $zone_reader );
 		$preview_planner        = new PreviewPlanner( $datasets, $settings, $diagnostics, $managed_registry );
+		$safe_apply_engine      = new SafeApplyEngine( $woocommerce_active, $preview_planner, $managed_registry );
 		$apply_contract         = new ApplyContract( $settings, $managed_registry );
 		$bootstrap              = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
 		$dataset_controller     = new DatasetController( $woocommerce_active, $datasets );
@@ -51,7 +52,7 @@ final class Plugin {
 		$diagnostics_controller = new DiagnosticsController( $woocommerce_active, $diagnostics );
 		$preview_controller     = new PreviewController( $woocommerce_active, $preview_planner, new PreviewRequestSanitizer() );
 		$apply_controller       = new ApplyContractController( $woocommerce_active, $apply_contract );
-		$disabled_apply         = new ApplyController( $woocommerce_active, new ApplyRequestSanitizer(), new ApplySafetyValidator() );
+		$apply                  = new ApplyController( $woocommerce_active, new ApplyRequestSanitizer(), $safe_apply_engine );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
@@ -65,7 +66,7 @@ final class Plugin {
 
 		$algeria_states->register();
 
-		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller, $apply_controller, $disabled_apply );
+		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller, $apply_controller, $apply );
 		$routes->register();
 	}
 

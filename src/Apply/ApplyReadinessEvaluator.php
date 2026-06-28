@@ -1,6 +1,6 @@
 <?php
 /**
- * Read-only apply workflow readiness evaluator.
+ * Apply workflow readiness evaluator.
  *
  * @package YaxiiShippingManager
  */
@@ -159,33 +159,33 @@ final class ApplyReadinessEvaluator {
 		return array(
 			'fresh_store'            => array(
 				'title'             => __( 'Ready to create Yaxii shipping zones', 'yaxii-shipping-manager' ),
-				'message'           => __( 'No existing Algeria wilaya zones were found. Future apply can create reviewed Yaxii-managed zones.', 'yaxii-shipping-manager' ),
+				'message'           => __( 'No existing Algeria wilaya zones were found. Apply can create reviewed Yaxii-managed zones.', 'yaxii-shipping-manager' ),
 				'recommendedAction' => __( 'Review the plan before applying.', 'yaxii-shipping-manager' ),
 			),
 			'partial_setup'          => array(
-				'title'             => __( 'Some wilayas are ready; missing wilayas can be created later', 'yaxii-shipping-manager' ),
+				'title'             => __( 'Some wilayas are ready; missing wilayas can be created', 'yaxii-shipping-manager' ),
 				'message'           => __( 'Some Algeria wilayas already have WooCommerce zones and others are missing.', 'yaxii-shipping-manager' ),
-				'recommendedAction' => __( 'Review existing coverage and missing wilayas before future apply.', 'yaxii-shipping-manager' ),
+				'recommendedAction' => __( 'Review existing coverage and missing wilayas before applying.', 'yaxii-shipping-manager' ),
 			),
 			'manual_zones_detected'  => array(
 				'title'             => __( 'Manual zones are protected and will be skipped', 'yaxii-shipping-manager' ),
 				'message'           => __( 'Manual or unknown WooCommerce zones overlap selected wilayas. Yaxii will not overwrite them by default.', 'yaxii-shipping-manager' ),
-				'recommendedAction' => __( 'Review skipped manual zones before future apply.', 'yaxii-shipping-manager' ),
+				'recommendedAction' => __( 'Review skipped manual zones before applying.', 'yaxii-shipping-manager' ),
 			),
 			'conflicts_detected'     => array(
 				'title'             => __( 'Resolve conflicts before applying', 'yaxii-shipping-manager' ),
 				'message'           => __( 'Duplicate or conflicting WooCommerce zones were found for selected wilayas.', 'yaxii-shipping-manager' ),
-				'recommendedAction' => __( 'Resolve conflicts in WooCommerce before any apply engine can run.', 'yaxii-shipping-manager' ),
+				'recommendedAction' => __( 'Resolve conflicts in WooCommerce before applying.', 'yaxii-shipping-manager' ),
 			),
 			'methods_missing'        => array(
-				'title'             => __( 'Methods can be added later through reviewed apply', 'yaxii-shipping-manager' ),
+				'title'             => __( 'Method changes need a later apply step', 'yaxii-shipping-manager' ),
 				'message'           => __( 'Some matching zones are missing required enabled shipping methods or need method updates.', 'yaxii-shipping-manager' ),
-				'recommendedAction' => __( 'Review method additions and updates before future apply.', 'yaxii-shipping-manager' ),
+				'recommendedAction' => __( 'This apply step creates missing zones only. Methods and prices are not changed.', 'yaxii-shipping-manager' ),
 			),
 			'yaxii_managed_ready'    => array(
-				'title'             => __( 'Yaxii-managed zones can be updated after review', 'yaxii-shipping-manager' ),
+				'title'             => __( 'Yaxii-managed zones are already present', 'yaxii-shipping-manager' ),
 				'message'           => __( 'The preview includes zones known by the Yaxii managed registry or existing Yaxii-looking zones.', 'yaxii-shipping-manager' ),
-				'recommendedAction' => __( 'Review every proposed update before applying later.', 'yaxii-shipping-manager' ),
+				'recommendedAction' => __( 'Existing zone updates are not part of this apply step.', 'yaxii-shipping-manager' ),
 			),
 			'blocked'                => array(
 				'title'             => __( 'Cannot apply yet', 'yaxii-shipping-manager' ),

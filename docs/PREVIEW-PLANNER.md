@@ -2,7 +2,7 @@
 
 The preview planner generates a read-only dry-run plan for future WooCommerce shipping-zone changes.
 
-It exists between diagnostics and the safe apply engine. It lets a merchant inspect proposed creates, updates, skips, conflicts, and warnings before any WooCommerce write code exists.
+It exists between diagnostics and the safe apply engine. It lets a merchant inspect proposed creates, updates, skips, conflicts, and warnings before any WooCommerce write is attempted.
 
 ## Endpoint
 
@@ -58,9 +58,17 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
 }
 ```
 
-`previewHash` is deterministic for the selected wilayas, summary, plan groups, locked safety policy, and apply contract version. It is not persisted in TASK-006A.
+`previewHash` is deterministic for the selected wilayas, summary, plan groups, locked safety policy, and apply contract version. It is not persisted.
 
-The response also includes `applyReadiness`, a read-only UX state derived from diagnostics, the preview plan, the apply contract, and locked safety policy. It explains whether the store looks fresh, partial, manually configured, conflicted, missing methods, Yaxii-managed, or blocked.
+The response also includes `applyReadiness`, a UX state derived from diagnostics, the preview plan, the apply contract, and locked safety policy. It explains whether the store looks fresh, partial, manually configured, conflicted, missing methods, Yaxii-managed, or blocked.
+
+In TASK-008A, `canApplyLater` is `true` only when:
+
+- the preview has at least one `createZones` item
+- readiness is not blocked
+- conflicts are empty
+
+The apply endpoint still regenerates and compares the preview before creating any zone.
 
 Preview items that involve WooCommerce zones include an ownership source:
 
@@ -111,6 +119,6 @@ The planner does not:
 - Update method prices.
 - Persist a preview plan.
 - Modify checkout fields.
-- Implement the safe apply engine.
+- Add shipping methods, update method prices, update existing zones, delete zones, or adopt manual zones.
 
-The safe apply engine comes later and must apply only an explicitly reviewed plan.
+TASK-008A safe apply can create missing Yaxii-managed zones only. Method creation, method price updates, existing zone updates, and deletes remain outside the planner's write scope.

@@ -1,4 +1,4 @@
-import type { PreviewResponse } from "@/types/preview";
+import type { PreviewRequest, PreviewResponse } from "@/types/preview";
 
 export type WilayaStatus = "ready" | "missing" | "managed" | "manual" | "conflict" | "needs_update";
 
@@ -41,4 +41,5 @@ export type GeneratorPreviewContext = {
 export type GeneratorPreviewSnapshot = {
   response: PreviewResponse;
   context: GeneratorPreviewContext;
+  request: PreviewRequest;
 };

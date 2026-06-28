@@ -1,22 +1,76 @@
-import { Activity, Lock, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { Activity, AlertCircle, CheckCircle2, Lock, ShieldCheck } from "lucide-react";
 
+import { fetchApply } from "@/api/apply-api";
+import type { AdminBootstrapConfig } from "@/bootstrap";
 import type { GeneratorPreviewContext } from "./types";
-import type { ApplyReadiness, PreviewPlanItem, PreviewResponse } from "@/types/preview";
+import type { ApplyResponse } from "@/types/apply";
+import type {
+  ApplyReadiness,
+  PreviewPlanItem,
+  PreviewRequest,
+  PreviewResponse,
+} from "@/types/preview";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+const APPLY_CONFIRMATION_TEXT = "APPLY YAXII SHIPPING PLAN";
 
 export function PreviewPlanPanel({
   response,
   context,
+  config,
+  previewRequest,
   onOpenDiagnostics,
+  onRefreshDiagnostics,
 }: {
   response: PreviewResponse;
   context?: GeneratorPreviewContext;
+  config: AdminBootstrapConfig;
+  previewRequest: PreviewRequest;
   onOpenDiagnostics: () => void;
+  onRefreshDiagnostics: () => void;
 }) {
+  const [confirmationChecked, setConfirmationChecked] = useState(false);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [applyState, setApplyState] = useState<
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "ready"; response: ApplyResponse }
+    | { status: "error"; message: string }
+  >({ status: "idle" });
+  const canApply = canApplyPreview(response);
+  const confirmationMatches = confirmationText.trim() === APPLY_CONFIRMATION_TEXT;
+
+  const applyPreview = async () => {
+    setApplyState({ status: "loading" });
+
+    try {
+      const applyResponse = await fetchApply(config, {
+        previewHash: response.previewHash,
+        previewGeneratedAt: response.previewGeneratedAt,
+        selectedWilayaCodes: previewRequest.selectedWilayaCodes ?? [],
+        acceptedPlanSummary: acceptedPlanSummary(response),
+        confirmed: true,
+        confirmationText: APPLY_CONFIRMATION_TEXT,
+        safetyPolicySnapshot: response.safetyPolicy,
+        applyContractVersion: response.applyContractVersion,
+        previewRequest,
+      });
+      setApplyState({ status: "ready", response: applyResponse });
+    } catch (error) {
+      setApplyState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Apply request failed.",
+      });
+    }
+  };
+
   return (
     <div className="mt-6 space-y-4">
       <Alert>
@@ -32,9 +86,7 @@ export function PreviewPlanPanel({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Apply confirmation contract</CardTitle>
-          <CardDescription>
-            Apply will be enabled after the safe apply engine is implemented.
-          </CardDescription>
+          <CardDescription>{response.canApplyLaterMessage}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -51,18 +103,67 @@ export function PreviewPlanPanel({
             <span>Contract version</span>
             <Badge variant="outline">{response.applyContractVersion}</Badge>
           </div>
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button disabled variant="outline">
-              <Lock className="h-4 w-4" />
-              Apply disabled
-            </Button>
-            <Button variant="outline" onClick={onOpenDiagnostics}>
-              <Activity className="h-4 w-4" />
-              Open diagnostics
-            </Button>
+          <div className="space-y-3 pt-2">
+            {canApply ? (
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={confirmationChecked}
+                    onCheckedChange={(checked) => setConfirmationChecked(Boolean(checked))}
+                  />
+                  <div className="space-y-2">
+                    <div className="font-medium">Create missing zones only</div>
+                    <div className="text-xs text-muted-foreground">
+                      Yaxii will create {response.plan.createZones.length} missing zone(s). No
+                      methods or prices will be created.
+                    </div>
+                    <Input
+                      value={confirmationText}
+                      onChange={(event) => setConfirmationText(event.target.value)}
+                      placeholder={APPLY_CONFIRMATION_TEXT}
+                    />
+                    <Button
+                      onClick={() => void applyPreview()}
+                      disabled={
+                        applyState.status === "loading" ||
+                        !confirmationChecked ||
+                        !confirmationMatches
+                      }
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      {applyState.status === "loading" ? "Creating zones..." : "Create zones"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Button disabled variant="outline">
+                <Lock className="h-4 w-4" />
+                {applyDisabledLabel(response)}
+              </Button>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={onOpenDiagnostics}>
+                <Activity className="h-4 w-4" />
+                Open diagnostics
+              </Button>
+              <Button variant="outline" onClick={onRefreshDiagnostics}>
+                <Activity className="h-4 w-4" />
+                Refresh diagnostics
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {applyState.status === "ready" && <ApplyResultPanel response={applyState.response} />}
+      {applyState.status === "error" && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Apply blocked</AlertTitle>
+          <AlertDescription>{applyState.message}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <PreviewStat label="Zones to create" value={String(response.summary.createZones)} />
@@ -149,6 +250,37 @@ function PreviewContextPanel({ context }: { context: GeneratorPreviewContext }) 
   );
 }
 
+function ApplyResultPanel({ response }: { response: ApplyResponse }) {
+  return (
+    <Alert className={response.wooCommerceChanged ? "border-emerald-200 bg-emerald-50" : ""}>
+      {response.wooCommerceChanged ? (
+        <CheckCircle2 className="h-4 w-4" />
+      ) : (
+        <AlertCircle className="h-4 w-4" />
+      )}
+      <AlertTitle>{response.wooCommerceChanged ? "Zones created" : "No zones created"}</AlertTitle>
+      <AlertDescription>
+        <div>{response.message}</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Badge variant="outline">{response.createdZones.length} created</Badge>
+          <Badge variant="secondary">{response.skippedZones.length} skipped/manual</Badge>
+          <Badge variant="secondary">{response.blockedZones.length} blocked</Badge>
+          <Badge variant={response.registryUpdated ? "outline" : "secondary"}>
+            Registry {response.registryUpdated ? "updated" : "not updated"}
+          </Badge>
+        </div>
+        {response.warnings.length > 0 && (
+          <ul className="mt-2 list-disc space-y-1 pl-4">
+            {response.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-3">
@@ -218,6 +350,42 @@ function applyReadinessSeverityLabel(severity: ApplyReadiness["severity"]): stri
   }
 
   return severity === "ready" ? "Ready later" : "Needs review";
+}
+
+function canApplyPreview(response: PreviewResponse): boolean {
+  return (
+    response.canApplyLater &&
+    response.plan.createZones.length > 0 &&
+    response.applyReadiness.severity !== "blocked" &&
+    response.plan.conflicts.length === 0
+  );
+}
+
+function applyDisabledLabel(response: PreviewResponse): string {
+  if (response.plan.createZones.length === 0) {
+    return "No missing zones to create";
+  }
+
+  if (response.plan.conflicts.length > 0 || response.applyReadiness.severity === "blocked") {
+    return "Apply blocked";
+  }
+
+  return "Apply unavailable";
+}
+
+function acceptedPlanSummary(response: PreviewResponse) {
+  return {
+    selectedWilayas: response.summary.selectedWilayas,
+    createZones: response.summary.createZones,
+    updateZones: response.summary.updateZones,
+    addMethods: response.summary.addMethods,
+    updateMethods: response.summary.updateMethods,
+    skipManualZones: response.summary.skipManualZones,
+    conflicts: response.summary.conflicts,
+    warnings: response.summary.warnings,
+    unchanged: response.summary.unchanged,
+    deleteZones: response.summary.deleteZones,
+  };
 }
 
 function PreviewPlanGroup({

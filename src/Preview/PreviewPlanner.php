@@ -59,20 +59,34 @@ final class PreviewPlanner {
 		$summary                 = $this->summary( $plan_groups, $selected_count );
 		$generated_at            = gmdate( 'c' );
 		$preview_hash            = $this->preview_hash( $summary, $plan_groups, $context['selectedCodes'], $settings['safetyPolicy'] );
+		$apply_readiness         = $this->apply_readiness( $plan_groups, $diagnostics, $settings['safetyPolicy'], $selected_count );
+		$can_apply_later         = $this->can_apply_later( $plan_groups, $apply_readiness );
 
 		return array(
 			'summary'              => $summary,
 			'plan'                 => $plan_groups,
-			'applyReadiness'       => $this->apply_readiness( $plan_groups, $diagnostics, $settings['safetyPolicy'], $selected_count ),
+			'applyReadiness'       => $apply_readiness,
 			'warnings'             => $warning_messages,
 			'generatedAt'          => $generated_at,
 			'previewGeneratedAt'   => $generated_at,
 			'previewHash'          => $preview_hash,
 			'applyContractVersion' => ApplyRequestSanitizer::CONTRACT_VERSION,
 			'safetyPolicy'         => $settings['safetyPolicy'],
-			'canApplyLater'        => false,
-			'canApplyLaterMessage' => __( 'Apply engine is not implemented yet.', 'yaxii-shipping-manager' ),
+			'canApplyLater'        => $can_apply_later,
+			'canApplyLaterMessage' => $can_apply_later
+				? __( 'Apply can create missing Yaxii-managed zones only. Methods and prices are not created yet.', 'yaxii-shipping-manager' )
+				: __( 'Apply is available only when the preview has missing zones to create and no blocking conflicts.', 'yaxii-shipping-manager' ),
 		);
+	}
+
+	/**
+	 * @param array<string,array<int,array<string,mixed>>> $plan_groups Preview plan groups.
+	 * @param array<string,mixed>                          $apply_readiness Apply readiness.
+	 */
+	private function can_apply_later( array $plan_groups, array $apply_readiness ): bool {
+		return 'blocked' !== ( $apply_readiness['severity'] ?? '' )
+			&& count( $plan_groups['createZones'] ) > 0
+			&& count( $plan_groups['conflicts'] ) === 0;
 	}
 
 	/**
@@ -121,7 +135,7 @@ final class PreviewPlanner {
 	 */
 	private function apply_contract_payload(): array {
 		return array(
-			'applyEngineAvailable'     => false,
+			'applyEngineAvailable'     => true,
 			'managedRegistryAvailable' => true,
 			'managedRegistryOption'    => ManagedZoneRegistry::OPTION_NAME,
 			'managedZoneCount'         => $this->managed_registry->managed_zone_count(),
@@ -350,7 +364,7 @@ final class PreviewPlanner {
 			'location'        => 'DZ:' . (string) $wilaya['code'],
 			'methods'         => $this->desired_methods( $wilaya, $context ),
 			'ownershipSource' => 'managed_registry',
-			'reason'          => __( 'No direct WooCommerce zone exists for this wilaya. A future apply engine would record it in the Yaxii managed registry.', 'yaxii-shipping-manager' ),
+			'reason'          => __( 'No direct WooCommerce zone exists for this wilaya. Apply can create and record it in the Yaxii managed registry.', 'yaxii-shipping-manager' ),
 		);
 	}
 
@@ -635,7 +649,7 @@ final class PreviewPlanner {
 			return __( 'Review protected manual zones before applying future changes.', 'yaxii-shipping-manager' );
 		}
 
-		return __( 'Review this preview. The apply engine is not implemented yet.', 'yaxii-shipping-manager' );
+		return __( 'Review this preview. Apply can create missing Yaxii-managed zones only.', 'yaxii-shipping-manager' );
 	}
 
 	/**

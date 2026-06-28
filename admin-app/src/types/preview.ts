@@ -108,6 +108,6 @@ export type PreviewResponse = {
     skipConflictsByDefault: true;
     neverDeleteManualZones: true;
   };
-  canApplyLater: false;
+  canApplyLater: boolean;
   canApplyLaterMessage: string;
 };

@@ -1,8 +1,8 @@
 # Apply Workflow UX States
 
-The apply workflow state model explains what a future safe apply engine would do after diagnostics and preview. It is read-only in TASK-005B.
+The apply workflow state model explains whether the current preview can be applied safely.
 
-No WooCommerce changes are made by these states.
+TASK-008A allows only one write path: create missing Yaxii-managed zones from the preview `createZones` group. The readiness model is still informational; the apply endpoint revalidates the preview before any write.
 
 ## Source Inputs
 
@@ -116,23 +116,23 @@ Cannot apply yet
 
 ## Severity
 
-- `ready`: the preview can be reviewed for future apply.
+- `ready`: the preview can be reviewed for apply.
 - `attention`: the preview needs merchant review because setup is partial, manual zones are protected, or methods need work.
-- `blocked`: conflicts or critical missing conditions prevent future apply.
+- `blocked`: conflicts or critical missing conditions prevent apply.
 
-The current plugin still returns:
+The current plugin returns:
 
 ```json
 {
   "previewHash": "64-character sha256 hash",
   "previewGeneratedAt": "2026-06-28T00:00:00+00:00",
   "applyContractVersion": "apply-contract-v1",
-  "canApplyLater": false,
-  "canApplyLaterMessage": "Apply engine is not implemented yet."
+  "canApplyLater": true,
+  "canApplyLaterMessage": "Apply can create missing Yaxii-managed zones only. Methods and prices are not created yet."
 }
 ```
 
-The preview hash is a reference for a future confirmed apply request. It is not stored and does not allow apply by itself.
+`canApplyLater` is true only when the preview has missing zones to create and no blocking conflicts. The preview hash is a reference for a confirmed apply request. It is not stored and does not allow apply by itself.
 
 ## Counts
 
@@ -151,14 +151,12 @@ These counts are explanatory only. They do not persist a preview plan.
 
 The readiness model does not:
 
-- create WooCommerce shipping zones
 - update WooCommerce shipping zones
 - delete WooCommerce shipping zones
 - add shipping methods
 - update method prices
 - persist a preview plan
-- write the managed registry
 
-The future apply engine must still require an explicit reviewed preview and must protect manual zones by default.
+Zone creation and registry writes happen only inside `POST /apply` after explicit confirmation and fresh preview revalidation.
 
-TASK-006A adds request validation for the future apply endpoint, but that endpoint remains disabled and returns `applyEngineAvailable: false`.
+TASK-008A keeps manual zones protected, skips manual overlaps, and blocks conflicts.

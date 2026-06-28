@@ -45,7 +45,7 @@ function parsePreviewResponse(payload: unknown): PreviewResponse {
     !isPreviewHash(payload.previewHash) ||
     payload.applyContractVersion !== "apply-contract-v1" ||
     !isObject(payload.safetyPolicy) ||
-    payload.canApplyLater !== false ||
+    typeof payload.canApplyLater !== "boolean" ||
     typeof payload.canApplyLaterMessage !== "string"
   ) {
     throw new Error("Preview response did not match the expected contract.");
@@ -61,7 +61,7 @@ function parsePreviewResponse(payload: unknown): PreviewResponse {
     previewHash: payload.previewHash,
     applyContractVersion: "apply-contract-v1",
     safetyPolicy: payload.safetyPolicy as PreviewResponse["safetyPolicy"],
-    canApplyLater: false,
+    canApplyLater: payload.canApplyLater,
     canApplyLaterMessage: payload.canApplyLaterMessage,
   };
 }

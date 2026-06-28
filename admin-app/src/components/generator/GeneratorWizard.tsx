@@ -93,7 +93,7 @@ type PriceOverrides = Partial<Record<string, Partial<Record<ShippingMethodKey, n
 type PreviewLoadState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ready"; response: PreviewResponse }
+  | { status: "ready"; response: PreviewResponse; request: PreviewRequest }
   | { status: "error"; message: string };
 type CommuneLoadState =
   | { status: "idle" }
@@ -120,14 +120,20 @@ export function GeneratorWizard({
   onComplete,
   onPreviewReady,
   onOpenDiagnostics,
+  onRefreshDiagnostics,
 }: {
   config: AdminBootstrapConfig;
   settings: PersistedSettings;
   baseList: WilayaReference[];
   onClose: () => void;
   onComplete: (wilayas: Wilaya[], defs: MethodDef[]) => void;
-  onPreviewReady: (preview: PreviewResponse, context: GeneratorPreviewContext) => void;
+  onPreviewReady: (
+    preview: PreviewResponse,
+    context: GeneratorPreviewContext,
+    request: PreviewRequest,
+  ) => void;
   onOpenDiagnostics: () => void;
+  onRefreshDiagnostics: () => void;
 }) {
   const initialDraft = useMemo(() => generatorDraftFromSettings(settings), [settings]);
   const [step, setStep] = useState(0);
@@ -372,11 +378,12 @@ export function GeneratorWizard({
     setPreviewContext(null);
 
     try {
-      const response = await fetchPreview(config, previewRequest());
+      const request = previewRequest();
+      const response = await fetchPreview(config, request);
       const context = buildPreviewContext();
-      setPreviewState({ status: "ready", response });
+      setPreviewState({ status: "ready", response, request });
       setPreviewContext(context);
-      onPreviewReady(response, context);
+      onPreviewReady(response, context, request);
     } catch (error) {
       setPreviewState({
         status: "error",
@@ -531,10 +538,12 @@ export function GeneratorWizard({
                 labelFormat={labelFormat}
                 zoneNameFormat={zoneNameFormat}
                 zonePrefix={zonePrefix}
+                config={config}
                 previewState={previewState}
                 previewContext={previewContext}
                 loadPreview={loadPreview}
                 onOpenDiagnostics={onOpenDiagnostics}
+                onRefreshDiagnostics={onRefreshDiagnostics}
               />
             )}
           </div>
@@ -552,7 +561,7 @@ export function GeneratorWizard({
           </Button>
           <div className="hidden text-xs text-muted-foreground md:block">
             <ShieldCheck className="mr-1 inline h-3 w-3" />
-            Preview only. No WooCommerce changes are made yet.
+            Preview first. Apply can create missing zones only after confirmation.
           </div>
           {step < WIZARD_STEPS.length - 1 ? (
             <Button
@@ -580,8 +589,7 @@ function StepStart({ mode, setMode }: { mode: SetupMode; setMode: (mode: SetupMo
       </div>
       <h3 className="text-2xl font-semibold tracking-tight">How would you like to start?</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Choose how you want to prepare your Algeria shipping setup. No WooCommerce changes are made
-        yet.
+        Choose how you want to prepare your Algeria shipping setup. Preview runs before any apply.
       </p>
       <div className="mt-6 grid gap-3 md:grid-cols-3">
         <StartCard
@@ -1556,7 +1564,7 @@ function PreviewLine({ label, value }: { label: string; value: string }) {
 function StepSafety() {
   const items = [
     "Manual zones are protected and skipped by default.",
-    "Conflicts must be reviewed before any future apply.",
+    "Conflicts must be reviewed before apply.",
     "No deletes are planned in this MVP flow.",
     "Preview is required before apply.",
   ];
@@ -1565,7 +1573,7 @@ function StepSafety() {
     <div className="mx-auto max-w-2xl">
       <h3 className="text-2xl font-semibold tracking-tight">Safety check</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Yaxii protects manual WooCommerce zones. Conflicts must be reviewed before any future apply.
+        Yaxii protects manual WooCommerce zones. Conflicts must be reviewed before apply.
       </p>
       <Card className="mt-6 border-emerald-200 bg-emerald-50/40">
         <CardContent className="space-y-3 p-5">
@@ -1594,10 +1602,12 @@ function StepPreview({
   labelFormat,
   zoneNameFormat,
   zonePrefix,
+  config,
   previewState,
   previewContext,
   loadPreview,
   onOpenDiagnostics,
+  onRefreshDiagnostics,
 }: {
   setupMode: SetupMode;
   dataset: DatasetMode;
@@ -1609,10 +1619,12 @@ function StepPreview({
   labelFormat: RegionLabelFormat;
   zoneNameFormat: ZoneNameFormat;
   zonePrefix: string;
+  config: AdminBootstrapConfig;
   previewState: PreviewLoadState;
   previewContext: GeneratorPreviewContext | null;
   loadPreview: () => Promise<void>;
   onOpenDiagnostics: () => void;
+  onRefreshDiagnostics: () => void;
 }) {
   const sampleWilaya = selectedWilayas[0];
   const sampleLabel = sampleWilaya
@@ -1651,7 +1663,7 @@ function StepPreview({
           </p>
         </div>
         <Badge variant="secondary" className="rounded-full">
-          Apply disabled
+          Create zones only
         </Badge>
       </div>
 
@@ -1728,7 +1740,7 @@ function StepPreview({
         </Button>
         <Button disabled variant="outline">
           <Lock className="h-4 w-4" />
-          Apply engine is not enabled yet
+          Apply after preview below
         </Button>
         <Button variant="outline" onClick={onOpenDiagnostics}>
           Open diagnostics
@@ -1747,7 +1759,10 @@ function StepPreview({
         <PreviewPlanPanel
           response={previewState.response}
           context={previewContext ?? currentContext}
+          config={config}
+          previewRequest={previewState.request}
           onOpenDiagnostics={onOpenDiagnostics}
+          onRefreshDiagnostics={onRefreshDiagnostics}
         />
       )}
     </div>

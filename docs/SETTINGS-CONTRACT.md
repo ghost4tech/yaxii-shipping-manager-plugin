@@ -20,7 +20,7 @@ Storage rules:
 - The option is created with autoload disabled.
 - Dataset rows are not stored in the option.
 - Raw source data is not stored in the option.
-- WooCommerce zone IDs are not stored yet.
+- WooCommerce zone IDs are stored only in the managed zone registry, not in settings.
 - Secrets are not stored.
 
 ## REST Endpoints
@@ -129,7 +129,7 @@ These safety rules are always locked on in the MVP:
 - `skipConflictsByDefault`
 - `neverDeleteManualZones`
 
-The REST sanitizer forces all safety rules back to `true`. The UI copy says these are required safety rules for the future apply engine.
+The REST sanitizer forces all safety rules back to `true`. The UI copy says these are required safety rules for the safe apply engine.
 
 ## Wizard Contract
 
@@ -166,7 +166,7 @@ TASK-003B does not implement:
 - WooCommerce zone reads or writes.
 - WooCommerce diagnostics backend.
 - Preview planner.
-- Safe apply engine.
+- Safe apply updates beyond creating missing managed zones.
 - CSV backend.
 - YSF sync.
 - Provider imports.

@@ -15,7 +15,7 @@ Yaxii Shipping Manager diagnostics are read-only checks for existing WooCommerce
 
 Diagnostics do not create, update, or delete WooCommerce shipping zones.
 
-Diagnostics do not add shipping methods, change method prices, alter checkout fields, persist preview plans, or apply any store configuration. They are a read-only input for the future preview planner.
+Diagnostics do not add shipping methods, change method prices, alter checkout fields, persist preview plans, or apply any store configuration. They are a read-only input for preview and safe apply revalidation.
 
 ## Coverage Rules
 
@@ -36,8 +36,6 @@ Manual merchant zones are not treated as bad by default. Yaxii-looking names are
 
 Diagnostics do not prove checkout is fully safe. They only report what the read layer can inspect.
 
-## Why Preview And Apply Come Later
+## Why Preview And Apply Are Separate
 
-Shipping zones are store configuration. Yaxii will add changes only after a separate preview planner can show proposed creates, updates, skips, and conflicts before any write is possible.
-
-The safe apply engine remains out of scope until the preview planner is implemented and audited.
+Shipping zones are store configuration. Yaxii creates missing managed zones only after a separate preview planner shows proposed creates, skips, and conflicts, and the apply endpoint regenerates that preview immediately before writing.

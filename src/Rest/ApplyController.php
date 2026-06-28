@@ -9,7 +9,7 @@ namespace Yaxii\ShippingManager\Rest;
 
 use WP_REST_Request;
 use Yaxii\ShippingManager\Apply\ApplyRequestSanitizer;
-use Yaxii\ShippingManager\Apply\ApplySafetyValidator;
+use Yaxii\ShippingManager\Apply\SafeApplyEngine;
 use Yaxii\ShippingManager\Support\Capabilities;
 use Yaxii\ShippingManager\Support\JsonResponse;
 
@@ -18,16 +18,16 @@ defined( 'ABSPATH' ) || exit;
 final class ApplyController {
 	private bool $woocommerce_active;
 	private ApplyRequestSanitizer $sanitizer;
-	private ApplySafetyValidator $validator;
+	private SafeApplyEngine $apply_engine;
 
 	public function __construct(
 		bool $woocommerce_active,
 		ApplyRequestSanitizer $sanitizer,
-		ApplySafetyValidator $validator
+		SafeApplyEngine $apply_engine
 	) {
 		$this->woocommerce_active = $woocommerce_active;
 		$this->sanitizer          = $sanitizer;
-		$this->validator          = $validator;
+		$this->apply_engine       = $apply_engine;
 	}
 
 	/**
@@ -39,7 +39,12 @@ final class ApplyController {
 			return $apply_request;
 		}
 
-		return JsonResponse::read( $this->validator->disabled_response( $apply_request ) );
+		$apply_response = $this->apply_engine->apply( $apply_request );
+		if ( is_wp_error( $apply_response ) ) {
+			return $apply_response;
+		}
+
+		return JsonResponse::read( $apply_response );
 	}
 
 	public function can_apply( WP_REST_Request $request ): bool {

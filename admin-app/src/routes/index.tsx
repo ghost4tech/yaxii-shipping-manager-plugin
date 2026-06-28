@@ -258,6 +258,11 @@ export default function AdminApp({
     return response;
   };
 
+  const openAndRefreshDiagnostics = () => {
+    setDiagnosticsReloadKey((current) => current + 1);
+    setTab("diagnostics");
+  };
+
   const datasetReady = datasetState.status === "ready";
   const settingsReady = settingsState.status === "ready";
   const activeSettings = settingsReady ? settingsState.response.settings : DEFAULT_SETTINGS;
@@ -286,8 +291,10 @@ export default function AdminApp({
         )}
         {tab === "generator" && (
           <GeneratorHub
+            config={config}
             onLaunch={() => setWizardOpen(true)}
             onOpenDiagnostics={() => setTab("diagnostics")}
+            onRefreshDiagnostics={openAndRefreshDiagnostics}
             launchDisabled={!datasetReady || !settingsReady}
             latestPreview={latestPreview}
           />
@@ -307,7 +314,7 @@ export default function AdminApp({
         {tab === "sync" && <SmartFormSyncScreen />}
       </main>
       <footer className="mx-auto max-w-5xl px-6 pb-10 text-center text-xs text-muted-foreground">
-        Yaxii Shipping Manager - Local draft UI - No WooCommerce changes are made yet
+        Yaxii Shipping Manager - Preview first - Apply creates missing zones only
       </footer>
       <div id="yaxii-shipping-manager-admin-portal" />
 
@@ -323,10 +330,16 @@ export default function AdminApp({
             setWizardOpen(false);
             setTab("generator");
           }}
-          onPreviewReady={(response, context) => setLatestPreview({ response, context })}
+          onPreviewReady={(response, context, request) =>
+            setLatestPreview({ response, context, request })
+          }
           onOpenDiagnostics={() => {
             setWizardOpen(false);
             setTab("diagnostics");
+          }}
+          onRefreshDiagnostics={() => {
+            setWizardOpen(false);
+            openAndRefreshDiagnostics();
           }}
         />
       )}
@@ -393,17 +406,17 @@ function RuntimeNotices({
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>WooCommerce is inactive</AlertTitle>
           <AlertDescription>
-            The admin UI can load, but WooCommerce-specific diagnostics and future apply actions
-            remain unavailable.
+            The admin UI can load, but WooCommerce-specific diagnostics and apply actions remain
+            unavailable.
           </AlertDescription>
         </Alert>
       )}
       <Alert className="border-primary/20 bg-primary/5">
         <ShieldCheck className="h-4 w-4" />
-        <AlertTitle>Local draft only</AlertTitle>
+        <AlertTitle>Preview before apply</AlertTitle>
         <AlertDescription>
-          Settings, diagnostics, and preview are active. No WooCommerce changes are made; apply
-          remains disabled.
+          Settings, diagnostics, and preview are active. Apply can create missing Yaxii-managed
+          zones only after confirmation.
         </AlertDescription>
       </Alert>
       {datasetState.status === "loading" && (
@@ -538,13 +551,17 @@ function SectionHeader({
 }
 
 function GeneratorHub({
+  config,
   onLaunch,
   onOpenDiagnostics,
+  onRefreshDiagnostics,
   launchDisabled,
   latestPreview,
 }: {
+  config: AdminBootstrapConfig;
   onLaunch: () => void;
   onOpenDiagnostics: () => void;
+  onRefreshDiagnostics: () => void;
   launchDisabled: boolean;
   latestPreview: GeneratorPreviewSnapshot | null;
 }) {
@@ -564,13 +581,13 @@ function GeneratorHub({
               <h3 className="text-lg font-semibold">Guided shipping setup</h3>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                 Pick the dataset mode, choose how prices will be entered, define the methods you
-                ship with, then preview the WooCommerce changes before apply exists.
+                ship with, then preview the WooCommerce changes before creating zones.
               </p>
               <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                 <BulletItem>Current Algeria dataset</BulletItem>
                 <BulletItem>Legacy 58-compatible mode is not available yet</BulletItem>
                 <BulletItem>CSV import path prepared, backend not connected yet</BulletItem>
-                <BulletItem>No WooCommerce changes are made yet</BulletItem>
+                <BulletItem>Apply creates missing zones only after confirmation</BulletItem>
               </ul>
               <Button className="mt-6 gap-2" onClick={onLaunch} disabled={launchDisabled}>
                 <Wand2 className="h-4 w-4" /> Start generator
@@ -584,7 +601,10 @@ function GeneratorHub({
           <PreviewPlanPanel
             response={latestPreview.response}
             context={latestPreview.context}
+            config={config}
+            previewRequest={latestPreview.request}
             onOpenDiagnostics={onOpenDiagnostics}
+            onRefreshDiagnostics={onRefreshDiagnostics}
           />
         </div>
       )}
@@ -822,7 +842,7 @@ function ZonesScreen({
     <>
       <SectionHeader
         title="Shipping Zones"
-        description="Manage wilaya shipping prices in a local draft. No WooCommerce changes are made yet."
+        description="Manage wilaya shipping prices in a local draft. Method and price writes are not implemented yet."
         action={
           <Button variant="outline" onClick={onLaunchWizard}>
             <Wand2 className="h-4 w-4" /> Open generator
@@ -1748,7 +1768,7 @@ function SettingsForm({
             <ToggleRow
               key={rule.key}
               label={rule.label}
-              desc="Required safety rule for the future apply engine."
+              desc="Required safety rule for the safe apply engine."
               checked
               disabled
             />

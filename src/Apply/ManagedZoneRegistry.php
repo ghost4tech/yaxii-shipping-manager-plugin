@@ -1,6 +1,6 @@
 <?php
 /**
- * Read-only registry for Yaxii-managed WooCommerce zones.
+ * Registry for Yaxii-managed WooCommerce zones.
  *
  * @package YaxiiShippingManager
  */
@@ -52,6 +52,31 @@ final class ManagedZoneRegistry {
 	}
 
 	/**
+	 * @param array<string,mixed> $record Registry record.
+	 */
+	public function record_created_zone( array $record ): bool {
+		$sanitized = $this->sanitize_record( $record );
+		if ( null === $sanitized ) {
+			return false;
+		}
+
+		$records = $this->records_without_created_zone( $sanitized );
+		$records[] = $sanitized;
+		$payload = array(
+			'schemaVersion' => self::SCHEMA_VERSION,
+			'records'       => $records,
+		);
+
+		$saved = update_option( self::OPTION_NAME, $payload, false );
+		if ( $saved || $payload === get_option( self::OPTION_NAME, array() ) ) {
+			$this->records = $records;
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * @return array<string,mixed>|null
 	 */
 	public function record_for_zone_id( int $zone_id ): ?array {
@@ -66,6 +91,23 @@ final class ManagedZoneRegistry {
 		}
 
 		return null;
+	}
+
+	/**
+	 * @param array<string,mixed> $created_record Created zone record.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function records_without_created_zone( array $created_record ): array {
+		return array_values(
+			array_filter(
+				$this->records(),
+				static function ( array $stored_record ) use ( $created_record ): bool {
+					return (int) $stored_record['zoneId'] !== (int) $created_record['zoneId']
+						&& (string) $stored_record['wilayaCode'] !== (string) $created_record['wilayaCode'];
+				}
+			)
+		);
 	}
 
 	/**

@@ -8,6 +8,7 @@
 namespace Yaxii\ShippingManager\Apply;
 
 use WP_Error;
+use Yaxii\ShippingManager\Preview\PreviewRequestSanitizer;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,6 +26,7 @@ final class ApplyRequestSanitizer {
 		'confirmationText',
 		'safetyPolicySnapshot',
 		'applyContractVersion',
+		'previewRequest',
 	);
 	private const SUMMARY_KEYS = array(
 		'selectedWilayas',
@@ -44,6 +46,12 @@ final class ApplyRequestSanitizer {
 		'skipConflictsByDefault',
 		'neverDeleteManualZones',
 	);
+
+	private PreviewRequestSanitizer $preview_sanitizer;
+
+	public function __construct( ?PreviewRequestSanitizer $preview_sanitizer = null ) {
+		$this->preview_sanitizer = $preview_sanitizer ?? new PreviewRequestSanitizer();
+	}
 
 	/**
 	 * @param mixed $payload Request JSON payload.
@@ -114,7 +122,12 @@ final class ApplyRequestSanitizer {
 			return $safety_policy;
 		}
 
-		return $this->confirmed_payload( $payload, $preview_hash, $preview_generated_at, $codes, $summary, $safety_policy );
+		$preview_request = $this->preview_request( $payload['previewRequest'], $codes );
+		if ( is_wp_error( $preview_request ) ) {
+			return $preview_request;
+		}
+
+		return $this->confirmed_payload( $payload, $preview_hash, $preview_generated_at, $codes, $summary, $safety_policy, $preview_request );
 	}
 
 	/**
@@ -122,10 +135,11 @@ final class ApplyRequestSanitizer {
 	 * @param array<int,string>   $codes Selected wilaya codes.
 	 * @param array<string,int>   $summary Accepted plan summary.
 	 * @param array<string,bool>  $safety_policy Safety policy snapshot.
+	 * @param array<string,mixed> $preview_request Sanitized preview request snapshot.
 	 *
 	 * @return array<string,mixed>|WP_Error
 	 */
-	private function confirmed_payload( array $payload, string $preview_hash, string $preview_generated_at, array $codes, array $summary, array $safety_policy ) {
+	private function confirmed_payload( array $payload, string $preview_hash, string $preview_generated_at, array $codes, array $summary, array $safety_policy, array $preview_request ) {
 		if ( true !== $payload['confirmed'] ) {
 			return $this->validation_error( __( 'Apply request requires explicit confirmation.', 'yaxii-shipping-manager' ) );
 		}
@@ -149,7 +163,27 @@ final class ApplyRequestSanitizer {
 			'confirmationText'     => $confirmation_text,
 			'safetyPolicySnapshot' => $safety_policy,
 			'applyContractVersion' => $contract_version,
+			'previewRequest'       => $preview_request,
 		);
+	}
+
+	/**
+	 * @param mixed             $raw_preview_request Raw preview request snapshot.
+	 * @param array<int,string> $codes Selected wilaya codes.
+	 *
+	 * @return array<string,mixed>|WP_Error
+	 */
+	private function preview_request( $raw_preview_request, array $codes ) {
+		$preview_request = $this->preview_sanitizer->sanitize( $raw_preview_request );
+		if ( is_wp_error( $preview_request ) ) {
+			return $preview_request;
+		}
+
+		if ( ! isset( $preview_request['selectedWilayaCodes'] ) || $codes !== $preview_request['selectedWilayaCodes'] ) {
+			return $this->validation_error( __( 'Apply selected wilayas must match the preview request snapshot.', 'yaxii-shipping-manager' ) );
+		}
+
+		return $preview_request;
 	}
 
 	/**

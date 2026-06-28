@@ -1,12 +1,12 @@
 # Safe Apply Contract
 
-The safe apply contract defines how Yaxii Shipping Manager will later identify and update its own WooCommerce shipping zones without touching manual merchant zones by mistake.
+The safe apply contract defines how Yaxii Shipping Manager identifies its own WooCommerce shipping zones without touching manual merchant zones by mistake.
 
-This contract is foundation-only. The apply engine is not implemented yet.
+TASK-008A implements the first narrow apply engine step: create missing Yaxii-managed zones only from a freshly revalidated preview.
 
 ## Managed Zone Registry
 
-Future Yaxii-created WooCommerce zones will be tracked in one WordPress option:
+Yaxii-created WooCommerce zones are tracked in one WordPress option:
 
 ```text
 yaxii_shipping_manager_managed_zones
@@ -34,7 +34,7 @@ Method instance records support:
 - `title`
 - `lastKnownCost`
 
-If the option is missing or contains invalid records, the registry reader returns an empty or repaired in-memory registry. TASK-005A does not persist repaired records.
+If the option is missing or contains invalid records, the registry reader returns an empty or repaired in-memory registry. TASK-008A writes records only after WooCommerce returns a created zone ID.
 
 ## Ownership Priority
 
@@ -48,7 +48,7 @@ The registry is authoritative. Name hints are weak and must not be treated as pr
 
 ## Endpoint
 
-Read-only apply readiness endpoint:
+Apply readiness endpoint:
 
 ```text
 GET /wp-json/yaxii-shipping-manager/v1/apply-contract
@@ -56,7 +56,7 @@ GET /wp-json/yaxii-shipping-manager/v1/apply-contract
 
 The endpoint returns:
 
-- `applyEngineAvailable: false`
+- `applyEngineAvailable: true`
 - `managedRegistryAvailable: true`
 - `managedRegistryOption`
 - `applyContractVersion`
@@ -75,25 +75,32 @@ Access uses the same protected admin policy as diagnostics and preview:
 
 The endpoint does not write to WooCommerce, settings, options, files, or datasets.
 
-## Disabled Apply Endpoint
+## Apply Endpoint
 
-TASK-006A adds a disabled apply endpoint:
+TASK-008A enables a create-only apply endpoint:
 
 ```text
 POST /wp-json/yaxii-shipping-manager/v1/apply
 ```
 
-The endpoint validates the future apply request contract, then returns:
+The endpoint validates the apply request contract, regenerates the preview immediately before writing, and creates only missing Yaxii-managed zones from the fresh `createZones` group.
 
 ```json
 {
-  "applyEngineAvailable": false,
-  "message": "Apply engine is not enabled yet.",
-  "requestAccepted": true
+  "applyEngineAvailable": true,
+  "applied": true,
+  "createdZones": [],
+  "skippedZones": [],
+  "blockedZones": [],
+  "conflicts": [],
+  "warnings": [],
+  "registryUpdated": true,
+  "wooCommerceChanged": true,
+  "message": "Created 1 Yaxii-managed zones. Manual zones skipped: 0. No methods or prices were created."
 }
 ```
 
-The endpoint is intentionally disabled and does not write to WooCommerce.
+The endpoint does not add shipping methods, update prices, update existing zones, delete zones, or touch manual zones.
 
 Access policy:
 
@@ -101,9 +108,9 @@ Access policy:
 - WooCommerce inactive: `manage_options`
 - `X-WP-Nonce` is required
 
-## Future Apply Request Contract
+## Apply Request Contract
 
-Future apply requests must include:
+Apply requests must include:
 
 - `previewHash`: 64-character SHA-256 preview hash from the preview response.
 - `previewGeneratedAt`: preview timestamp from the preview response.
@@ -113,10 +120,11 @@ Future apply requests must include:
 - `confirmationText`: `APPLY YAXII SHIPPING PLAN`.
 - `safetyPolicySnapshot`: all locked safety policy values set to `true`.
 - `applyContractVersion`: `apply-contract-v1`.
+- `previewRequest`: sanitized preview request snapshot.
 
-Unknown request keys are rejected. Missing confirmation, stale preview metadata, invalid preview hash format, planned deletes, and disabled safety rules are rejected.
+Unknown request keys are rejected. Missing confirmation, stale preview metadata, invalid preview hash format, planned deletes, disabled safety rules, and mismatched preview request wilayas are rejected.
 
-The future real apply engine must re-read WooCommerce and regenerate/compare the preview before writing. A submitted preview hash is a contract reference, not proof that current WooCommerce state is unchanged.
+The apply engine re-reads WooCommerce and regenerates the preview before writing. A submitted preview hash is a contract reference, not proof that current WooCommerce state is unchanged.
 
 ## Safety Rules
 
@@ -139,27 +147,26 @@ Readiness states are documented in:
 docs/APPLY-WORKFLOW.md
 ```
 
-The readiness model does not change the apply contract. The apply engine still reports unavailable until a future task implements and audits WooCommerce writes.
+The readiness model does not replace the apply contract. TASK-008A still requires explicit confirmation and fresh preview revalidation before creating zones.
 
-## Future Apply Engine Requirements
+## Apply Engine Rules
 
-The future apply engine must:
+The TASK-008A apply engine must:
 
 - Apply only explicitly reviewed preview plans.
-- Write only zones/methods that are recorded in, or about to be recorded in, the managed registry.
+- Write only missing zones that are about to be recorded in the managed registry.
 - Never overwrite manual/unknown zones by default.
 - Never delete zones in the MVP.
 - Re-read WooCommerce state immediately before applying.
-- Report every create, update, skip, conflict, and failure.
+- Report every create, skip, conflict, unsupported update/method item, and failure.
+- Leave method and price changes for a later task.
 
 ## Not Implemented Yet
 
-TASK-005A does not:
+TASK-008A does not:
 
-- Create WooCommerce shipping zones.
 - Update WooCommerce shipping zones.
 - Delete WooCommerce shipping zones.
 - Add shipping methods.
 - Update method prices.
 - Persist preview plans.
-- Implement the apply engine.

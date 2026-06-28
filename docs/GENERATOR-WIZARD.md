@@ -49,7 +49,7 @@ Recommended steps:
 6. Names and labels
 7. Safety check
 8. Preview
-9. Apply disabled
+9. Apply create-only when safe
 
 ### 1. Setup Mode And Defaults
 
@@ -63,7 +63,7 @@ Options:
 
 Recommended copy:
 
-> Choose how you want to prepare your Algeria shipping setup. No WooCommerce changes are made yet.
+> Choose how you want to prepare your Algeria shipping setup. Preview runs before any apply.
 
 Mapping:
 
@@ -194,7 +194,7 @@ Recommended copy:
 
 ### 7. Safety Check
 
-Purpose: explain what the future apply engine will protect before preview.
+Purpose: explain what the apply engine protects before preview.
 
 Show locked safety rules:
 
@@ -205,7 +205,7 @@ Show locked safety rules:
 
 Recommended copy:
 
-> Yaxii protects manual WooCommerce zones. Conflicts must be reviewed before any future apply.
+> Yaxii protects manual WooCommerce zones. Conflicts must be reviewed before apply.
 
 ### 8. Preview
 
@@ -235,15 +235,15 @@ Recommended copy:
 
 > This is a preview only. No WooCommerce changes were made.
 
-### 9. Apply Disabled
+### 9. Apply Create-Only
 
 Purpose: make the current boundary obvious.
 
 Recommended copy:
 
-> Apply engine is not enabled yet. Yaxii will only apply reviewed plans in a later step.
+> Apply can create missing Yaxii-managed zones only. Methods and prices are not created yet.
 
-No active apply button should be shown until the real apply engine exists. A disabled button is acceptable only if the explanation is next to it.
+The active apply button should appear only when a reviewed preview has missing zones to create, no conflicts, and the required confirmation text is entered.
 
 ## UI Copy Recommendations
 
@@ -267,9 +267,9 @@ Preview only:
 
 > This is a preview only. No WooCommerce changes were made.
 
-Apply disabled:
+Apply create-only:
 
-> Apply engine is not enabled yet.
+> Create missing zones only.
 
 Commune coverage:
 
@@ -291,18 +291,17 @@ Must implement next:
 - Improve selected wilaya and pricing review.
 - Move preview into the final wizard step.
 - Make safety copy clear before preview.
-- Keep apply disabled.
+- Enable apply only for the reviewed create-missing-zones path.
 
 Must not implement next:
 
-- Real WooCommerce apply engine.
-- WooCommerce zone or method writes.
+- WooCommerce zone updates, deletes, or method writes beyond creating missing managed zones.
 - Commune-level pricing engine.
 - Checkout city field changes.
 - CSV backend.
 - Provider imports.
 - YSF sync.
-- Remote calls, telemetry, licensing, or Pro locks.
+- Remote calls, remote tracking, licensing, or Pro locks.
 
 ## Risks
 
