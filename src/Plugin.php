@@ -42,7 +42,7 @@ final class Plugin {
 		$managed_registry       = new ManagedZoneRegistry();
 		$algeria_states         = new AlgeriaStatesRegistrar( $woocommerce_active, $datasets, $settings );
 		$zone_reader            = new ShippingZoneReader( $woocommerce_active );
-		$diagnostics            = new ShippingDiagnosticsService( $woocommerce_active, $datasets, $settings, $zone_reader );
+		$diagnostics            = new ShippingDiagnosticsService( $woocommerce_active, $datasets, $settings, $zone_reader, $managed_registry );
 		$preview_planner        = new PreviewPlanner( $datasets, $settings, $diagnostics, $managed_registry );
 		$safe_apply_engine      = new SafeApplyEngine( $woocommerce_active, $preview_planner, $managed_registry );
 		$apply_contract         = new ApplyContract( $settings, $managed_registry );

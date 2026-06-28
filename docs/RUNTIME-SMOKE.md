@@ -6,7 +6,7 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 
 1. Open `wp-admin/admin.php?page=yaxii-shipping-manager` as an administrator.
 2. Confirm the plugin admin page loads without console errors.
-3. Confirm Shipping Zones says controls are local draft controls only.
+3. Confirm Shipping Zones shows live WooCommerce status and says controls are local draft controls only.
 4. Open the generator.
 5. Confirm setup modes are distinct:
    - Fresh setup: create a new shipping setup for selected wilayas.
@@ -22,6 +22,17 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 13. Confirm final details are collapsed by default.
 14. Confirm Preview-only mode hides apply controls and shows `Check diagnostics`.
 15. Confirm `Check diagnostics` opens the Diagnostics tab.
+
+## Shipping Zones Table Smoke
+
+Expected result:
+
+- The table shows `Shipping setup is active` when diagnostics are low-risk and all selected Yaxii-managed zones/methods are present.
+- Each row shows live WooCommerce status from diagnostics, not only local draft state.
+- Managed zones show `Yaxii-managed`; weak name matches show `Name match only`; manual or unknown zones show `Manual or unknown`.
+- Home and office method summaries show enabled/disabled state and the live WooCommerce cost when the method is registry-owned.
+- Price, free, enable, and disable controls say draft-only and do not imply a direct WooCommerce write.
+- The screen routes merchants to Generator preview/apply for supported updates.
 
 ## Runtime Scenarios
 

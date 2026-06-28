@@ -1,6 +1,7 @@
 import type { AdminBootstrapConfig } from "../bootstrap";
 import type {
   DiagnosticsResponse,
+  ManagedMethodDiagnostic,
   DiagnosticsSummary,
   ShippingMethodDiagnostic,
   WilayaDiagnostic,
@@ -92,7 +93,11 @@ function isZoneDiagnostic(value: unknown): value is ZoneDiagnostic {
     Array.isArray(value.locations) &&
     Array.isArray(value.matchedWilayaCodes) &&
     Array.isArray(value.overlapWilayaCodes) &&
-    (value.ownershipHint === "yaxii_hint" || value.ownershipHint === "manual_unknown") &&
+    (value.ownershipHint === "managed_registry" ||
+      value.ownershipHint === "yaxii_hint" ||
+      value.ownershipHint === "manual_unknown") &&
+    Array.isArray(value.managedMethods) &&
+    value.managedMethods.every(isManagedMethodDiagnostic) &&
     typeof value.methodCount === "number" &&
     typeof value.enabledMethodCount === "number" &&
     typeof value.disabledMethods === "number" &&
@@ -112,6 +117,17 @@ function isShippingMethodDiagnostic(value: unknown): value is ShippingMethodDiag
     typeof value.methodTitle === "string" &&
     typeof value.enabled === "boolean" &&
     (typeof value.cost === "string" || value.cost === null)
+  );
+}
+
+function isManagedMethodDiagnostic(value: unknown): value is ManagedMethodDiagnostic {
+  return (
+    isObject(value) &&
+    typeof value.methodKey === "string" &&
+    typeof value.instanceId === "number" &&
+    typeof value.methodId === "string" &&
+    typeof value.title === "string" &&
+    (typeof value.lastKnownCost === "string" || value.lastKnownCost === null)
   );
 }
 

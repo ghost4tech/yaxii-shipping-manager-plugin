@@ -11,6 +11,14 @@ export type ShippingMethodDiagnostic = {
   cost: string | null;
 };
 
+export type ManagedMethodDiagnostic = {
+  methodKey: string;
+  instanceId: number;
+  methodId: string;
+  title: string;
+  lastKnownCost: string | null;
+};
+
 export type ZoneDiagnostic = {
   zoneId: number;
   name: string;
@@ -20,7 +28,8 @@ export type ZoneDiagnostic = {
   }>;
   matchedWilayaCodes: string[];
   overlapWilayaCodes: string[];
-  ownershipHint: "yaxii_hint" | "manual_unknown";
+  ownershipHint: "managed_registry" | "yaxii_hint" | "manual_unknown";
+  managedMethods: ManagedMethodDiagnostic[];
   methodCount: number;
   enabledMethodCount: number;
   disabledMethods: number;

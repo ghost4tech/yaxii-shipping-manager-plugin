@@ -58,7 +58,6 @@ import type {
   MethodDef,
   Wilaya,
   WilayaReference,
-  WilayaStatus,
 } from "@/components/generator/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -295,6 +294,8 @@ export default function AdminApp({
             setWilayas={setWilayas}
             methodDefs={methodDefs}
             onLaunchWizard={() => setWizardOpen(true)}
+            diagnosticsState={diagnosticsState}
+            onOpenDiagnostics={() => setTab("diagnostics")}
           />
         )}
         {tab === "generator" && (
@@ -626,37 +627,73 @@ function BulletItem({ children }: { children: ReactNode }) {
   );
 }
 
-const STATUS_META: Record<WilayaStatus, { label: string; dot: string; pill: string }> = {
-  ready: {
-    label: "Draft",
+type LiveZoneStatus =
+  | "managed"
+  | "ready"
+  | "needs_methods"
+  | "needs_update"
+  | "missing"
+  | "manual"
+  | "conflict"
+  | "checking"
+  | "unavailable";
+
+type LiveZoneSummary = {
+  status: LiveZoneStatus;
+  message: string;
+  zones: ZoneDiagnostic[];
+};
+
+const LIVE_STATUS_META: Record<LiveZoneStatus, { label: string; dot: string; pill: string }> = {
+  managed: {
+    label: "Managed",
     dot: "bg-emerald-500",
     pill: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
-  managed: {
-    label: "Local",
+  ready: {
+    label: "Ready",
     dot: "bg-primary",
     pill: "border-primary/20 bg-primary/5 text-primary",
   },
+  needs_methods: {
+    label: "Needs methods",
+    dot: "bg-amber-500",
+    pill: "border-amber-200 bg-amber-50 text-amber-700",
+  },
   needs_update: {
-    label: "Needs review",
+    label: "Needs update",
     dot: "bg-amber-500",
     pill: "border-amber-200 bg-amber-50 text-amber-700",
   },
   missing: {
-    label: "Disabled",
+    label: "Missing",
     dot: "bg-amber-500",
     pill: "border-amber-200 bg-amber-50 text-amber-700",
   },
   manual: {
-    label: "Manual note",
+    label: "Manual zone",
     dot: "bg-slate-400",
     pill: "border-slate-200 bg-slate-50 text-slate-700",
   },
-  conflict: { label: "Review", dot: "bg-red-500", pill: "border-red-200 bg-red-50 text-red-700" },
+  conflict: {
+    label: "Manual conflict",
+    dot: "bg-red-500",
+    pill: "border-red-200 bg-red-50 text-red-700",
+  },
+  checking: {
+    label: "Checking",
+    dot: "bg-slate-400",
+    pill: "border-slate-200 bg-slate-50 text-slate-700",
+  },
+  unavailable: {
+    label: "Unavailable",
+    dot: "bg-slate-400",
+    pill: "border-slate-200 bg-slate-50 text-slate-700",
+  },
 };
 
-function StatusPill({ status }: { status: WilayaStatus }) {
-  const meta = STATUS_META[status];
+function LiveStatusPill({ status }: { status: LiveZoneStatus }) {
+  const meta = LIVE_STATUS_META[status];
   return (
     <span
       className={cn(
@@ -675,11 +712,15 @@ function ZonesScreen({
   setWilayas,
   methodDefs,
   onLaunchWizard,
+  diagnosticsState,
+  onOpenDiagnostics,
 }: {
   wilayas: Wilaya[];
   setWilayas: (wilayas: Wilaya[]) => void;
   methodDefs: MethodDef[];
   onLaunchWizard: () => void;
+  diagnosticsState: DiagnosticsLoadState;
+  onOpenDiagnostics: () => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [targetMethod, setTargetMethod] = useState<string>(methodDefs[0]?.key ?? "home_delivery");
@@ -687,6 +728,7 @@ function ZonesScreen({
   const [pct, setPct] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState<Wilaya[] | null>(null);
+  const liveSummary = shippingSetupSummary(diagnosticsState);
 
   if (wilayas.length === 0) {
     return (
@@ -847,7 +889,7 @@ function ZonesScreen({
     <>
       <SectionHeader
         title="Shipping Zones"
-        description="Manage wilaya shipping prices in a local draft. Use the generator preview/apply flow for supported WooCommerce writes."
+        description="Live WooCommerce status with local draft planning. Writes go through Generator preview/apply."
         action={
           <Button variant="outline" onClick={onLaunchWizard}>
             <Wand2 className="h-4 w-4" /> Open generator
@@ -857,12 +899,39 @@ function ZonesScreen({
 
       <Alert className="mb-4 border-primary/20 bg-primary/5">
         <ShieldCheck className="h-4 w-4" />
-        <AlertTitle>Local draft controls only</AlertTitle>
+        <AlertTitle>Draft only - use Preview & Apply to update WooCommerce.</AlertTitle>
         <AlertDescription>
           Price, free shipping, enabled, and disabled controls on this screen update only the local
-          draft. Use the generator preview/apply flow for supported WooCommerce writes.
+          draft. Open Generator to preview selected prices and apply supported Yaxii-managed method
+          updates.
         </AlertDescription>
       </Alert>
+
+      <Card className="mb-4">
+        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="text-base font-semibold">{liveSummary.title}</div>
+            <p className="text-sm text-muted-foreground">{liveSummary.message}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={onLaunchWizard}>
+              <Wand2 className="h-4 w-4" />
+              {liveSummary.generatorLabel}
+            </Button>
+            <Button variant="outline" onClick={onOpenDiagnostics}>
+              <Activity className="h-4 w-4" /> Check diagnostics
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                window.location.href = "admin.php?page=wc-settings&tab=shipping";
+              }}
+            >
+              <Package className="h-4 w-4" /> Open WooCommerce zones
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {hasSelection && (
         <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
@@ -892,7 +961,7 @@ function ZonesScreen({
                 className="h-8 w-24"
               />
               <Button size="sm" variant="outline" onClick={previewBulkPrice} disabled={!bulkPrice}>
-                <DollarSign className="h-4 w-4" /> Apply draft price
+                <DollarSign className="h-4 w-4" /> Update draft price
               </Button>
             </div>
             <div className="flex items-center gap-1">
@@ -904,7 +973,7 @@ function ZonesScreen({
                 className="h-8 w-16"
               />
               <Button size="sm" variant="outline" onClick={previewPercent} disabled={!pct}>
-                <Percent className="h-4 w-4" /> Preview draft %
+                <Percent className="h-4 w-4" /> Update draft %
               </Button>
             </div>
             <Button size="sm" variant="outline" onClick={makeFree}>
@@ -955,18 +1024,20 @@ function ZonesScreen({
               </TableHead>
               <TableHead className="w-16">Code</TableHead>
               <TableHead>Wilaya</TableHead>
-              <TableHead className="w-20">Enabled</TableHead>
+              <TableHead className="w-36">WooCommerce status</TableHead>
+              <TableHead className="w-56">Live WooCommerce zone</TableHead>
+              <TableHead className="w-20">Draft row</TableHead>
               {methodDefs.map((method) => (
                 <TableHead key={method.key} className="w-36">
-                  {method.label}
+                  {method.label} draft
                 </TableHead>
               ))}
-              <TableHead className="w-28">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {wilayas.map((wilaya) => {
               const isSelected = selected.includes(wilaya.code);
+              const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, methodDefs);
               return (
                 <TableRow key={wilaya.code} data-state={isSelected ? "selected" : undefined}>
                   <TableCell>
@@ -989,9 +1060,17 @@ function ZonesScreen({
                     <div className="text-xs text-muted-foreground">{wilaya.ar}</div>
                   </TableCell>
                   <TableCell>
+                    <LiveStatusPill status={liveZone.status} />
+                    <div className="mt-1 text-xs text-muted-foreground">{liveZone.message}</div>
+                  </TableCell>
+                  <TableCell>
+                    <LiveZoneDetails summary={liveZone} methodDefs={methodDefs} />
+                  </TableCell>
+                  <TableCell>
                     <Switch
                       checked={wilaya.enabled}
                       onCheckedChange={(value) => updateRow(wilaya.code, { enabled: value })}
+                      aria-label={`${wilaya.name} local draft row enabled`}
                     />
                   </TableCell>
                   {methodDefs.map((method) => {
@@ -1005,9 +1084,6 @@ function ZonesScreen({
                       </TableCell>
                     );
                   })}
-                  <TableCell>
-                    <StatusPill status={wilaya.status} />
-                  </TableCell>
                 </TableRow>
               );
             })}
@@ -1068,6 +1144,7 @@ function MethodCell({
       <Input
         type="number"
         min={0}
+        placeholder="Draft"
         value={method.price ?? ""}
         onChange={(event) => {
           const nextPrice = parseOptionalPrice(event.target.value);
@@ -1077,13 +1154,233 @@ function MethodCell({
         }}
         className="h-8"
       />
-      {(method.price === null || method.price === 0) && (
-        <Badge variant="outline" className="border-emerald-200 text-[10px] text-emerald-700">
-          Free draft
-        </Badge>
-      )}
+      <Badge variant="outline" className="text-[10px]">
+        {method.price === null || method.price === 0 ? "Free draft" : "Draft"}
+      </Badge>
     </div>
   );
+}
+
+function shippingSetupSummary(diagnosticsState: DiagnosticsLoadState): {
+  title: string;
+  message: string;
+  generatorLabel: string;
+} {
+  if (diagnosticsState.status === "waiting" || diagnosticsState.status === "loading") {
+    return {
+      title: "Checking shipping setup",
+      message: "Yaxii is reading WooCommerce zones and methods before showing live status.",
+      generatorLabel: "Open Generator",
+    };
+  }
+
+  if (diagnosticsState.status === "error") {
+    return {
+      title: "Shipping status needs refresh",
+      message: diagnosticsState.message,
+      generatorLabel: "Open Generator",
+    };
+  }
+
+  if (!diagnosticsState.response.woocommerceActive) {
+    return {
+      title: "WooCommerce is inactive",
+      message: "Activate WooCommerce to inspect live shipping zones and methods.",
+      generatorLabel: "Open Generator",
+    };
+  }
+
+  const summary = diagnosticsState.response.summary;
+  if (summary.duplicateConflictCount > 0) {
+    return {
+      title: "Manual zones need review",
+      message:
+        "Conflicting or overlapping WooCommerce zones were found. Check diagnostics before applying changes.",
+      generatorLabel: "Open Generator",
+    };
+  }
+
+  if (summary.missingWilayas > 0 || summary.zonesWithoutMethods > 0) {
+    return {
+      title: "Some shipping setup is missing",
+      message:
+        "Use Generator preview/apply to create missing Yaxii-managed setup where it is safe.",
+      generatorLabel: "Preview missing setup",
+    };
+  }
+
+  const directZones = diagnosticsState.response.zoneResults.filter(
+    (zone) => zone.matchedWilayaCodes.length > 0,
+  );
+  const allDirectZonesManaged =
+    directZones.length > 0 &&
+    directZones.every((zone) => zone.ownershipHint === "managed_registry");
+
+  return {
+    title: "Shipping setup is active",
+    message: allDirectZonesManaged
+      ? "WooCommerce checkout is using Yaxii-managed zones and methods."
+      : "WooCommerce checkout has matching zones and methods. Review ownership before applying updates.",
+    generatorLabel: "Open Generator to update prices",
+  };
+}
+
+function liveStatusForWilaya(
+  wilaya: Wilaya,
+  diagnosticsState: DiagnosticsLoadState,
+  methodDefs: MethodDef[],
+): LiveZoneSummary {
+  if (diagnosticsState.status === "waiting" || diagnosticsState.status === "loading") {
+    return { status: "checking", message: "Reading WooCommerce", zones: [] };
+  }
+
+  if (diagnosticsState.status === "error") {
+    return { status: "unavailable", message: "Diagnostics unavailable", zones: [] };
+  }
+
+  if (!diagnosticsState.response.woocommerceActive) {
+    return { status: "unavailable", message: "WooCommerce inactive", zones: [] };
+  }
+
+  const result = diagnosticsState.response.wilayaResults.find((item) => item.code === wilaya.code);
+  const zones = result
+    ? diagnosticsState.response.zoneResults.filter((zone) => result.zoneIds.includes(zone.zoneId))
+    : [];
+
+  if (!result || result.status === "missing") {
+    return { status: "missing", message: "No direct DZ zone", zones };
+  }
+
+  if (result.status === "conflict") {
+    const hasManualZone = zones.some((zone) => zone.ownershipHint === "manual_unknown");
+    return {
+      status: "conflict",
+      message: hasManualZone ? "Manual overlap protected" : "Duplicate zones found",
+      zones,
+    };
+  }
+
+  const [zone] = zones;
+  if (!zone) {
+    return { status: "unavailable", message: "Zone details unavailable", zones };
+  }
+
+  if (zone.ownershipHint === "manual_unknown") {
+    return { status: "manual", message: "Not Yaxii-owned", zones };
+  }
+
+  if (zone.enabledMethodCount === 0 || !zone.hasHomeLikeMethod || !zone.hasOfficeLikeMethod) {
+    return { status: "needs_methods", message: "Missing required methods", zones };
+  }
+
+  if (
+    zone.ownershipHint === "managed_registry" &&
+    hasDraftPriceDifference(wilaya, zone, methodDefs)
+  ) {
+    return { status: "needs_update", message: "Draft differs from live price", zones };
+  }
+
+  if (zone.ownershipHint === "managed_registry") {
+    return { status: "managed", message: "Registry-owned zone", zones };
+  }
+
+  return { status: "ready", message: "Zone exists; ownership is name hint only", zones };
+}
+
+function hasDraftPriceDifference(
+  wilaya: Wilaya,
+  zone: ZoneDiagnostic,
+  methodDefs: MethodDef[],
+): boolean {
+  return methodDefs.some((methodDef) => {
+    const draftMethod = wilaya.methods[methodDef.key];
+    const liveMethod = liveMethodForKey(zone, methodDef.key);
+    if (!draftMethod || !liveMethod || !draftMethod.enabled) {
+      return false;
+    }
+
+    return normalizedPrice(draftMethod.price) !== normalizedPrice(liveMethod.cost);
+  });
+}
+
+function LiveZoneDetails({
+  summary,
+  methodDefs,
+}: {
+  summary: LiveZoneSummary;
+  methodDefs: MethodDef[];
+}) {
+  if (summary.zones.length === 0) {
+    return <span className="text-xs text-muted-foreground">No live zone matched.</span>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {summary.zones.map((zone) => (
+        <div key={zone.zoneId} className="space-y-1">
+          <div className="text-xs font-medium">{zone.name}</div>
+          <div className="flex flex-wrap gap-1">
+            {zone.ownershipHint === "managed_registry" && (
+              <Badge variant="outline" className="text-[10px]">
+                Yaxii-managed
+              </Badge>
+            )}
+            {zone.ownershipHint === "yaxii_hint" && (
+              <Badge variant="outline" className="text-[10px]">
+                Name match only
+              </Badge>
+            )}
+            {zone.ownershipHint === "manual_unknown" && (
+              <Badge variant="secondary" className="text-[10px]">
+                Manual or unknown
+              </Badge>
+            )}
+          </div>
+          <div className="space-y-0.5 text-xs text-muted-foreground">
+            {methodDefs.slice(0, 2).map((methodDef) => (
+              <div key={methodDef.key}>{liveMethodSummary(zone, methodDef)}</div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function liveMethodSummary(zone: ZoneDiagnostic, methodDef: MethodDef): string {
+  const method = liveMethodForKey(zone, methodDef.key);
+  if (!method) {
+    return `${methodDef.label}: missing`;
+  }
+
+  const enabledLabel = method.enabled ? "enabled" : "disabled";
+  return `${methodDef.label}: ${enabledLabel} - ${formatLiveCost(method.cost)}`;
+}
+
+function liveMethodForKey(zone: ZoneDiagnostic, methodKey: string) {
+  const registryMethod = zone.managedMethods.find((method) => method.methodKey === methodKey);
+  if (registryMethod) {
+    return zone.methods.find((method) => method.instanceId === registryMethod.instanceId);
+  }
+
+  return undefined;
+}
+
+function formatLiveCost(cost: string | null): string {
+  if (cost === null || cost.trim() === "") {
+    return "price not set";
+  }
+
+  return normalizedPrice(cost) === "0" ? "Free" : `${cost} DZD`;
+}
+
+function normalizedPrice(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? String(numeric) : String(value);
 }
 
 function DiagnosticsScreen({
@@ -1350,8 +1647,20 @@ function ZoneDiagnosticsPanel({ zones }: { zones: ZoneDiagnostic[] }) {
                 <div className="text-sm font-medium">{zone.name}</div>
                 <div className="text-xs text-muted-foreground">Zone ID {zone.zoneId}</div>
               </div>
-              <Badge variant={zone.ownershipHint === "yaxii_hint" ? "default" : "secondary"}>
-                {zone.ownershipHint === "yaxii_hint" ? "Yaxii-looking" : "Manual or unknown"}
+              <Badge
+                variant={
+                  zone.ownershipHint === "managed_registry"
+                    ? "default"
+                    : zone.ownershipHint === "yaxii_hint"
+                      ? "outline"
+                      : "secondary"
+                }
+              >
+                {zone.ownershipHint === "managed_registry"
+                  ? "Yaxii-managed"
+                  : zone.ownershipHint === "yaxii_hint"
+                    ? "Yaxii-looking"
+                    : "Manual or unknown"}
               </Badge>
             </div>
             <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">

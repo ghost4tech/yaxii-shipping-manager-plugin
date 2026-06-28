@@ -269,13 +269,17 @@ The final wizard footer uses `Done`, not draft-oriented copy.
 
 ## Shipping Zones Controls
 
-The Shipping Zones screen is a local draft editor, not a WooCommerce write surface.
+The Shipping Zones screen is a live status and local draft planning table, not a direct WooCommerce write surface.
 
 Current control classification:
 
+- WooCommerce status badges, zone names, ownership labels, method enabled state, and method prices: live read-only diagnostics.
 - Price inputs: draft/local only until the merchant reviews preview and applies supported Yaxii-managed method updates.
 - Bulk price and percent controls: draft/local only.
 - Free shipping and disabled/enabled actions: draft/local only.
+- `Open Generator to update prices`: opens the Generator preview/apply flow.
+- `Check diagnostics`: opens the read-only diagnostics screen.
+- `Open WooCommerce zones`: opens WooCommerce's native shipping settings for inspection.
 - `Save settings` in Settings: functional settings persistence only; it does not directly update WooCommerce zones or existing methods. Use wizard preview/apply for supported Yaxii-managed method price or label updates.
 - CSV import/export controls: coming soon and disabled.
 

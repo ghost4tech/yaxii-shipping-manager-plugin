@@ -8,6 +8,7 @@ Yaxii Shipping Manager diagnostics are read-only checks for existing WooCommerce
 - Zone IDs, names, and locations.
 - Shipping methods attached to each zone.
 - Method instance IDs, method type IDs, titles, enabled state, and flat-rate cost strings when WooCommerce exposes them safely.
+- Yaxii managed registry ownership for existing zone IDs, including recorded method keys and instance IDs.
 - The normalized current Algeria wilaya dataset.
 - Persisted Yaxii settings needed for weak Yaxii-name hints, such as the zone prefix.
 
@@ -26,7 +27,7 @@ The current diagnostics compare WooCommerce zone locations with Yaxii current wi
 - More than one direct zone match for the same wilaya is reported as a conflict.
 - Zones with no enabled methods are reported as method gaps.
 
-Manual merchant zones are not treated as bad by default. Yaxii-looking names are only weak hints based on the configured prefix or the `Yaxii` name.
+Manual merchant zones are not treated as bad by default. Registry ownership is authoritative for Yaxii-managed zones. Yaxii-looking names are only weak hints based on the configured prefix or the `Yaxii` name.
 
 ## Risk Levels
 

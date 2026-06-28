@@ -7,6 +7,7 @@
 
 namespace Yaxii\ShippingManager\WooCommerce;
 
+use Yaxii\ShippingManager\Apply\ManagedZoneRegistry;
 use Yaxii\ShippingManager\Data\DatasetMode;
 use Yaxii\ShippingManager\Data\DatasetRepository;
 use Yaxii\ShippingManager\Settings\SettingsRepository;
@@ -18,17 +19,20 @@ final class ShippingDiagnosticsService {
 	private DatasetRepository $datasets;
 	private SettingsRepository $settings;
 	private ShippingZoneReader $zone_reader;
+	private ManagedZoneRegistry $managed_registry;
 
 	public function __construct(
 		bool $woocommerce_active,
 		DatasetRepository $datasets,
 		SettingsRepository $settings,
-		ShippingZoneReader $zone_reader
+		ShippingZoneReader $zone_reader,
+		ManagedZoneRegistry $managed_registry
 	) {
 		$this->woocommerce_active = $woocommerce_active;
 		$this->datasets           = $datasets;
 		$this->settings           = $settings;
 		$this->zone_reader        = $zone_reader;
+		$this->managed_registry   = $managed_registry;
 	}
 
 	/**
@@ -103,9 +107,10 @@ final class ShippingDiagnosticsService {
 	 * @return array<string,mixed>
 	 */
 	private function zone_result( array $zone, array $wilayas_by_code ): array {
-		$matched_codes = $this->matched_wilaya_codes( $zone, $wilayas_by_code );
-		$overlap_codes = $this->overlap_wilaya_codes( $zone, $wilayas_by_code );
-		$methods       = $this->method_results( $zone['methods'] ?? array() );
+		$matched_codes   = $this->matched_wilaya_codes( $zone, $wilayas_by_code );
+		$overlap_codes   = $this->overlap_wilaya_codes( $zone, $wilayas_by_code );
+		$methods         = $this->method_results( $zone['methods'] ?? array() );
+		$registry_record = $this->managed_registry->record_for_zone_id( (int) $zone['zoneId'] );
 
 		return array(
 			'zoneId'               => (int) $zone['zoneId'],
@@ -113,7 +118,8 @@ final class ShippingDiagnosticsService {
 			'locations'            => $zone['locations'],
 			'matchedWilayaCodes'   => $matched_codes,
 			'overlapWilayaCodes'   => $overlap_codes,
-			'ownershipHint'        => $this->ownership_hint( (string) $zone['name'] ),
+			'ownershipHint'        => $this->ownership_hint( (string) $zone['name'], $registry_record ),
+			'managedMethods'       => $this->managed_method_results( $registry_record ),
 			'methodCount'          => count( $methods ),
 			'enabledMethodCount'   => count( array_filter( $methods, static fn( array $method ): bool => (bool) $method['enabled'] ) ),
 			'disabledMethods'      => count( array_filter( $methods, static fn( array $method ): bool => ! (bool) $method['enabled'] ) ),
@@ -214,6 +220,32 @@ final class ShippingDiagnosticsService {
 	}
 
 	/**
+	 * @param array<string,mixed>|null $registry_record Managed registry record.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function managed_method_results( ?array $registry_record ): array {
+		if ( null === $registry_record || ! is_array( $registry_record['methodInstances'] ?? null ) ) {
+			return array();
+		}
+
+		return array_values(
+			array_map(
+				static function ( array $method ): array {
+					return array(
+						'methodKey'     => (string) $method['methodKey'],
+						'instanceId'    => (int) $method['instanceId'],
+						'methodId'      => (string) $method['methodId'],
+						'title'         => (string) $method['title'],
+						'lastKnownCost' => isset( $method['lastKnownCost'] ) ? (string) $method['lastKnownCost'] : null,
+					);
+				},
+				$registry_record['methodInstances']
+			)
+		);
+	}
+
+	/**
 	 * @param array<string,mixed>                $zone WooCommerce zone.
 	 * @param array<string,array<string,mixed>> $wilayas_by_code Dataset wilayas indexed by code.
 	 *
@@ -309,7 +341,14 @@ final class ShippingDiagnosticsService {
 		return count( $matching_zones ) > 1 ? 'conflict' : 'configured';
 	}
 
-	private function ownership_hint( string $zone_name ): string {
+	/**
+	 * @param array<string,mixed>|null $registry_record Managed registry record.
+	 */
+	private function ownership_hint( string $zone_name, ?array $registry_record ): string {
+		if ( null !== $registry_record ) {
+			return 'managed_registry';
+		}
+
 		$settings    = $this->settings->read();
 		$zone_prefix = (string) ( $settings['settings']['zonePrefix'] ?? 'Yaxii' );
 		$haystack    = strtolower( $zone_name );
