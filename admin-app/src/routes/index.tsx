@@ -743,8 +743,8 @@ function ZonesScreen({
     wilayas.map((wilaya) => (selected.includes(wilaya.code) ? transform(wilaya) : wilaya));
 
   const previewBulkPrice = () => {
-    const price = Number(bulkPrice);
-    if (!price) {
+    const price = parseOptionalPrice(bulkPrice);
+    if (price === undefined || bulkPrice.trim() === "") {
       return;
     }
 
@@ -801,11 +801,11 @@ function ZonesScreen({
           id: targetMethod,
           label: targetMethod,
           enabled: true,
-          price: null,
+          price: 0,
         };
         return {
           ...wilaya,
-          methods: { ...wilaya.methods, [targetMethod]: { ...method, price: null, enabled: true } },
+          methods: { ...wilaya.methods, [targetMethod]: { ...method, price: 0, enabled: true } },
         };
       }),
     );
@@ -853,12 +853,21 @@ function ZonesScreen({
         }
       />
 
+      <Alert className="mb-4 border-primary/20 bg-primary/5">
+        <ShieldCheck className="h-4 w-4" />
+        <AlertTitle>Local draft controls only</AlertTitle>
+        <AlertDescription>
+          Price, free shipping, enabled, and disabled controls on this screen update only the local
+          draft. Use the generator preview/apply flow for supported WooCommerce writes.
+        </AlertDescription>
+      </Alert>
+
       {hasSelection && (
         <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="rounded-full">{selected.length} selected</Badge>
             <Separator orientation="vertical" className="h-6" />
-            <span className="text-xs text-muted-foreground">Update method:</span>
+            <span className="text-xs text-muted-foreground">Draft method:</span>
             <Select value={targetMethod} onValueChange={setTargetMethod}>
               <SelectTrigger className="h-8 w-44">
                 <SelectValue />
@@ -874,14 +883,14 @@ function ZonesScreen({
             <Separator orientation="vertical" className="h-6" />
             <div className="flex items-center gap-1">
               <Input
-                type="number"
-                placeholder="Price"
+                type="text"
+                placeholder="Price or free"
                 value={bulkPrice}
                 onChange={(event) => setBulkPrice(event.target.value)}
                 className="h-8 w-24"
               />
               <Button size="sm" variant="outline" onClick={previewBulkPrice} disabled={!bulkPrice}>
-                <DollarSign className="h-4 w-4" /> Set local price
+                <DollarSign className="h-4 w-4" /> Apply draft price
               </Button>
             </div>
             <div className="flex items-center gap-1">
@@ -893,14 +902,14 @@ function ZonesScreen({
                 className="h-8 w-16"
               />
               <Button size="sm" variant="outline" onClick={previewPercent} disabled={!pct}>
-                <Percent className="h-4 w-4" /> Adjust local
+                <Percent className="h-4 w-4" /> Preview draft %
               </Button>
             </div>
             <Button size="sm" variant="outline" onClick={makeFree}>
-              Make free
+              Mark free in draft
             </Button>
             <Button size="sm" variant="outline" onClick={disableMethod}>
-              <PowerOff className="h-4 w-4" /> Disable method
+              <PowerOff className="h-4 w-4" /> Disable in draft
             </Button>
             <Separator orientation="vertical" className="h-6" />
             <Button
@@ -911,7 +920,7 @@ function ZonesScreen({
                 setConfirmOpen(true);
               }}
             >
-              <Power className="h-4 w-4" /> Enable rows
+              <Power className="h-4 w-4" /> Enable draft rows
             </Button>
             <Button
               size="sm"
@@ -921,7 +930,7 @@ function ZonesScreen({
                 setConfirmOpen(true);
               }}
             >
-              <PowerOff className="h-4 w-4" /> Disable rows
+              <PowerOff className="h-4 w-4" /> Disable draft rows
             </Button>
             <div className="ml-auto">
               <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
@@ -1010,13 +1019,13 @@ function ZonesScreen({
           setConfirmOpen(value);
           if (!value) setPending(null);
         }}
-        title="Preview local draft changes?"
+        title="Update local draft only?"
         description={
           pending
             ? `${selected.length} row(s) will be updated in the local draft. No WooCommerce zones are changed.`
             : "No local draft changes to preview."
         }
-        confirmLabel="Update local draft"
+        confirmLabel="Update draft only"
         onConfirm={confirm}
       />
     </>
@@ -1037,7 +1046,7 @@ function MethodCell({
         onClick={() => onChange({ enabled: true, price: 0 })}
         className="text-xs text-muted-foreground hover:text-foreground"
       >
-        - add
+        Add draft method
       </button>
     );
   }
@@ -1048,18 +1057,7 @@ function MethodCell({
         onClick={() => onChange({ enabled: true })}
         className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
       >
-        <PowerOff className="h-3 w-3" /> Off
-      </button>
-    );
-  }
-  if (method.price === null) {
-    return (
-      <button
-        type="button"
-        onClick={() => onChange({ price: 0 })}
-        className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
-      >
-        Free
+        <PowerOff className="h-3 w-3" /> Draft off
       </button>
     );
   }
@@ -1077,6 +1075,11 @@ function MethodCell({
         }}
         className="h-8"
       />
+      {(method.price === null || method.price === 0) && (
+        <Badge variant="outline" className="border-emerald-200 text-[10px] text-emerald-700">
+          Free draft
+        </Badge>
+      )}
     </div>
   );
 }
@@ -1410,7 +1413,7 @@ function CheckoutSim({ wilaya }: { wilaya: Wilaya }) {
               >
                 <span>{method.label}</span>
                 <span className="font-medium">
-                  {method.price === null ? "Free" : `${method.price} DZD`}
+                  {method.price === null || method.price === 0 ? "Free" : `${method.price} DZD`}
                 </span>
               </div>
             ))}

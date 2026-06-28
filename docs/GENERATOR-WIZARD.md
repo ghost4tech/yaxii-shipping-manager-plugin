@@ -22,10 +22,10 @@ Already connected to real backend contracts:
 
 - Settings initialize from persisted settings.
 - Current wilayas load through `GET /dataset?mode=current&include=wilayas`.
-- Preview calls `POST /preview`.
-- Preview output shows a simplified merchant summary, grouped method additions, collapsed advanced details, readiness, and apply state.
+- Preview calls `POST /preview` automatically on the final step when the draft is valid.
+- Preview output shows one merchant action card, one setup summary, grouped method additions, collapsed advanced details, and a safe apply action only when supported work exists.
 - Diagnostics uses `GET /diagnostics`.
-- Apply remains disabled through the apply contract.
+- Apply can create missing Yaxii-managed zones and add missing methods/prices after checkbox confirmation. Existing method price/label updates remain reserved for the next task.
 
 Still prototype-like:
 
@@ -68,8 +68,8 @@ Recommended copy:
 Mapping:
 
 - Fresh setup: default to all current wilayas selected.
-- Continue existing setup: use diagnostics to explain existing WooCommerce zones.
-- Preview changes only: let the merchant review a plan without implying apply is available.
+- Continue existing setup: emphasize that Yaxii adds only missing managed zones or methods and protects existing manual zones.
+- Preview changes only: let the merchant review a plan without showing the apply action.
 
 CSV import should not be a primary wizard path until the CSV backend exists. Keep it outside this wizard or show it as disabled with plain copy.
 
@@ -227,7 +227,14 @@ Behavior:
 - Keep `Refresh preview` as a secondary action.
 - Keep technical fields collapsed in `Advanced details`.
 
-Show in the main summary:
+Show in the main action card:
+
+- `Ready to prepare shipping` when safe creates or method additions are available.
+- `Shipping setup already exists` when no missing zones or methods are found.
+- `Setup exists. Updates are coming next.` when only existing method/price/label updates remain for TASK-008C.
+- `Needs review before applying` only for real blockers.
+
+Show in the setup summary:
 
 - selected wilayas count
 - commune coverage summary
@@ -253,6 +260,26 @@ Recommended copy:
 > Apply can create missing Yaxii-managed zones and add selected methods with prices to managed zones. Manual zones are not touched.
 
 The active apply button should appear only when a reviewed preview has missing zones or missing methods, no conflicts, and the merchant checks the confirmation checkbox. The frontend still submits the backend-required confirmation phrase internally for the current safe apply scope.
+
+Preview-only setup mode hides the apply action and shows:
+
+> Preview-only mode. Switch setup mode if you want to apply changes.
+
+The final wizard footer uses `Done`, not draft-oriented copy.
+
+## Shipping Zones Controls
+
+The Shipping Zones screen is a local draft editor, not a WooCommerce write surface.
+
+Current control classification:
+
+- Price inputs: draft/local only.
+- Bulk price and percent controls: draft/local only.
+- Free shipping and disabled/enabled actions: draft/local only.
+- `Save settings` in Settings: functional settings persistence only; it does not update WooCommerce zones or existing methods.
+- CSV import/export controls: coming soon and disabled.
+
+The UI must say local draft controls do not write WooCommerce. Existing WooCommerce method price and label updates remain for TASK-008C.
 
 ## UI Copy Recommendations
 

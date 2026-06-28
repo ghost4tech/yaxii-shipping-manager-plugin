@@ -111,7 +111,7 @@ WooCommerce is inactive, no wilayas are selected, or another critical condition 
 UX title:
 
 ```text
-Cannot apply yet
+Needs review before applying
 ```
 
 ## Severity
@@ -160,18 +160,39 @@ Zone creation, method creation, and registry writes happen only inside `POST /ap
 
 ## Final Step UX
 
-The generator final step auto-runs preview once when the merchant reaches the step with a valid draft. The main view shows a short merchant summary:
+The generator final step auto-runs preview once when the merchant reaches the step with a valid draft. The main view answers one merchant question:
+
+```text
+Can Yaxii safely do something now?
+```
+
+The main view shows one status/action card, one short setup summary, and collapsed details. It does not show preview hash, contract version, generated timestamp, raw preview groups, zone IDs, method keys, or ownership labels outside `Advanced details`.
+
+Merchant-facing states:
+
+- `ready_to_apply`: title `Ready to prepare shipping`; shown when the preview has safe zone creates or method additions. The action button is `Create shipping setup`, `Create zones`, or `Add methods and prices` depending on the supported work.
+- `setup_already_created`: title `Shipping setup already exists`; shown when no missing zones or methods and no conflicts are found. Primary action is `Done`; secondary action is `Check diagnostics`.
+- `updates_pending_next`: title `Setup exists. Updates are coming next.`; shown when only unsupported existing zone/method updates remain for the next implementation step. This is not treated as an error.
+- `blocked`: title `Needs review before applying`; shown only for real blockers such as conflicts, WooCommerce inactive, invalid selected wilayas, preview errors, or safety policy issues.
+
+The setup summary includes:
 
 - wilayas selected
 - zones to create
 - methods to add
-- updates reserved for a later step
-- manual zones skipped
-- conflicts
+- updates reserved for the next step, only when present
+- manual zones protected
+- conflicts, only when present
 - enabled methods and price summary
 
 Large method lists, zone IDs, method keys, preview hash, contract version, generated timestamp, raw preview groups, and registry/ownership labels stay collapsed under `View affected wilayas` or `Advanced details`.
 
-For the current safe apply scope, the visible confirmation is a checkbox. The frontend submits the backend-required confirmation phrase internally only after the checkbox is checked. Typed confirmation remains a backend contract field and should be reserved in the UI for future dangerous actions such as deletes, manual-zone adoption, or overwrites.
+For the current safe apply scope, the visible confirmation is a checkbox labeled `I reviewed this setup`. The frontend submits the backend-required confirmation phrase internally only after the checkbox is checked. Typed confirmation remains a backend contract field and should be reserved in the UI for future dangerous actions such as deletes, manual-zone adoption, or overwrites.
+
+Preview-only mode hides the apply action and shows:
+
+```text
+Preview-only mode. Switch setup mode if you want to apply changes.
+```
 
 TASK-008B keeps manual zones protected, skips manual overlaps, and blocks conflicts.

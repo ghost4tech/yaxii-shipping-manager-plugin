@@ -4,8 +4,8 @@ import {
   AlertCircle,
   CheckCircle2,
   ExternalLink,
-  ListChecks,
   Lock,
+  RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 
@@ -31,6 +31,13 @@ import type { GeneratorPreviewContext } from "./types";
 const APPLY_CONFIRMATION_TEXT = "APPLY YAXII SHIPPING PLAN";
 const AFFECTED_WILAYA_LIMIT = 10;
 
+type SetupMode = "fresh" | "continue" | "preview";
+type FinalApplyStatus =
+  | "ready_to_apply"
+  | "setup_already_created"
+  | "updates_pending_next"
+  | "blocked";
+
 type PlannedMethod = {
   wilayaCode?: string;
   wilayaName?: string;
@@ -54,7 +61,9 @@ export function PreviewPlanPanel({
   previewRequest,
   onOpenDiagnostics,
   onRefreshDiagnostics,
+  onRefreshPreview,
   onDone,
+  setupMode = "continue",
 }: {
   response: PreviewResponse;
   context?: GeneratorPreviewContext;
@@ -62,7 +71,9 @@ export function PreviewPlanPanel({
   previewRequest: PreviewRequest;
   onOpenDiagnostics: () => void;
   onRefreshDiagnostics: () => void;
+  onRefreshPreview?: () => void;
   onDone: () => void;
+  setupMode?: SetupMode;
 }) {
   const [confirmationChecked, setConfirmationChecked] = useState(false);
   const [showAllAffected, setShowAllAffected] = useState(false);
@@ -79,6 +90,8 @@ export function PreviewPlanPanel({
     : affectedWilayas.slice(0, AFFECTED_WILAYA_LIMIT);
   const canApply = canApplyPreview(response);
   const updateCount = response.summary.updateMethods + response.summary.updateZones;
+  const finalStatus = finalApplyStatus(response, plannedMethods.length, updateCount);
+  const isPreviewOnly = setupMode === "preview";
 
   const applyPreview = async () => {
     setApplyState({ status: "loading" });
@@ -106,42 +119,27 @@ export function PreviewPlanPanel({
 
   return (
     <div className="mt-6 space-y-4">
-      <MerchantSummaryCard
+      <FinalActionCard
+        response={response}
+        finalStatus={finalStatus}
+        canApply={canApply}
+        isPreviewOnly={isPreviewOnly}
+        updateCount={updateCount}
+        confirmationChecked={confirmationChecked}
+        setConfirmationChecked={setConfirmationChecked}
+        applyStateStatus={applyState.status}
+        applyPreview={applyPreview}
+        onOpenDiagnostics={onOpenDiagnostics}
+        onRefreshPreview={onRefreshPreview}
+        onDone={onDone}
+      />
+
+      <SetupSummaryCard
         response={response}
         context={context}
         plannedMethods={plannedMethods}
         updateCount={updateCount}
       />
-
-      <SafetyCard blocked={!canApply} conflicts={response.summary.conflicts} />
-
-      {plannedMethods.length > 0 && <MethodSummaryCard methods={plannedMethods} />}
-
-      {updateCount > 0 && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Some updates are for a later step</AlertTitle>
-          <AlertDescription>
-            Existing Yaxii zones or methods may need updates. Those updates are not applied yet.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <ApplyCard
-        response={response}
-        canApply={canApply}
-        confirmationChecked={confirmationChecked}
-        setConfirmationChecked={setConfirmationChecked}
-        applyStateStatus={applyState.status}
-        applyPreview={applyPreview}
-      />
-
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={onOpenDiagnostics}>
-          <Activity className="h-4 w-4" />
-          Check diagnostics
-        </Button>
-      </div>
 
       {applyState.status === "ready" && (
         <ApplyResultPanel
@@ -194,143 +192,73 @@ export function PreviewPlanPanel({
   );
 }
 
-function MerchantSummaryCard({
+function FinalActionCard({
   response,
-  context,
-  plannedMethods,
+  finalStatus,
+  canApply,
+  isPreviewOnly,
   updateCount,
+  confirmationChecked,
+  setConfirmationChecked,
+  applyStateStatus,
+  applyPreview,
+  onOpenDiagnostics,
+  onRefreshPreview,
+  onDone,
 }: {
   response: PreviewResponse;
-  context?: GeneratorPreviewContext;
-  plannedMethods: PlannedMethod[];
+  finalStatus: FinalApplyStatus;
+  canApply: boolean;
+  isPreviewOnly: boolean;
   updateCount: number;
+  confirmationChecked: boolean;
+  setConfirmationChecked: (checked: boolean) => void;
+  applyStateStatus: "idle" | "loading" | "ready" | "error";
+  applyPreview: () => Promise<void>;
+  onOpenDiagnostics: () => void;
+  onRefreshPreview?: () => void;
+  onDone: () => void;
 }) {
+  const title = finalStatusTitle(finalStatus);
+  const message = finalStatusMessage(response, finalStatus, updateCount);
+  const ready = finalStatus === "ready_to_apply" && canApply && !isPreviewOnly;
+
   return (
     <Card className="border-primary/20">
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle>{previewTitle(response, plannedMethods.length)}</CardTitle>
-            <CardDescription>Here is what Yaxii can safely apply now.</CardDescription>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{message}</CardDescription>
           </div>
-          <Badge
-            variant={response.applyReadiness.severity === "blocked" ? "destructive" : "outline"}
-          >
-            {response.applyReadiness.severity === "blocked" ? "Blocked" : "Ready to review"}
+          <Badge variant={finalStatus === "blocked" ? "destructive" : "outline"}>
+            {isPreviewOnly ? "Preview only" : finalStatusBadge(finalStatus)}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <SummaryTile label="Wilayas selected" value={String(response.summary.selectedWilayas)} />
-          <SummaryTile label="Zones to create" value={String(response.summary.createZones)} />
-          <SummaryTile label="Methods to add" value={String(plannedMethods.length)} />
-          <SummaryTile label="Updates later" value={String(updateCount)} />
-          <SummaryTile
-            label="Manual zones skipped"
-            value={String(response.summary.skipManualZones)}
-          />
-          <SummaryTile
-            label="Conflicts"
-            value={String(response.summary.conflicts)}
-            tone={response.summary.conflicts > 0 ? "warn" : undefined}
-          />
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <PlainSummaryLine
-            label="Enabled methods"
-            value={
-              context?.enabledMethodLabels.length
-                ? context.enabledMethodLabels.join(", ")
-                : "No enabled methods"
-            }
-          />
-          <PlainSummaryLine label="Prices" value={context?.priceSummary ?? "No price summary"} />
-        </div>
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 text-sm text-emerald-900">
-          Manual zones will not be touched.
+          Manual zones will not be touched. No deletes will be made.
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SafetyCard({ blocked, conflicts }: { blocked: boolean; conflicts: number }) {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <ShieldCheck className="h-4 w-4" />
-          {blocked ? "Review needed" : "Safe to apply"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-2 text-sm md:grid-cols-3">
-        <SafetyLine text="Manual zones will not be touched." />
-        <SafetyLine text="No deletes will be made." />
-        <SafetyLine text="Yaxii checks WooCommerce again before applying." />
-        {conflicts > 0 && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-destructive md:col-span-3">
-            Resolve conflicts before applying.
-          </div>
+        {isPreviewOnly && (
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertTitle>Preview-only mode</AlertTitle>
+            <AlertDescription>
+              Preview-only mode. Switch setup mode if you want to apply changes.
+            </AlertDescription>
+          </Alert>
         )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function MethodSummaryCard({ methods }: { methods: PlannedMethod[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Methods and prices to add</CardTitle>
-        <CardDescription>Grouped by delivery method and price.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {methodAdditionSummaries(methods).map((summary) => (
-          <div
-            key={summary}
-            className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm"
-          >
-            {summary}
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ApplyCard({
-  response,
-  canApply,
-  confirmationChecked,
-  setConfirmationChecked,
-  applyStateStatus,
-  applyPreview,
-}: {
-  response: PreviewResponse;
-  canApply: boolean;
-  confirmationChecked: boolean;
-  setConfirmationChecked: (checked: boolean) => void;
-  applyStateStatus: "idle" | "loading" | "ready" | "error";
-  applyPreview: () => Promise<void>;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{applyActionTitle(response)}</CardTitle>
-        <CardDescription>{applyActionDescription(response)}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {canApply ? (
+        {ready ? (
           <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3">
             <Checkbox
               checked={confirmationChecked}
               onCheckedChange={(checked) => setConfirmationChecked(Boolean(checked))}
             />
             <div className="space-y-3">
-              <div className="text-sm font-medium">
-                I reviewed this setup and understand Yaxii will update WooCommerce shipping zones
-                and methods shown above.
+              <div className="text-sm font-medium">I reviewed this setup</div>
+              <div className="text-xs text-muted-foreground">
+                Yaxii checks WooCommerce again before applying.
               </div>
               <Button
                 onClick={() => void applyPreview()}
@@ -344,11 +272,86 @@ function ApplyCard({
             </div>
           </div>
         ) : (
-          <Button disabled variant="outline">
-            <Lock className="h-4 w-4" />
-            {applyDisabledLabel(response)}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {finalStatus === "blocked" ? (
+              <Button
+                type="button"
+                onClick={() => void onRefreshPreview?.()}
+                disabled={!onRefreshPreview}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh preview
+              </Button>
+            ) : (
+              <Button type="button" onClick={onDone}>
+                Done
+              </Button>
+            )}
+            <Button type="button" variant="outline" onClick={onOpenDiagnostics}>
+              <Activity className="h-4 w-4" />
+              Check diagnostics
+            </Button>
+          </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SetupSummaryCard({
+  response,
+  context,
+  plannedMethods,
+  updateCount,
+}: {
+  response: PreviewResponse;
+  context?: GeneratorPreviewContext;
+  plannedMethods: PlannedMethod[];
+  updateCount: number;
+}) {
+  const methodSummaries = methodAdditionSummaries(plannedMethods);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Setup summary</CardTitle>
+        <CardDescription>
+          Short preview of selected coverage, methods, and protected work.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <PlainSummaryLine
+            label="Wilayas selected"
+            value={String(response.summary.selectedWilayas)}
+          />
+          <PlainSummaryLine label="Zones to create" value={String(response.summary.createZones)} />
+          <PlainSummaryLine label="Methods to add" value={String(plannedMethods.length)} />
+          <PlainSummaryLine
+            label="Manual zones protected"
+            value={String(response.summary.skipManualZones)}
+          />
+          {updateCount > 0 && (
+            <PlainSummaryLine label="Updates for next step" value={String(updateCount)} />
+          )}
+          {response.summary.conflicts > 0 && (
+            <PlainSummaryLine label="Conflicts" value={String(response.summary.conflicts)} />
+          )}
+        </div>
+        <PlainSummaryLine
+          label="Enabled methods and prices"
+          value={
+            methodSummaries.length > 0
+              ? methodSummaries.join("; ")
+              : (context?.priceSummary ?? "No methods or prices to add.")
+          }
+        />
+        {context?.enabledMethodLabels.length ? (
+          <PlainSummaryLine
+            label="Enabled methods"
+            value={context.enabledMethodLabels.join(", ")}
+          />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -512,15 +515,6 @@ function PlainSummaryLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SafetyLine({ text }: { text: string }) {
-  return (
-    <div className="flex items-start gap-2 rounded-md border border-border bg-card p-3">
-      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-700" />
-      <span>{text}</span>
-    </div>
-  );
-}
-
 function PreviewPlanGroup({ title, items }: { title: string; items: PreviewPlanItem[] }) {
   return (
     <div className="rounded-lg border border-border">
@@ -578,26 +572,6 @@ function acceptedPlanSummary(response: PreviewResponse) {
   };
 }
 
-function previewTitle(response: PreviewResponse, plannedMethodCount: number): string {
-  if (response.summary.conflicts > 0 || response.applyReadiness.severity === "blocked") {
-    return "Review needed before apply";
-  }
-
-  if (response.summary.createZones > 0 && plannedMethodCount > 0) {
-    return "Shipping setup is ready";
-  }
-
-  if (plannedMethodCount > 0) {
-    return "Missing methods can be added";
-  }
-
-  if (response.summary.createZones > 0) {
-    return "Missing zones can be created";
-  }
-
-  return "No safe apply changes found";
-}
-
 function canApplyPreview(response: PreviewResponse): boolean {
   return (
     response.canApplyLater &&
@@ -607,47 +581,100 @@ function canApplyPreview(response: PreviewResponse): boolean {
   );
 }
 
-function applyDisabledLabel(response: PreviewResponse): string {
-  if (response.plan.createZones.length === 0 && response.plan.addMethods.length === 0) {
-    return "No missing zones or methods";
+function finalApplyStatus(
+  response: PreviewResponse,
+  plannedMethodCount: number,
+  updateCount: number,
+): FinalApplyStatus {
+  if (response.summary.conflicts > 0 || response.applyReadiness.severity === "blocked") {
+    return "blocked";
   }
 
-  if (response.plan.conflicts.length > 0 || response.applyReadiness.severity === "blocked") {
-    return "Cannot apply yet";
+  if (response.summary.createZones > 0 || plannedMethodCount > 0) {
+    return "ready_to_apply";
   }
 
-  return "Cannot apply yet";
+  if (updateCount > 0) {
+    return "updates_pending_next";
+  }
+
+  return "setup_already_created";
 }
 
-function applyActionTitle(response: PreviewResponse): string {
-  const plannedMethodCount = plannedMethodAdditions(response).length;
-  if (response.plan.createZones.length > 0 && plannedMethodCount > 0) {
-    return "Create zones and add methods";
+function finalStatusTitle(status: FinalApplyStatus): string {
+  if (status === "ready_to_apply") {
+    return "Ready to prepare shipping";
   }
 
-  if (plannedMethodCount > 0) {
-    return "Add methods and prices";
+  if (status === "setup_already_created") {
+    return "Shipping setup already exists";
   }
 
-  if (response.plan.createZones.length > 0) {
-    return "Create zones";
+  if (status === "updates_pending_next") {
+    return "Setup exists. Updates are coming next.";
   }
 
-  return "Cannot apply yet";
+  return "Needs review before applying";
+}
+
+function finalStatusMessage(
+  response: PreviewResponse,
+  status: FinalApplyStatus,
+  updateCount: number,
+): string {
+  if (status === "ready_to_apply") {
+    return applyActionDescription(response);
+  }
+
+  if (status === "setup_already_created") {
+    return "No missing zones or methods were found for this selection.";
+  }
+
+  if (status === "updates_pending_next") {
+    return "Your zones and methods already exist. Price and label updates will be handled in the next step.";
+  }
+
+  if (response.plan.conflicts.length > 0) {
+    return "Conflicts were found in WooCommerce zones for this selection.";
+  }
+
+  if (response.applyReadiness.blockingReasons.length > 0) {
+    return response.applyReadiness.blockingReasons[0];
+  }
+
+  return updateCount > 0
+    ? "This preview has work that is not supported by the current safe apply step."
+    : response.applyReadiness.message;
+}
+
+function finalStatusBadge(status: FinalApplyStatus): string {
+  if (status === "ready_to_apply") {
+    return "Ready";
+  }
+
+  if (status === "setup_already_created") {
+    return "Done";
+  }
+
+  if (status === "updates_pending_next") {
+    return "Next step";
+  }
+
+  return "Needs review";
 }
 
 function applyActionDescription(response: PreviewResponse): string {
   const plannedMethodCount = plannedMethodAdditions(response).length;
   if (response.plan.createZones.length > 0 && plannedMethodCount > 0) {
-    return `${response.plan.createZones.length} zone(s) will be created and ${plannedMethodCount} method(s) will be added with prices.`;
+    return `${response.plan.createZones.length} zones and ${plannedMethodCount} methods can be added now.`;
   }
 
   if (plannedMethodCount > 0) {
-    return `Yaxii-managed zones already exist. This apply will add ${plannedMethodCount} missing method(s) and prices.`;
+    return `${plannedMethodCount} missing methods and prices can be added now.`;
   }
 
   if (response.plan.createZones.length > 0) {
-    return `${response.plan.createZones.length} missing zone(s) will be created.`;
+    return `${response.plan.createZones.length} missing zones can be created now.`;
   }
 
   return "There is no supported safe apply work in this preview.";
@@ -667,7 +694,7 @@ function applyButtonLabel(response: PreviewResponse): string {
     return "Create zones";
   }
 
-  return "Cannot apply yet";
+  return "Refresh preview";
 }
 
 function plannedMethodAdditions(response: PreviewResponse): PlannedMethod[] {

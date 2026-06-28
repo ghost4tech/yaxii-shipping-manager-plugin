@@ -437,7 +437,7 @@ export function GeneratorWizard({
             <div className="flex flex-wrap items-center gap-2">
               <div className="text-sm font-semibold">Shipping setup assistant</div>
               <Badge variant="secondary" className="rounded-full text-[10px]">
-                <Eye className="mr-1 h-3 w-3" /> Preview only
+                <Eye className="mr-1 h-3 w-3" /> {setupModeBadgeLabel(setupMode)}
               </Badge>
             </div>
             <div className="text-xs text-muted-foreground">
@@ -559,15 +559,6 @@ export function GeneratorWizard({
             {step === 7 && (
               <StepPreview
                 setupMode={setupMode}
-                dataset={dataset}
-                selectedWilayas={selectedWilayas}
-                enabledMethods={enabledMethods}
-                communeMode={communeMode}
-                communesByWilaya={communesByWilaya}
-                priceOverrides={priceOverrides}
-                labelFormat={labelFormat}
-                zoneNameFormat={zoneNameFormat}
-                zonePrefix={zonePrefix}
                 config={config}
                 previewState={previewState}
                 previewContext={previewContext ?? currentPreviewContext}
@@ -591,11 +582,7 @@ export function GeneratorWizard({
           >
             <ChevronLeft className="h-4 w-4" /> Back
           </Button>
-          <div className="hidden text-xs text-muted-foreground md:block">
-            <ShieldCheck className="mr-1 inline h-3 w-3" />
-            Preview first. Apply can create missing zones and add missing methods after
-            confirmation.
-          </div>
+          <div />
           {step < WIZARD_STEPS.length - 1 ? (
             <Button
               onClick={() => setStep((current) => Math.min(current + 1, WIZARD_STEPS.length - 1))}
@@ -605,7 +592,7 @@ export function GeneratorWizard({
             </Button>
           ) : (
             <Button variant="outline" onClick={useDraftAndClose}>
-              Use draft and close
+              Done
             </Button>
           )}
         </div>
@@ -618,7 +605,7 @@ function StepStart({ mode, setMode }: { mode: SetupMode; setMode: (mode: SetupMo
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[11px] font-medium text-primary">
-        <ShieldCheck className="h-3 w-3" /> Preview only for now
+        <ShieldCheck className="h-3 w-3" /> Preview before apply
       </div>
       <h3 className="text-2xl font-semibold tracking-tight">How would you like to start?</h3>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -630,21 +617,21 @@ function StepStart({ mode, setMode }: { mode: SetupMode; setMode: (mode: SetupMo
           onClick={() => setMode("fresh")}
           icon={<Sparkles className="h-5 w-5" />}
           title="Fresh setup"
-          desc="Start with all current wilayas selected."
+          desc="Create a new shipping setup for selected wilayas."
         />
         <StartCard
           active={mode === "continue"}
           onClick={() => setMode("continue")}
           icon={<FileEdit className="h-5 w-5" />}
           title="Continue existing"
-          desc="Prepare a preview while diagnostics protects manual zones."
+          desc="Add only missing managed zones or methods. Manual zones are protected."
         />
         <StartCard
           active={mode === "preview"}
           onClick={() => setMode("preview")}
           icon={<Eye className="h-5 w-5" />}
           title="Preview changes"
-          desc="Review a plan without changing WooCommerce."
+          desc="Review a plan only. Switch modes if you want to apply changes."
         />
       </div>
 
@@ -1626,15 +1613,6 @@ function StepSafety() {
 
 function StepPreview({
   setupMode,
-  dataset,
-  selectedWilayas,
-  enabledMethods,
-  communeMode,
-  communesByWilaya,
-  priceOverrides,
-  labelFormat,
-  zoneNameFormat,
-  zonePrefix,
   config,
   previewState,
   previewContext,
@@ -1645,15 +1623,6 @@ function StepPreview({
   onDone,
 }: {
   setupMode: SetupMode;
-  dataset: DatasetMode;
-  selectedWilayas: WilayaReference[];
-  enabledMethods: ShippingMethodTemplate[];
-  communeMode: CommuneMode;
-  communesByWilaya: Record<string, CommuneLoadState>;
-  priceOverrides: PriceOverrides;
-  labelFormat: RegionLabelFormat;
-  zoneNameFormat: ZoneNameFormat;
-  zonePrefix: string;
   config: AdminBootstrapConfig;
   previewState: PreviewLoadState;
   previewContext: GeneratorPreviewContext;
@@ -1663,87 +1632,16 @@ function StepPreview({
   onRefreshDiagnostics: () => void;
   onDone: () => void;
 }) {
-  const sampleWilaya = selectedWilayas[0];
-  const sampleLabel = sampleWilaya
-    ? formatRegionLabel({ nameFr: sampleWilaya.name, nameAr: sampleWilaya.ar }, labelFormat)
-    : "Wilaya";
-  const sampleZoneName = sampleWilaya
-    ? zoneNamePreview({
-        format: zoneNameFormat,
-        prefix: zonePrefix,
-        code: sampleWilaya.code,
-        name: sampleLabel,
-      })
-    : "Select a wilaya";
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-2xl font-semibold tracking-tight">Review and apply</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Yaxii checks WooCommerce before apply and protects manual zones.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{setupModePreviewCopy(setupMode)}</p>
         </div>
         <Badge variant="secondary" className="rounded-full">
-          Safe apply
+          {setupModeBadgeLabel(setupMode)}
         </Badge>
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile
-          label="Wilayas selected"
-          value={String(selectedWilayas.length)}
-          icon={<MapPin className="h-4 w-4" />}
-        />
-        <StatTile
-          label="Commune coverage"
-          value={
-            communeMode === "show"
-              ? `${loadedCommuneWilayaCount(communesByWilaya)} loaded`
-              : "Skipped"
-          }
-          icon={<Building2 className="h-4 w-4" />}
-        />
-        <StatTile
-          label="Methods enabled"
-          value={String(enabledMethods.length)}
-          icon={<Package className="h-4 w-4" />}
-        />
-        <StatTile
-          label="Dataset"
-          value={dataset === "current" ? "Current" : "Legacy"}
-          icon={<Tag className="h-4 w-4" />}
-        />
-      </div>
-
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Setup summary</CardTitle>
-            <CardDescription>These choices are checked against WooCommerce.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <PreviewLine label="Setup mode" value={setupModeLabel(setupMode)} />
-            <PreviewLine label="Sample zone" value={sampleZoneName} />
-            <PreviewLine label="Commune coverage" value={previewContext.communeCoverageSummary} />
-            <PreviewLine label="Prices" value={previewContext.priceSummary} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Enabled methods</CardTitle>
-            <CardDescription>Default and custom methods included in this preview.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {enabledMethods.length === 0 && <Badge variant="destructive">No methods enabled</Badge>}
-            {enabledMethods.map((method) => (
-              <Badge key={method.key} variant="outline">
-                {method.label} - {formatDraftPrice(method.defaultPrice)}
-              </Badge>
-            ))}
-          </CardContent>
-        </Card>
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -1754,9 +1652,6 @@ function StepPreview({
         >
           <RefreshCw className="h-4 w-4" />
           {previewState.status === "loading" ? "Checking setup..." : "Refresh preview"}
-        </Button>
-        <Button variant="outline" onClick={onOpenDiagnostics}>
-          Check diagnostics
         </Button>
       </div>
 
@@ -1802,7 +1697,9 @@ function StepPreview({
           previewRequest={previewState.request}
           onOpenDiagnostics={onOpenDiagnostics}
           onRefreshDiagnostics={onRefreshDiagnostics}
+          onRefreshPreview={loadPreview}
           onDone={onDone}
+          setupMode={setupMode}
         />
       )}
     </div>
@@ -1933,14 +1830,26 @@ function priceSummary(
   return `${enabledMethods.length} method defaults, ${overrideCount} wilaya overrides.`;
 }
 
-function setupModeLabel(mode: SetupMode): string {
+function setupModeBadgeLabel(mode: SetupMode): string {
   if (mode === "continue") {
-    return "Continue existing setup";
+    return "Continue existing";
   }
 
   if (mode === "preview") {
-    return "Preview changes only";
+    return "Preview only";
   }
 
   return "Fresh setup";
+}
+
+function setupModePreviewCopy(mode: SetupMode): string {
+  if (mode === "continue") {
+    return "Yaxii will add only missing managed zones or methods. Existing manual zones are protected.";
+  }
+
+  if (mode === "preview") {
+    return "Preview-only mode. Review the plan without applying WooCommerce changes.";
+  }
+
+  return "Create a new shipping setup for selected wilayas.";
 }
