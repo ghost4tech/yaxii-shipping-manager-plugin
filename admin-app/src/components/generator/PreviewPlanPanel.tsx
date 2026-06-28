@@ -38,8 +38,10 @@ export function PreviewPlanPanel({
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span>Preview reference</span>
-            <Badge variant="outline">{response.previewHash.slice(0, 12)}</Badge>
+            <span>Preview hash</span>
+            <Badge variant="outline" title={response.previewHash}>
+              {response.previewHash.slice(0, 12)}
+            </Badge>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>Preview generated</span>
