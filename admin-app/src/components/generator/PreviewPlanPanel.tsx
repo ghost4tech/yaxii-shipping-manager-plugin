@@ -34,6 +34,7 @@ const AFFECTED_WILAYA_LIMIT = 10;
 type SetupMode = "fresh" | "continue" | "preview";
 type FinalApplyStatus =
   | "ready_to_apply"
+  | "ready_to_update_methods"
   | "setup_already_created"
   | "updates_pending_next"
   | "blocked";
@@ -84,13 +85,15 @@ export function PreviewPlanPanel({
     | { status: "error"; message: string }
   >({ status: "idle" });
   const plannedMethods = useMemo(() => plannedMethodAdditions(response), [response]);
+  const plannedUpdates = useMemo(() => plannedMethodUpdates(response), [response]);
   const affectedWilayas = useMemo(() => affectedWilayaRows(response), [response]);
   const visibleAffectedWilayas = showAllAffected
     ? affectedWilayas
     : affectedWilayas.slice(0, AFFECTED_WILAYA_LIMIT);
   const canApply = canApplyPreview(response);
   const updateCount = response.summary.updateMethods + response.summary.updateZones;
-  const finalStatus = finalApplyStatus(response, plannedMethods.length, updateCount);
+  const unsupportedUpdateCount = response.summary.updateZones;
+  const finalStatus = finalApplyStatus(response, plannedMethods.length, plannedUpdates.length);
   const isPreviewOnly = setupMode === "preview";
 
   const applyPreview = async () => {
@@ -138,13 +141,13 @@ export function PreviewPlanPanel({
         response={response}
         context={context}
         plannedMethods={plannedMethods}
-        updateCount={updateCount}
+        plannedUpdates={plannedUpdates}
       />
 
       {applyState.status === "ready" && (
         <ApplyResultPanel
           response={applyState.response}
-          pendingUpdates={updateCount}
+          pendingUpdates={unsupportedUpdateCount}
           onRefreshDiagnostics={onRefreshDiagnostics}
           onDone={onDone}
         />
@@ -221,7 +224,10 @@ function FinalActionCard({
 }) {
   const title = finalStatusTitle(finalStatus);
   const message = finalStatusMessage(response, finalStatus, updateCount);
-  const ready = finalStatus === "ready_to_apply" && canApply && !isPreviewOnly;
+  const ready =
+    (finalStatus === "ready_to_apply" || finalStatus === "ready_to_update_methods") &&
+    canApply &&
+    !isPreviewOnly;
 
   return (
     <Card className="border-primary/20">
@@ -302,14 +308,15 @@ function SetupSummaryCard({
   response,
   context,
   plannedMethods,
-  updateCount,
+  plannedUpdates,
 }: {
   response: PreviewResponse;
   context?: GeneratorPreviewContext;
   plannedMethods: PlannedMethod[];
-  updateCount: number;
+  plannedUpdates: PlannedMethod[];
 }) {
   const methodSummaries = methodAdditionSummaries(plannedMethods);
+  const updateSummaries = methodAdditionSummaries(plannedUpdates);
 
   return (
     <Card>
@@ -327,12 +334,16 @@ function SetupSummaryCard({
           />
           <PlainSummaryLine label="Zones to create" value={String(response.summary.createZones)} />
           <PlainSummaryLine label="Methods to add" value={String(plannedMethods.length)} />
+          <PlainSummaryLine label="Method updates" value={String(plannedUpdates.length)} />
           <PlainSummaryLine
             label="Manual zones protected"
             value={String(response.summary.skipManualZones)}
           />
-          {updateCount > 0 && (
-            <PlainSummaryLine label="Updates for next step" value={String(updateCount)} />
+          {response.summary.updateZones > 0 && (
+            <PlainSummaryLine
+              label="Zone name updates later"
+              value={String(response.summary.updateZones)}
+            />
           )}
           {response.summary.conflicts > 0 && (
             <PlainSummaryLine label="Conflicts" value={String(response.summary.conflicts)} />
@@ -346,6 +357,9 @@ function SetupSummaryCard({
               : (context?.priceSummary ?? "No methods or prices to add.")
           }
         />
+        {updateSummaries.length > 0 && (
+          <PlainSummaryLine label="Price and label updates" value={updateSummaries.join("; ")} />
+        )}
         {context?.enabledMethodLabels.length ? (
           <PlainSummaryLine
             label="Enabled methods"
@@ -368,9 +382,11 @@ function ApplyResultPanel({
   onRefreshDiagnostics: () => void;
   onDone: () => void;
 }) {
+  const priceUpdatedCount = response.updatedMethods.filter((method) => method.priceUpdated).length;
   const skippedCount =
     response.skippedZones.length +
     response.skippedMethods.length +
+    response.skippedMethodUpdates.length +
     response.blockedZones.length +
     response.conflicts.length;
 
@@ -391,14 +407,21 @@ function ApplyResultPanel({
         <div className="grid gap-2 sm:grid-cols-3">
           <PlainSummaryLine label="Zones created" value={String(response.createdZones.length)} />
           <PlainSummaryLine label="Methods added" value={String(response.createdMethods.length)} />
+          <PlainSummaryLine
+            label="Methods updated"
+            value={String(response.updatedMethods.length)}
+          />
+          <PlainSummaryLine label="Prices updated" value={String(priceUpdatedCount)} />
           <PlainSummaryLine label="Manual zones" value="Not touched" />
         </div>
         {pendingUpdates > 0 && (
           <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{pendingUpdates} updates are still pending for a later step</AlertTitle>
+            <AlertTitle>
+              {pendingUpdates} zone updates are still pending for a later step
+            </AlertTitle>
             <AlertDescription>
-              Existing zone or method updates were not applied in this safe apply step.
+              Zone name updates were not applied in this safe apply step.
             </AlertDescription>
           </Alert>
         )}
@@ -455,7 +478,10 @@ function AdvancedDetails({ response }: { response: PreviewResponse }) {
       <PreviewPlanGroup title="Zones to create" items={response.plan.createZones} />
       <PreviewPlanGroup title="Zones to update later" items={response.plan.updateZones} />
       <PreviewPlanGroup title="Methods to add" items={response.plan.addMethods} />
-      <PreviewPlanGroup title="Methods to update later" items={response.plan.updateMethods} />
+      <PreviewPlanGroup
+        title="Method price and label updates"
+        items={response.plan.updateMethods}
+      />
       <PreviewPlanGroup title="Manual zones skipped" items={response.plan.skipManualZones} />
       <PreviewPlanGroup title="Conflicts" items={response.plan.conflicts} />
       <PreviewPlanGroup title="Planner warnings" items={response.plan.warnings} />
@@ -468,6 +494,9 @@ function ApplyResultDetails({ response }: { response: ApplyResponse }) {
   const rows = [
     ...response.skippedZones.map((zone) => zone.reason ?? zone.zoneName ?? "Zone skipped"),
     ...response.skippedMethods.map((method) => method.reason ?? method.title ?? "Method skipped"),
+    ...response.skippedMethodUpdates.map(
+      (method) => method.reason ?? method.title ?? "Method update skipped",
+    ),
     ...response.blockedZones.map((zone) => zone.reason ?? zone.zoneName ?? "Zone blocked"),
     ...response.conflicts.map((zone) => zone.reason ?? zone.zoneName ?? "Conflict"),
     ...response.warnings,
@@ -575,7 +604,9 @@ function acceptedPlanSummary(response: PreviewResponse) {
 function canApplyPreview(response: PreviewResponse): boolean {
   return (
     response.canApplyLater &&
-    (response.plan.createZones.length > 0 || response.plan.addMethods.length > 0) &&
+    (response.plan.createZones.length > 0 ||
+      response.plan.addMethods.length > 0 ||
+      response.plan.updateMethods.length > 0) &&
     response.applyReadiness.severity !== "blocked" &&
     response.plan.conflicts.length === 0
   );
@@ -584,7 +615,7 @@ function canApplyPreview(response: PreviewResponse): boolean {
 function finalApplyStatus(
   response: PreviewResponse,
   plannedMethodCount: number,
-  updateCount: number,
+  plannedUpdateCount: number,
 ): FinalApplyStatus {
   if (response.summary.conflicts > 0 || response.applyReadiness.severity === "blocked") {
     return "blocked";
@@ -594,7 +625,11 @@ function finalApplyStatus(
     return "ready_to_apply";
   }
 
-  if (updateCount > 0) {
+  if (plannedUpdateCount > 0) {
+    return "ready_to_update_methods";
+  }
+
+  if (response.summary.updateZones > 0) {
     return "updates_pending_next";
   }
 
@@ -604,6 +639,10 @@ function finalApplyStatus(
 function finalStatusTitle(status: FinalApplyStatus): string {
   if (status === "ready_to_apply") {
     return "Ready to prepare shipping";
+  }
+
+  if (status === "ready_to_update_methods") {
+    return "Ready to update prices";
   }
 
   if (status === "setup_already_created") {
@@ -626,12 +665,16 @@ function finalStatusMessage(
     return applyActionDescription(response);
   }
 
+  if (status === "ready_to_update_methods") {
+    return "Yaxii will update prices and labels only for methods it created.";
+  }
+
   if (status === "setup_already_created") {
     return "No missing zones or methods were found for this selection.";
   }
 
   if (status === "updates_pending_next") {
-    return "Your zones and methods already exist. Price and label updates will be handled in the next step.";
+    return "Your zones and methods already exist. Zone name updates will be handled in a later step.";
   }
 
   if (response.plan.conflicts.length > 0) {
@@ -649,6 +692,10 @@ function finalStatusMessage(
 
 function finalStatusBadge(status: FinalApplyStatus): string {
   if (status === "ready_to_apply") {
+    return "Ready";
+  }
+
+  if (status === "ready_to_update_methods") {
     return "Ready";
   }
 
@@ -694,6 +741,10 @@ function applyButtonLabel(response: PreviewResponse): string {
     return "Create zones";
   }
 
+  if (response.plan.updateMethods.length > 0) {
+    return "Update prices";
+  }
+
   return "Refresh preview";
 }
 
@@ -714,6 +765,15 @@ function plannedMethodAdditions(response: PreviewResponse): PlannedMethod[] {
   );
 
   return [...existingZoneMethods, ...newZoneMethods];
+}
+
+function plannedMethodUpdates(response: PreviewResponse): PlannedMethod[] {
+  return response.plan.updateMethods.map((item) => ({
+    wilayaCode: item.wilayaCode,
+    wilayaName: item.wilayaName,
+    label: item.label ?? item.methodKey ?? "Shipping method",
+    price: item.price ?? null,
+  }));
 }
 
 function methodAdditionSummaries(methods: PlannedMethod[]): string[] {
@@ -775,6 +835,13 @@ function affectedWilayaRows(response: PreviewResponse): AffectedWilaya[] {
     action: "Add method",
     detail: `${method.label}: ${formatPrice(method.price)}`,
   }));
+  const updateRows = plannedMethodUpdates(response).map((method, index) => ({
+    key: `update-${method.wilayaCode ?? index}-${method.label}-${index}`,
+    wilayaCode: method.wilayaCode,
+    wilayaName: method.wilayaName,
+    action: "Update price",
+    detail: `${method.label}: ${formatPrice(method.price)}`,
+  }));
   const skippedRows = response.plan.skipManualZones.map((item, index) => ({
     key: `skip-${item.wilayaCode ?? index}`,
     wilayaCode: item.wilayaCode,
@@ -792,7 +859,7 @@ function affectedWilayaRows(response: PreviewResponse): AffectedWilaya[] {
     tone: "warn" as const,
   }));
 
-  return [...zoneRows, ...methodRows, ...skippedRows, ...conflictRows];
+  return [...zoneRows, ...methodRows, ...updateRows, ...skippedRows, ...conflictRows];
 }
 
 function previewItemDetails(item: PreviewPlanItem): string {

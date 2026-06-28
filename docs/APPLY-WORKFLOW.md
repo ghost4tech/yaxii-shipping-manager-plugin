@@ -2,7 +2,7 @@
 
 The apply workflow state model explains whether the current preview can be applied safely.
 
-TASK-008B allows two narrow write paths: create missing Yaxii-managed zones from the preview `createZones` group, and add enabled flat-rate methods with prices to managed zones. The readiness model is still informational; the apply endpoint revalidates the preview before any write.
+TASK-008C allows three narrow write paths: create missing Yaxii-managed zones from the preview `createZones` group, add enabled flat-rate methods with prices to managed zones, and update labels or prices for existing registry-owned flat-rate method instances. The readiness model is still informational; the apply endpoint revalidates the preview before any write.
 
 ## Source Inputs
 
@@ -128,11 +128,11 @@ The current plugin returns:
   "previewGeneratedAt": "2026-06-28T00:00:00+00:00",
   "applyContractVersion": "apply-contract-v1",
   "canApplyLater": true,
-  "canApplyLaterMessage": "Apply can create missing Yaxii-managed zones and add missing methods with prices to managed zones."
+  "canApplyLaterMessage": "Apply can create missing Yaxii-managed zones, add missing methods, or update Yaxii-managed method prices and labels."
 }
 ```
 
-`canApplyLater` is true only when the preview has missing zones or missing methods to create and no blocking conflicts. The preview hash is a reference for a confirmed apply request. It is not stored and does not allow apply by itself.
+`canApplyLater` is true only when the preview has supported Yaxii-managed work to apply and no blocking conflicts. Supported work currently means missing zones, missing methods, or registry-owned method label/price updates. The preview hash is a reference for a confirmed apply request. It is not stored and does not allow apply by itself.
 
 ## Counts
 
@@ -153,10 +153,10 @@ The readiness model does not:
 
 - update WooCommerce shipping zones
 - delete WooCommerce shipping zones
-- update existing shipping methods
+- update unknown, manual, or unrecorded shipping methods
 - persist a preview plan
 
-Zone creation, method creation, and registry writes happen only inside `POST /apply` after explicit confirmation and fresh preview revalidation.
+Zone creation, method creation, method updates, and registry writes happen only inside `POST /apply` after explicit confirmation and fresh preview revalidation.
 
 ## Final Step UX
 
@@ -171,8 +171,9 @@ The main view shows one status/action card, one short setup summary, and collaps
 Merchant-facing states:
 
 - `ready_to_apply`: title `Ready to prepare shipping`; shown when the preview has safe zone creates or method additions. The action button is `Create shipping setup`, `Create zones`, or `Add methods and prices` depending on the supported work.
+- `ready_to_update_methods`: title `Ready to update prices`; shown when only registry-owned method label or price updates are available. The action button is `Update prices`.
 - `setup_already_created`: title `Shipping setup already exists`; shown when no missing zones or methods and no conflicts are found. Primary action is `Done`; secondary action is `Check diagnostics`.
-- `updates_pending_next`: title `Setup exists. Updates are coming next.`; shown when only unsupported existing zone/method updates remain for the next implementation step. This is not treated as an error.
+- `updates_pending_next`: title `Setup exists. Updates are coming next.`; shown when only unsupported existing zone updates remain for a later implementation step. This is not treated as an error.
 - `blocked`: title `Needs review before applying`; shown only for real blockers such as conflicts, WooCommerce inactive, invalid selected wilayas, preview errors, or safety policy issues.
 
 The setup summary includes:
@@ -180,7 +181,8 @@ The setup summary includes:
 - wilayas selected
 - zones to create
 - methods to add
-- updates reserved for the next step, only when present
+- registry-owned method updates, only when present
+- zone name updates reserved for later, only when present
 - manual zones protected
 - conflicts, only when present
 - enabled methods and price summary
@@ -195,4 +197,4 @@ Preview-only mode hides the apply action and shows:
 Preview-only mode. Switch setup mode if you want to apply changes.
 ```
 
-TASK-008B keeps manual zones protected, skips manual overlaps, and blocks conflicts.
+TASK-008C keeps manual zones protected, skips manual overlaps, and blocks conflicts.

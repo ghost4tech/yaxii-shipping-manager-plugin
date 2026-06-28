@@ -54,7 +54,7 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
   "previewGeneratedAt": "2026-06-28T00:00:00+00:00",
   "applyContractVersion": "apply-contract-v1",
   "canApplyLater": false,
-  "canApplyLaterMessage": "Apply can create missing Yaxii-managed zones and add missing methods with prices to managed zones."
+  "canApplyLaterMessage": "Apply can create missing Yaxii-managed zones, add missing methods, or update Yaxii-managed method prices and labels."
 }
 ```
 
@@ -62,13 +62,13 @@ The response also includes a summary, `generatedAt`, locked `safetyPolicy`, and:
 
 The response also includes `applyReadiness`, a UX state derived from diagnostics, the preview plan, the apply contract, and locked safety policy. It explains whether the store looks fresh, partial, manually configured, conflicted, missing methods, Yaxii-managed, or blocked.
 
-In TASK-008B, `canApplyLater` is `true` only when:
+In TASK-008C, `canApplyLater` is `true` only when:
 
-- the preview has at least one `createZones` or `addMethods` item
+- the preview has at least one `createZones`, `addMethods`, or registry-owned `updateMethods` item
 - readiness is not blocked
 - conflicts are empty
 
-The apply endpoint still regenerates and compares the preview before creating any zone or method.
+The apply endpoint still regenerates and compares the preview before creating any zone, adding any method, or updating any registry-owned method.
 
 Preview items that involve WooCommerce zones include an ownership source:
 
@@ -81,12 +81,12 @@ For duplicate/conflict items, `ownershipSources` lists the ownership sources det
 ## Planning Rules
 
 - A selected wilaya with no direct `DZ:NN` zone becomes a `createZones` preview item.
-- A managed-registry direct zone may receive preview-only zone or method updates.
+- A managed-registry direct zone may receive preview-only zone updates or supported registry-owned method updates.
 - A Yaxii-looking direct zone may receive preview-only zone or method updates, but the hint is weak.
 - A manual or unknown zone that overlaps a wilaya is placed in `skipManualZones`.
 - Duplicate direct zones for the same wilaya are placed in `conflicts`.
 - Missing enabled methods become `addMethods`.
-- Method label or price differences become `updateMethods`.
+- Method label or price differences become `updateMethods`. For registry-owned zones, the planner matches recorded method instances by registry `instanceId` before falling back to title/heuristic matching.
 - Existing matching zones and methods become `unchanged`.
 
 The planner is deterministic. The same dataset, settings, diagnostics, and draft payload return the same plan groups.
@@ -116,9 +116,9 @@ The planner does not:
 - Update WooCommerce shipping zones.
 - Delete WooCommerce shipping zones.
 - Add shipping methods by itself.
-- Update existing method prices.
+- Update method prices by itself.
 - Persist a preview plan.
 - Modify checkout fields.
 - Update existing zones, delete zones, delete methods, or adopt manual zones.
 
-TASK-008B safe apply can create missing Yaxii-managed zones and add missing methods with prices to Yaxii-managed zones only. Existing method updates, existing zone updates, deletes, and manual-zone adoption remain outside the planner's write scope.
+TASK-008C safe apply can create missing Yaxii-managed zones, add missing methods with prices to Yaxii-managed zones, and update labels or prices for existing registry-owned flat-rate method instances. Existing zone updates, deletes, reset/wipe tools, unknown method updates, and manual-zone adoption remain outside the planner's write scope.

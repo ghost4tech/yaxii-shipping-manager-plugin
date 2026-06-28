@@ -2,7 +2,7 @@
 
 The safe apply contract defines how Yaxii Shipping Manager identifies its own WooCommerce shipping zones without touching manual merchant zones by mistake.
 
-TASK-008B implements the next narrow apply engine step: create missing Yaxii-managed zones and add enabled flat-rate methods with prices to Yaxii-managed zones only from a freshly revalidated preview.
+TASK-008C implements the next narrow apply engine step: create missing Yaxii-managed zones, add enabled flat-rate methods with prices, and update labels or prices for existing registry-owned flat-rate method instances only from a freshly revalidated preview.
 
 ## Managed Zone Registry
 
@@ -34,7 +34,7 @@ Method instance records support:
 - `title`
 - `lastKnownCost`
 
-If the option is missing or contains invalid records, the registry reader returns an empty or repaired in-memory registry. Zone records are written only after WooCommerce returns a created zone ID. Method instance records are written only after WooCommerce returns a created method instance ID.
+If the option is missing or contains invalid records, the registry reader returns an empty or repaired in-memory registry. Zone records are written only after WooCommerce returns a created zone ID. Method instance records are written after WooCommerce returns a created method instance ID, or after a registry-owned method update succeeds.
 
 ## Ownership Priority
 
@@ -77,13 +77,13 @@ The endpoint does not write to WooCommerce, settings, options, files, or dataset
 
 ## Apply Endpoint
 
-TASK-008B enables a managed-zone-only apply endpoint:
+TASK-008C enables a managed-zone-only apply endpoint:
 
 ```text
 POST /wp-json/yaxii-shipping-manager/v1/apply
 ```
 
-The endpoint validates the apply request contract, regenerates the preview immediately before writing, creates only missing Yaxii-managed zones from the fresh `createZones` group, and adds enabled flat-rate methods only to managed zones.
+The endpoint validates the apply request contract, regenerates the preview immediately before writing, creates only missing Yaxii-managed zones from the fresh `createZones` group, adds enabled flat-rate methods only to managed zones, and updates existing labels or prices only for registry-owned flat-rate method instances.
 
 ```json
 {
@@ -91,18 +91,20 @@ The endpoint validates the apply request contract, regenerates the preview immed
   "applied": true,
   "createdZones": [],
   "createdMethods": [],
+  "updatedMethods": [],
   "skippedZones": [],
   "skippedMethods": [],
+  "skippedMethodUpdates": [],
   "blockedZones": [],
   "conflicts": [],
   "warnings": [],
   "registryUpdated": true,
   "wooCommerceChanged": true,
-  "message": "Added 2 shipping methods to Yaxii-managed zones. Manual zones skipped: 0."
+  "message": "Updated 2 Yaxii-managed method prices or labels. Manual zones were not touched."
 }
 ```
 
-The endpoint does not update existing zones, update existing method instances, delete zones, delete methods, or touch manual zones.
+The endpoint does not update existing zones, update unknown method instances, delete zones, delete methods, or touch manual zones.
 
 Access policy:
 
@@ -143,7 +145,7 @@ Manual zones are protected by default even when they overlap Algeria wilayas.
 
 ## Apply Readiness UX
 
-The preview response includes `applyReadiness`, a read-only display model that explains the current workflow state before the real apply engine exists.
+The preview response includes `applyReadiness`, a read-only display model that explains the current workflow state before apply.
 
 Readiness states are documented in:
 
@@ -151,27 +153,28 @@ Readiness states are documented in:
 docs/APPLY-WORKFLOW.md
 ```
 
-The readiness model does not replace the apply contract. TASK-008B still requires explicit confirmation and fresh preview revalidation before creating zones or methods.
+The readiness model does not replace the apply contract. TASK-008C still requires explicit confirmation and fresh preview revalidation before creating zones, adding methods, or updating registry-owned methods.
 
 ## Apply Engine Rules
 
-The TASK-008B apply engine must:
+The TASK-008C apply engine must:
 
 - Apply only explicitly reviewed preview plans.
 - Write only missing zones that are about to be recorded in the managed registry.
 - Add methods only to zones already recorded in the managed registry or created and recorded in the same apply request.
+- Update methods only when the target zone and method instance are already recorded in the managed registry and still match WooCommerce.
 - Never overwrite manual/unknown zones by default.
 - Never delete zones in the MVP.
 - Re-read WooCommerce state immediately before applying.
 - Report every create, method add, skip, conflict, unsupported update item, and failure.
-- Leave existing zone and method updates for a later task.
+- Leave existing zone updates for a later task.
 
 ## Not Implemented Yet
 
-TASK-008B does not:
+TASK-008C does not:
 
 - Update WooCommerce shipping zones.
 - Delete WooCommerce shipping zones.
-- Update existing shipping method labels or prices.
+- Update unknown, manual, or unrecorded shipping method labels or prices.
 - Delete shipping methods.
 - Persist preview plans.

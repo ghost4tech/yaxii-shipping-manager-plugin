@@ -92,9 +92,10 @@ final class SafeApplyEngine {
 		if (
 			0 === count( $preview['plan']['createZones'] ?? array() )
 			&& 0 === count( $preview['plan']['addMethods'] ?? array() )
+			&& 0 === count( $preview['plan']['updateMethods'] ?? array() )
 			&& $this->has_unsupported_operations( $preview['plan'] )
 		) {
-			return $this->blocked_error( __( 'This preview only contains unsupported updates. No zones or methods were created.', 'yaxii-shipping-manager' ), 409 );
+			return $this->blocked_error( __( 'This preview only contains unsupported updates. No supported shipping changes were made.', 'yaxii-shipping-manager' ), 409 );
 		}
 
 		return null;
@@ -115,8 +116,7 @@ final class SafeApplyEngine {
 	 * @param array<string,array<int,array<string,mixed>>> $plan Preview plan groups.
 	 */
 	private function has_unsupported_operations( array $plan ): bool {
-		return count( $plan['updateZones'] ?? array() ) > 0
-			|| count( $plan['updateMethods'] ?? array() ) > 0;
+		return count( $plan['updateZones'] ?? array() ) > 0;
 	}
 
 	/**
@@ -125,12 +125,14 @@ final class SafeApplyEngine {
 	 * @return array<string,mixed>
 	 */
 	private function apply_preview_plan( array $preview ): array {
-		$created_zones   = array();
-		$created_methods = array();
-		$skipped_methods = $this->skipped_update_method_items( $preview['plan']['updateMethods'] ?? array() );
-		$blocked_zones   = $this->blocked_zone_update_items( $preview['plan']['updateZones'] ?? array() );
-		$warnings        = array();
-		$registry_ok     = true;
+		$created_zones          = array();
+		$created_methods        = array();
+		$updated_methods        = array();
+		$skipped_methods        = array();
+		$skipped_method_updates = array();
+		$blocked_zones          = $this->blocked_zone_update_items( $preview['plan']['updateZones'] ?? array() );
+		$warnings               = array();
+		$registry_ok            = true;
 
 		foreach ( $preview['plan']['createZones'] as $create_zone ) {
 			$created_zone = $this->create_zone( $create_zone );
@@ -160,15 +162,24 @@ final class SafeApplyEngine {
 			$this->collect_method_result( $method_result, $created_methods, $skipped_methods, $warnings, $registry_ok );
 		}
 
+		foreach ( $preview['plan']['updateMethods'] as $method_item ) {
+			$method_result = $this->update_method( $method_item );
+			$this->collect_method_result( $method_result, $updated_methods, $skipped_method_updates, $warnings, $registry_ok );
+		}
+
 		if ( array() !== $blocked_zones ) {
 			$warnings[] = __( 'Zone updates are not implemented yet. Zone names were not changed.', 'yaxii-shipping-manager' );
 		}
 
 		if ( array() !== $skipped_methods ) {
-			$warnings[] = __( 'Some shipping methods were skipped. Existing method instances were not updated.', 'yaxii-shipping-manager' );
+			$warnings[] = __( 'Some missing shipping methods were skipped.', 'yaxii-shipping-manager' );
 		}
 
-		return $this->apply_response( $preview, $created_zones, $created_methods, $skipped_methods, $blocked_zones, $warnings, $registry_ok );
+		if ( array() !== $skipped_method_updates ) {
+			$warnings[] = __( 'Some Yaxii-managed method updates were skipped.', 'yaxii-shipping-manager' );
+		}
+
+		return $this->apply_response( $preview, $created_zones, $created_methods, $updated_methods, $skipped_methods, $skipped_method_updates, $blocked_zones, $warnings, $registry_ok );
 	}
 
 	/**
@@ -260,7 +271,7 @@ final class SafeApplyEngine {
 		}
 
 		$title = sanitize_text_field( (string) $method_item['label'] );
-		$settings_saved = $this->save_created_method_settings( $method, $title, $method_price );
+		$settings_saved = $this->save_method_settings( $method, $title, $method_price );
 
 		$created_method = array(
 			'wilayaCode'    => (string) $method_item['wilayaCode'],
@@ -281,10 +292,86 @@ final class SafeApplyEngine {
 	}
 
 	/**
+	 * @param array<string,mixed> $method_item Preview method-update item.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function update_method( array $method_item ): array {
+		if ( ! $this->valid_method_update_item( $method_item ) ) {
+			return $this->skipped_method_item( $method_item, __( 'Method update item is not valid for apply.', 'yaxii-shipping-manager' ) );
+		}
+
+		$method_price = $this->method_price( $method_item['price'] ?? null );
+		if ( is_wp_error( $method_price ) ) {
+			return $this->skipped_method_item( $method_item, $method_price->get_error_message() );
+		}
+
+		$target = $this->managed_zone_target( $method_item );
+		if ( is_wp_error( $target ) ) {
+			return $this->skipped_method_item( $method_item, $target->get_error_message() );
+		}
+
+		$recorded_method = $this->recorded_method_for_key( $target['record'], (string) $method_item['methodKey'] );
+		if ( null === $recorded_method ) {
+			return $this->skipped_method_item( $method_item, __( 'Target method is not recorded in the Yaxii managed registry.', 'yaxii-shipping-manager' ) );
+		}
+
+		$instance_id = (int) $recorded_method['instanceId'];
+		if ( $instance_id <= 0 || 'flat_rate' !== (string) $recorded_method['methodId'] ) {
+			return $this->skipped_method_item( $method_item, __( 'Target method is not a recorded flat-rate method instance.', 'yaxii-shipping-manager' ) );
+		}
+
+		$method = $this->shipping_method_for_instance( (int) $target['zone']->get_id(), $instance_id );
+		if ( null === $method || 'flat_rate' !== (string) $method->id ) {
+			return $this->skipped_method_item( $method_item, __( 'WooCommerce no longer returns the recorded flat-rate method instance.', 'yaxii-shipping-manager' ) );
+		}
+
+		$title          = sanitize_text_field( (string) $method_item['label'] );
+		$current_title  = (string) $method->get_option( 'title', '' );
+		$current_cost   = $this->current_method_cost( $method );
+		$title_updated  = $title !== $current_title;
+		$price_updated  = $method_price !== $current_cost;
+		$settings_saved = $this->save_method_settings( $method, $title, $method_price );
+		if ( ! $settings_saved ) {
+			return $this->skipped_method_item( $method_item, __( 'WooCommerce method settings could not be saved.', 'yaxii-shipping-manager' ) );
+		}
+
+		$updated_method = array(
+			'wilayaCode'    => (string) $method_item['wilayaCode'],
+			'wilayaName'    => (string) ( $method_item['wilayaName'] ?? '' ),
+			'zoneId'        => (int) $target['zone']->get_id(),
+			'zoneName'      => (string) $method_item['zoneName'],
+			'methodKey'     => (string) $method_item['methodKey'],
+			'methodId'      => 'flat_rate',
+			'instanceId'    => $instance_id,
+			'title'         => $title,
+			'lastKnownCost' => $method_price,
+			'titleUpdated'  => $title_updated,
+			'priceUpdated'  => $price_updated,
+		);
+
+		return array(
+			'method'          => $updated_method,
+			'registryUpdated' => $this->managed_registry->record_method_instance( (int) $target['zone']->get_id(), $updated_method ),
+		);
+	}
+
+	/**
 	 * @param array<string,mixed> $method_item Preview method-addition item.
 	 */
 	private function valid_method_item( array $method_item ): bool {
 		return 'method_addition' === ( $method_item['type'] ?? '' )
+			&& isset( $method_item['wilayaCode'], $method_item['zoneId'], $method_item['zoneName'], $method_item['methodKey'], $method_item['label'], $method_item['price'] )
+			&& 1 === preg_match( '/^\d{2}$/', (string) $method_item['wilayaCode'] )
+			&& in_array( (string) $method_item['methodKey'], self::METHOD_KEYS, true )
+			&& 'managed_registry' === (string) ( $method_item['ownershipSource'] ?? '' );
+	}
+
+	/**
+	 * @param array<string,mixed> $method_item Preview method-update item.
+	 */
+	private function valid_method_update_item( array $method_item ): bool {
+		return 'method_update' === ( $method_item['type'] ?? '' )
 			&& isset( $method_item['wilayaCode'], $method_item['zoneId'], $method_item['zoneName'], $method_item['methodKey'], $method_item['label'], $method_item['price'] )
 			&& 1 === preg_match( '/^\d{2}$/', (string) $method_item['wilayaCode'] )
 			&& in_array( (string) $method_item['methodKey'], self::METHOD_KEYS, true )
@@ -405,7 +492,14 @@ final class SafeApplyEngine {
 		return null;
 	}
 
-	private function save_created_method_settings( \WC_Shipping_Method $method, string $title, string $cost ): bool {
+	private function current_method_cost( \WC_Shipping_Method $method ): string {
+		$method->init_instance_settings();
+		$settings = is_array( $method->instance_settings ) ? $method->instance_settings : array();
+
+		return wc_format_decimal( $settings['cost'] ?? '' );
+	}
+
+	private function save_method_settings( \WC_Shipping_Method $method, string $title, string $cost ): bool {
 		$method->init_instance_settings();
 		$settings          = is_array( $method->instance_settings ) ? $method->instance_settings : array();
 		$settings['title'] = $title;
@@ -525,18 +619,6 @@ final class SafeApplyEngine {
 	}
 
 	/**
-	 * @param array<int,array<string,mixed>> $items Preview method update items.
-	 *
-	 * @return array<int,array<string,mixed>>
-	 */
-	private function skipped_update_method_items( array $items ): array {
-		return array_map(
-			fn( array $item ): array => $this->skipped_method_item( $item, __( 'Existing method updates are not implemented yet.', 'yaxii-shipping-manager' ) ),
-			$items
-		);
-	}
-
-	/**
 	 * @param array<int,array<string,mixed>> $items Preview plan items.
 	 *
 	 * @return array<int,array<string,mixed>>
@@ -586,24 +668,29 @@ final class SafeApplyEngine {
 	 * @param array<string,mixed>            $preview Fresh preview.
 	 * @param array<int,array<string,mixed>> $created_zones Created zones.
 	 * @param array<int,array<string,mixed>> $created_methods Created methods.
+	 * @param array<int,array<string,mixed>> $updated_methods Updated methods.
 	 * @param array<int,array<string,mixed>> $skipped_methods Skipped methods.
+	 * @param array<int,array<string,mixed>> $skipped_method_updates Skipped method updates.
 	 * @param array<int,array<string,mixed>> $blocked_zones Blocked zones.
 	 * @param array<int,string>              $warnings Warnings.
 	 *
 	 * @return array<string,mixed>
 	 */
-	private function apply_response( array $preview, array $created_zones, array $created_methods, array $skipped_methods, array $blocked_zones, array $warnings, bool $registry_ok ): array {
+	private function apply_response( array $preview, array $created_zones, array $created_methods, array $updated_methods, array $skipped_methods, array $skipped_method_updates, array $blocked_zones, array $warnings, bool $registry_ok ): array {
 		$created_zone_count   = count( $created_zones );
 		$created_method_count = count( $created_methods );
-		$changed              = $created_zone_count > 0 || $created_method_count > 0;
+		$updated_method_count = count( $updated_methods );
+		$changed              = $created_zone_count > 0 || $created_method_count > 0 || $updated_method_count > 0;
 
 		return array(
 			'applyEngineAvailable' => true,
 			'applied'              => $changed,
 			'createdZones'         => $created_zones,
 			'createdMethods'       => $created_methods,
+			'updatedMethods'       => $updated_methods,
 			'skippedZones'         => $preview['plan']['skipManualZones'],
 			'skippedMethods'       => $skipped_methods,
+			'skippedMethodUpdates' => $skipped_method_updates,
 			'blockedZones'         => $blocked_zones,
 			'conflicts'            => $preview['plan']['conflicts'],
 			'warnings'             => array_values( array_unique( $warnings ) ),
@@ -611,11 +698,22 @@ final class SafeApplyEngine {
 			'wooCommerceChanged'   => $changed,
 			'previewHash'          => $preview['previewHash'],
 			'applyContractVersion' => ApplyRequestSanitizer::CONTRACT_VERSION,
-			'message'              => $this->response_message( $created_zone_count, $created_method_count, count( $preview['plan']['skipManualZones'] ) ),
+			'message'              => $this->response_message( $created_zone_count, $created_method_count, $updated_method_count, count( $preview['plan']['skipManualZones'] ) ),
 		);
 	}
 
-	private function response_message( int $created_zone_count, int $created_method_count, int $manual_skip_count ): string {
+	private function response_message( int $created_zone_count, int $created_method_count, int $updated_method_count, int $manual_skip_count ): string {
+		if ( ( $created_zone_count > 0 || $created_method_count > 0 ) && $updated_method_count > 0 ) {
+			return sprintf(
+				/* translators: 1: created zone count, 2: created method count, 3: updated method count, 4: skipped manual zone count. */
+				__( 'Created %1$d Yaxii-managed zones, added %2$d shipping methods, and updated %3$d Yaxii-managed method prices or labels. Manual zones skipped: %4$d.', 'yaxii-shipping-manager' ),
+				$created_zone_count,
+				$created_method_count,
+				$updated_method_count,
+				$manual_skip_count
+			);
+		}
+
 		if ( $created_zone_count > 0 && $created_method_count > 0 ) {
 			return sprintf(
 				/* translators: 1: created zone count, 2: created method count, 3: skipped manual zone count. */
@@ -623,6 +721,14 @@ final class SafeApplyEngine {
 				$created_zone_count,
 				$created_method_count,
 				$manual_skip_count
+			);
+		}
+
+		if ( $updated_method_count > 0 ) {
+			return sprintf(
+				/* translators: 1: updated method count. */
+				__( 'Updated %1$d Yaxii-managed method prices or labels. Manual zones were not touched.', 'yaxii-shipping-manager' ),
+				$updated_method_count
 			);
 		}
 
@@ -644,7 +750,7 @@ final class SafeApplyEngine {
 			);
 		}
 
-		return __( 'No zones or methods were created. The current preview has no supported missing Yaxii-managed work to apply.', 'yaxii-shipping-manager' );
+		return __( 'No supported changes were needed.', 'yaxii-shipping-manager' );
 	}
 
 	private function blocked_error( string $message, int $status ): WP_Error {

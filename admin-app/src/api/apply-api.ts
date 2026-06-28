@@ -38,8 +38,10 @@ function parseApplyResponse(payload: unknown): ApplyResponse {
     typeof payload.applied !== "boolean" ||
     !isApplyResultZones(payload.createdZones) ||
     !isApplyResultMethods(payload.createdMethods) ||
+    !isApplyResultMethods(payload.updatedMethods) ||
     !isApplyResultZones(payload.skippedZones) ||
     !isApplyResultMethods(payload.skippedMethods) ||
+    !isApplyResultMethods(payload.skippedMethodUpdates) ||
     !isApplyResultZones(payload.blockedZones) ||
     !isApplyResultZones(payload.conflicts) ||
     !Array.isArray(payload.warnings) ||
@@ -57,8 +59,10 @@ function parseApplyResponse(payload: unknown): ApplyResponse {
     applied: payload.applied,
     createdZones: payload.createdZones,
     createdMethods: payload.createdMethods,
+    updatedMethods: payload.updatedMethods,
     skippedZones: payload.skippedZones,
     skippedMethods: payload.skippedMethods,
+    skippedMethodUpdates: payload.skippedMethodUpdates,
     blockedZones: payload.blockedZones,
     conflicts: payload.conflicts,
     warnings: payload.warnings.filter((warning): warning is string => typeof warning === "string"),

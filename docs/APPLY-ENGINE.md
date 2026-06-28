@@ -2,14 +2,15 @@
 
 ## Current Scope
 
-TASK-008B enables the second narrow WooCommerce write path:
+TASK-008C enables the next narrow WooCommerce write path:
 
 - Create missing Yaxii-managed shipping zones from the fresh preview `createZones` group.
 - Add enabled `flat_rate` shipping method instances with prices to Yaxii-managed zones only.
+- Update labels and costs for existing `flat_rate` method instances only when the target method is already recorded in the Yaxii managed registry.
 - Record created zones and method instances in `yaxii_shipping_manager_managed_zones`.
-- Return a clear apply result with created, skipped, blocked, warning, registry, and WooCommerce-change fields.
+- Return a clear apply result with created, updated, skipped, blocked, warning, registry, and WooCommerce-change fields.
 
-This task does not update existing zone names, update existing method instances, delete zones, delete methods, adopt manual zones, or modify checkout fields.
+This task does not update existing zone names, delete zones, delete methods, adopt manual zones, reset/wipe setup, or modify checkout fields.
 
 ## Endpoint
 
@@ -43,7 +44,7 @@ The `previewRequest` snapshot is sanitized through the preview request sanitizer
 
 The apply endpoint does not trust a submitted preview hash by itself.
 
-Before creating any zone or method, the engine:
+Before creating or updating any zone or method, the engine:
 
 1. Sanitizes the apply payload.
 2. Re-reads WooCommerce diagnostics through the preview planner.
@@ -53,6 +54,7 @@ Before creating any zone or method, the engine:
 6. Blocks if readiness is blocked or conflicts exist.
 7. Creates only fresh `createZones` items.
 8. Adds methods only from fresh create-zone method data or fresh `addMethods` items.
+9. Updates methods only from fresh `updateMethods` items whose target zone and method are registry-owned.
 
 This re-read happens immediately before the WooCommerce write loop.
 
@@ -68,7 +70,7 @@ The engine appends zones after existing WooCommerce zones by assigning the next 
 
 ## Method Creation
 
-TASK-008B can add enabled `flat_rate` method instances for these fixed method keys:
+The apply engine can add or update enabled `flat_rate` method instances for these fixed method keys:
 
 - `home_delivery`
 - `office_delivery`
@@ -83,7 +85,6 @@ Rules:
 - The WooCommerce zone must still contain the expected `DZ:NN` state location.
 - The preview item must have `ownershipSource: managed_registry`.
 - Existing registry-recorded method keys are skipped, not duplicated.
-- Existing method instances are not updated in this task.
 - Manual or unknown zones are not touched.
 
 New flat-rate method settings use:
@@ -92,6 +93,24 @@ New flat-rate method settings use:
 - `cost`: selected wilaya price, or method default price as resolved by the preview planner.
 
 Price `0` is valid. Missing, invalid, or negative prices are rejected or skipped safely.
+
+## Method Updates
+
+TASK-008C can update an existing method label or cost only when all ownership checks pass:
+
+- The preview item is a fresh `method_update` item.
+- The preview item has `ownershipSource: managed_registry`.
+- The target zone ID is recorded in `yaxii_shipping_manager_managed_zones`.
+- The registry wilaya code matches the preview wilaya code.
+- The WooCommerce zone still exists.
+- The WooCommerce zone still has the expected `DZ:NN` state location.
+- The target method key is already recorded in the registry for that zone.
+- The recorded WooCommerce method instance still exists in that same zone.
+- The recorded method and current WooCommerce method are `flat_rate`.
+
+Successful updates write only the WooCommerce instance `title` and `cost`, then update the registry method record `title` and `lastKnownCost` and the zone record `updatedAt`.
+
+If any ownership, location, method, or price check fails, the method update is skipped and reported. The engine does not adopt manual methods, search for replacement methods, delete methods, or update unknown instances.
 
 ## Managed Registry
 
@@ -131,8 +150,10 @@ The response includes:
 - `applied`
 - `createdZones`
 - `createdMethods`
+- `updatedMethods`
 - `skippedZones`
 - `skippedMethods`
+- `skippedMethodUpdates`
 - `blockedZones`
 - `conflicts`
 - `warnings`
@@ -142,7 +163,7 @@ The response includes:
 - `applyContractVersion`
 - `message`
 
-If no zone or method is created, `applied` is `false` and `wooCommerceChanged` is `false`.
+If no supported change is made, `applied` is `false`, `wooCommerceChanged` is `false`, and `message` is `No supported changes were needed.`
 
 ## Safety Blocks
 
@@ -163,13 +184,13 @@ Manual or unknown zones in `skipManualZones` are not touched.
 
 ## Not Implemented
 
-TASK-008B does not implement:
+TASK-008C does not implement:
 
 - Updating WooCommerce shipping zones.
 - Deleting WooCommerce shipping zones.
-- Updating existing shipping method labels or prices.
 - Deleting shipping methods.
 - Adopting manual zones.
+- Reset or wipe tools.
 - CSV backend.
 - Commune-level pricing.
 - Provider imports.
