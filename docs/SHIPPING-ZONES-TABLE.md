@@ -8,8 +8,12 @@ It is not a direct WooCommerce write surface. Supported writes still go through 
 
 Rows combine the current wilaya dataset with read-only WooCommerce diagnostics.
 
-The table shows:
+The page shows:
 
+- a compact live status card with active wilayas, managed methods, and pending changes
+- secondary actions for diagnostics and WooCommerce's native shipping settings
+- search by wilaya name, Arabic name, or code
+- filters for all, active, needs update, missing setup, manual conflict, and pending changes
 - whether a direct WooCommerce zone exists for the wilaya
 - whether the zone is recorded in the Yaxii managed registry
 - simple row status such as `Active`, `Missing setup`, `Needs update`, `Manual conflict`, `Protected`, or `Not managed`
@@ -26,8 +30,9 @@ Supported actions:
 
 - edit a registry-owned Home delivery price
 - edit a registry-owned Office delivery price
-- set a registry-owned price to `0` with `Make free`
+- set a registry-owned price to `0` with the `Free shipping` switch
 - bulk-set a selected registry-owned method price
+- bulk-set a selected registry-owned method to free shipping
 - review pending changes through the existing preview/apply panel
 - clear pending changes before review
 
@@ -54,7 +59,7 @@ Unsupported actions must be hidden, disabled, or labeled as later work:
 Current copy:
 
 ```text
-Enable/disable will be added later. Prices can be updated now.
+Enable/disable controls are coming later.
 ```
 
 For protected rows:
@@ -68,8 +73,8 @@ Manual methods are protected. Use WooCommerce to edit them.
 The table routes merchants to:
 
 - `Open Generator`
-- `Check diagnostics`
-- `Open WooCommerce zones`
+- `Diagnostics`
+- `WooCommerce zones`
 - `Review changes`
 - `Clear changes`
 

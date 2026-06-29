@@ -12,6 +12,7 @@ import {
   Package,
   PowerOff,
   RefreshCw,
+  Search,
   Settings as SettingsIcon,
   ShieldCheck,
   Upload,
@@ -632,6 +633,12 @@ type LiveZoneSummary = {
 };
 
 type PendingPriceMap = Record<string, Partial<Record<string, number | null>>>;
+type ZoneFilter = "all" | "active" | "needs_update" | "missing" | "manual_conflict" | "pending";
+type ZoneTableRow = {
+  wilaya: Wilaya;
+  liveZone: LiveZoneSummary;
+  pendingMethodCount: number;
+};
 type ZoneReviewState =
   | { status: "idle" }
   | { status: "loading" }
@@ -734,6 +741,8 @@ function ZonesScreen({
   const [bulkPrice, setBulkPriceInput] = useState("");
   const [pendingPrices, setPendingPrices] = useState<PendingPriceMap>({});
   const [detailsOpen, setDetailsOpen] = useState<Record<string, boolean>>({});
+  const [zoneFilter, setZoneFilter] = useState<ZoneFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [reviewState, setReviewState] = useState<ZoneReviewState>({ status: "idle" });
   const liveSummary = shippingSetupSummary(diagnosticsState);
   const pendingCount = pendingPriceCount(pendingPrices);
@@ -764,17 +773,33 @@ function ZonesScreen({
     );
   }
 
+  const rows: ZoneTableRow[] = wilayas.map((wilaya) => ({
+    wilaya,
+    liveZone: liveStatusForWilaya(wilaya, diagnosticsState, methodDefs),
+    pendingMethodCount: Object.keys(pendingPrices[wilaya.code] ?? {}).length,
+  }));
+  const visibleRows = rows.filter(
+    (row) =>
+      rowMatchesZoneFilter(row, zoneFilter) && rowMatchesSearchQuery(row.wilaya, searchQuery),
+  );
+  const visibleCodes = visibleRows.map((row) => row.wilaya.code);
   const hasSelection = selected.length > 0;
+  const allVisibleSelected =
+    visibleCodes.length > 0 && visibleCodes.every((code) => selected.includes(code));
+  const stats = shippingZoneManagerStats(rows, methodDefs, pendingCount);
   const toggleAll = (value: boolean) =>
-    setSelected(value ? wilayas.map((wilaya) => wilaya.code) : []);
+    setSelected((current) =>
+      value
+        ? Array.from(new Set([...current, ...visibleCodes]))
+        : current.filter((code) => !visibleCodes.includes(code)),
+    );
+  const toggleWilayaSelection = (code: string, value: boolean) =>
+    setSelected((current) =>
+      value ? Array.from(new Set([...current, code])) : current.filter((item) => item !== code),
+    );
   const selectedManagedCodes = selected.filter((code) => {
-    const wilaya = wilayas.find((row) => row.code === code);
-    return wilaya
-      ? canEditManagedMethod(
-          liveStatusForWilaya(wilaya, diagnosticsState, methodDefs),
-          targetMethod,
-        )
-      : false;
+    const row = rows.find((item) => item.wilaya.code === code);
+    return row ? canEditManagedMethod(row.liveZone, targetMethod) : false;
   });
   const protectedSelectionCount = selected.length - selectedManagedCodes.length;
 
@@ -862,71 +887,118 @@ function ZonesScreen({
     <>
       <SectionHeader
         title="Shipping Zones"
-        description="Manage supported Yaxii-owned method prices with live WooCommerce status and safe review."
+        description="Live WooCommerce status, protected manual zones, and supported price changes in one place."
       />
 
-      <Card className="mb-4">
-        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="text-base font-semibold">{liveSummary.title}</div>
-            <p className="text-sm text-muted-foreground">{liveSummary.message}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={onLaunchWizard}>
-              <Wand2 className="h-4 w-4" />
-              Open Generator
-            </Button>
-            <Button variant="secondary" onClick={onOpenDiagnostics}>
-              <Activity className="h-4 w-4" /> Check diagnostics
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                window.open(
-                  "admin.php?page=wc-settings&tab=shipping",
-                  "_blank",
-                  "noopener,noreferrer",
-                );
-              }}
-            >
-              <ExternalLink className="h-4 w-4" /> Open WooCommerce zones
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
+          <CardContent className="p-5">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl space-y-3">
+                <Badge
+                  variant="outline"
+                  className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Live from WooCommerce
+                </Badge>
+                <div>
+                  <div className="text-xl font-semibold text-foreground">{liveSummary.title}</div>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {liveSummary.message}
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <ManagerMetric label="Active wilayas" value={stats.activeWilayas} />
+                  <ManagerMetric label="Managed methods" value={stats.managedMethods} />
+                  <ManagerMetric
+                    label="Pending changes"
+                    value={stats.pendingChanges}
+                    tone="pending"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 lg:justify-end">
+                <Button onClick={onLaunchWizard}>
+                  <Wand2 className="h-4 w-4" />
+                  Open Generator
+                </Button>
+                <Button variant="outline" onClick={onOpenDiagnostics}>
+                  <Activity className="h-4 w-4" /> Diagnostics
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    window.open(
+                      "admin.php?page=wc-settings&tab=shipping",
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" /> WooCommerce zones
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {(hasSelection || pendingCount > 0) && (
-        <div className="sticky top-14 z-10 mb-4 rounded-lg border border-primary/25 bg-card p-3 shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge className="rounded-full">
-              {selected.length} selected
-              {pendingCount > 0 ? ` - ${pendingCount} pending` : ""}
-            </Badge>
-            <span className="text-xs text-muted-foreground">
-              Changes will be reviewed before WooCommerce is updated.
-            </span>
-            <Separator orientation="vertical" className="h-6" />
-            <span className="text-xs text-muted-foreground">Method:</span>
-            <Select value={targetMethod} onValueChange={setTargetMethod}>
-              <SelectTrigger className="h-8 w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {methodDefs.map((method) => (
-                  <SelectItem key={method.key} value={method.key}>
-                    {method.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Separator orientation="vertical" className="h-6" />
-            <div className="flex items-center gap-1">
+        <Card>
+          <CardContent className="space-y-4 p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold">Safe price management</div>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Price edits become pending changes. Yaxii reviews them again before WooCommerce is
+                  updated.
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Lock className="h-3.5 w-3.5" />
+                Manual zones are protected.
+              </div>
+              <div className="flex items-center gap-2">
+                <PowerOff className="h-3.5 w-3.5" />
+                Enable/disable controls are coming later.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {hasSelection && (
+        <Card className="mt-4 border-primary/15">
+          <CardContent className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center">
+            <div className="flex items-center gap-3">
+              <Badge className="rounded-full">{selected.length} selected</Badge>
+              <div className="text-sm text-muted-foreground">
+                Bulk changes are prepared as pending prices.
+              </div>
+            </div>
+            <div className="flex flex-1 flex-wrap items-center gap-2 xl:justify-end">
+              <Select value={targetMethod} onValueChange={setTargetMethod}>
+                <SelectTrigger className="h-9 w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {methodDefs.map((method) => (
+                    <SelectItem key={method.key} value={method.key}>
+                      {method.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input
                 type="text"
                 placeholder="Price"
                 value={bulkPrice}
                 onChange={(event) => setBulkPriceInput(event.target.value)}
-                className="h-8 w-24"
+                className="h-9 w-24"
               />
               <Button
                 size="sm"
@@ -936,94 +1008,131 @@ function ZonesScreen({
               >
                 <DollarSign className="h-4 w-4" /> Set price
               </Button>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setBulkPendingPrice(0)}
-              disabled={selectedManagedCodes.length === 0}
-            >
-              Make free
-            </Button>
-            <Button
-              size="sm"
-              onClick={reviewPendingChanges}
-              disabled={pendingCount === 0 || reviewState.status === "loading"}
-            >
-              {reviewState.status === "loading" && <RefreshCw className="h-4 w-4 animate-spin" />}
-              Review changes
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={clearPendingChanges}
-              disabled={pendingCount === 0}
-            >
-              Clear changes
-            </Button>
-            <div className="ml-auto">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBulkPendingPrice(0)}
+                disabled={selectedManagedCodes.length === 0}
+              >
+                Free shipping
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
                 <X className="h-4 w-4" /> Clear selection
               </Button>
             </div>
-          </div>
-          {protectedSelectionCount > 0 && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              {protectedSelectionCount} selected row(s) are protected or not managed. Manual methods
-              are protected. Use WooCommerce to edit them.
-            </p>
-          )}
-        </div>
+            {protectedSelectionCount > 0 && (
+              <div className="text-xs text-muted-foreground xl:basis-full">
+                {protectedSelectionCount} selected row(s) are protected or not managed. Use
+                WooCommerce for manual methods.
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      <Card className="overflow-hidden">
+      <Card className="mt-4 overflow-hidden">
+        <CardHeader className="border-b border-border bg-muted/20">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <CardTitle className="text-base">Wilaya shipping prices</CardTitle>
+              <CardDescription>
+                Edit Yaxii-managed Home and Office prices. Nothing changes in WooCommerce until
+                review.
+              </CardDescription>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search wilaya or code"
+                  className="h-9 w-full pl-9 sm:w-64"
+                />
+              </div>
+              <Badge variant="outline" className="justify-center rounded-full">
+                {pendingCount > 0 ? `${pendingCount} pending` : "No pending changes"}
+              </Badge>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            {zoneFilterOptions(rows).map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={zoneFilter === option.value ? "default" : "outline"}
+                onClick={() => setZoneFilter(option.value)}
+                className="shrink-0"
+              >
+                {option.label}
+                <span className="ml-1 text-xs opacity-75">{option.count}</span>
+              </Button>
+            ))}
+          </div>
+        </CardHeader>
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40">
+            <TableRow className="bg-card">
               <TableHead className="w-10">
                 <Checkbox
-                  checked={selected.length === wilayas.length}
+                  checked={allVisibleSelected}
                   onCheckedChange={(value) => toggleAll(Boolean(value))}
                 />
               </TableHead>
-              <TableHead className="w-16">Code</TableHead>
-              <TableHead>Wilaya</TableHead>
+              <TableHead className="min-w-56">Wilaya</TableHead>
               <TableHead className="w-36">Status</TableHead>
-              <TableHead className="w-40">{methodDefs[0]?.label ?? "Home delivery"}</TableHead>
-              <TableHead className="w-40">{methodDefs[1]?.label ?? "Office delivery"}</TableHead>
-              <TableHead className="w-40">Actions</TableHead>
+              <TableHead className="min-w-56">{methodDefs[0]?.label ?? "Home delivery"}</TableHead>
+              <TableHead className="min-w-56">
+                {methodDefs[1]?.label ?? "Office delivery"}
+              </TableHead>
+              <TableHead className="w-28 text-right">Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {wilayas.map((wilaya) => {
+            {visibleRows.map(({ wilaya, liveZone, pendingMethodCount }) => {
               const isSelected = selected.includes(wilaya.code);
-              const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, methodDefs);
               const detailsVisible = Boolean(detailsOpen[wilaya.code]);
               return (
                 <Fragment key={wilaya.code}>
-                  <TableRow data-state={isSelected ? "selected" : undefined}>
+                  <TableRow
+                    data-state={isSelected ? "selected" : undefined}
+                    className={cn(
+                      isSelected && "bg-primary/5",
+                      pendingMethodCount > 0 && "border-l-4 border-l-amber-400",
+                    )}
+                  >
                     <TableCell>
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={(value) =>
-                          setSelected(
-                            value
-                              ? [...selected, wilaya.code]
-                              : selected.filter((code) => code !== wilaya.code),
-                          )
+                          toggleWilayaSelection(wilaya.code, Boolean(value))
                         }
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {wilaya.code}
-                    </TableCell>
                     <TableCell>
-                      <div className="font-medium">{wilaya.name}</div>
-                      <div className="text-xs text-muted-foreground">{wilaya.ar}</div>
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted font-mono text-xs text-muted-foreground">
+                          {wilaya.code}
+                        </div>
+                        <div>
+                          <div className="font-medium">{wilaya.name}</div>
+                          <div className="text-xs text-muted-foreground">{wilaya.ar}</div>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <LiveStatusPill status={liveZone.status} />
-                      <div className="mt-1 text-xs text-muted-foreground">{liveZone.message}</div>
+                      {pendingMethodCount > 0 && (
+                        <div className="mt-2">
+                          <Badge
+                            variant="outline"
+                            className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
+                          >
+                            Pending change
+                          </Badge>
+                        </div>
+                      )}
                     </TableCell>
                     {methodDefs.slice(0, 2).map((method) => (
                       <TableCell key={method.key}>
@@ -1038,43 +1147,26 @@ function ZonesScreen({
                         />
                       </TableCell>
                     ))}
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            setDetailsOpen((current) => ({
-                              ...current,
-                              [wilaya.code]: !detailsVisible,
-                            }))
-                          }
-                        >
-                          {detailsVisible ? "Hide details" : "Show details"}
-                        </Button>
-                        {methodDefs.slice(0, 2).map((method) => (
-                          <Button
-                            key={`${method.key}-free`}
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={!canEditManagedMethod(liveZone, method.key)}
-                            onClick={() => updatePendingPrice(wilaya, liveZone, method.key, 0)}
-                          >
-                            {method.key === "office_delivery" ? "Office free" : "Home free"}
-                          </Button>
-                        ))}
-                      </div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">
-                        Enable/disable will be added later. Prices can be updated now.
-                      </div>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          setDetailsOpen((current) => ({
+                            ...current,
+                            [wilaya.code]: !detailsVisible,
+                          }))
+                        }
+                      >
+                        {detailsVisible ? "Hide" : "Details"}
+                      </Button>
                     </TableCell>
                   </TableRow>
                   {detailsVisible && (
                     <TableRow key={`${wilaya.code}-details`} className="bg-muted/20">
                       <TableCell />
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={5}>
                         <LiveZoneDetails summary={liveZone} methodDefs={methodDefs} />
                       </TableCell>
                     </TableRow>
@@ -1082,9 +1174,46 @@ function ZonesScreen({
                 </Fragment>
               );
             })}
+            {visibleRows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <div className="flex flex-col items-center gap-2 py-10 text-center">
+                    <Package className="h-8 w-8 text-muted-foreground" />
+                    <div className="text-sm font-medium">No wilayas match this view</div>
+                    <p className="max-w-md text-sm text-muted-foreground">
+                      Try another search or filter. Protected manual zones and missing setup are
+                      still visible when diagnostics report them.
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </Card>
+
+      {pendingCount > 0 && (
+        <div className="sticky bottom-4 z-20 mt-4 rounded-xl border border-primary/20 bg-card p-4 shadow-lg">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="text-sm font-semibold">Review before applying</div>
+              <p className="text-sm text-muted-foreground">
+                {pendingCount} pending change(s). Changes will be reviewed before WooCommerce is
+                updated.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={reviewPendingChanges} disabled={reviewState.status === "loading"}>
+                {reviewState.status === "loading" && <RefreshCw className="h-4 w-4 animate-spin" />}
+                Review changes
+              </Button>
+              <Button variant="outline" onClick={clearPendingChanges}>
+                Clear changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {reviewState.status === "loading" && (
         <Card className="mt-4">
@@ -1115,6 +1244,119 @@ function ZonesScreen({
       )}
     </>
   );
+}
+
+function ManagerMetric({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: number;
+  tone?: "default" | "pending";
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-background/80 p-3">
+      <div
+        className={cn(
+          "text-xl font-semibold",
+          tone === "pending" && value > 0 ? "text-amber-600" : "text-foreground",
+        )}
+      >
+        {value}
+      </div>
+      <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function shippingZoneManagerStats(
+  rows: ZoneTableRow[],
+  methodDefs: MethodDef[],
+  pendingChanges: number,
+): {
+  activeWilayas: number;
+  managedMethods: number;
+  pendingChanges: number;
+} {
+  return {
+    activeWilayas: rows.filter((row) => row.liveZone.status === "managed").length,
+    managedMethods: rows.reduce(
+      (total, row) =>
+        total +
+        methodDefs
+          .slice(0, 2)
+          .filter((methodDef) => canEditManagedMethod(row.liveZone, methodDef.key)).length,
+      0,
+    ),
+    pendingChanges,
+  };
+}
+
+function zoneFilterOptions(rows: ZoneTableRow[]): Array<{
+  value: ZoneFilter;
+  label: string;
+  count: number;
+}> {
+  return [
+    { value: "all", label: "All", count: rows.length },
+    {
+      value: "active",
+      label: "Active",
+      count: rows.filter((row) => row.liveZone.status === "managed").length,
+    },
+    {
+      value: "needs_update",
+      label: "Needs update",
+      count: rows.filter((row) => row.pendingMethodCount > 0).length,
+    },
+    {
+      value: "missing",
+      label: "Missing setup",
+      count: rows.filter((row) =>
+        ["missing", "needs_methods", "unavailable"].includes(row.liveZone.status),
+      ).length,
+    },
+    {
+      value: "manual_conflict",
+      label: "Manual conflict",
+      count: rows.filter((row) => ["manual", "conflict"].includes(row.liveZone.status)).length,
+    },
+    {
+      value: "pending",
+      label: "Pending changes",
+      count: rows.filter((row) => row.pendingMethodCount > 0).length,
+    },
+  ];
+}
+
+function rowMatchesZoneFilter(row: ZoneTableRow, zoneFilter: ZoneFilter): boolean {
+  if (zoneFilter === "all") {
+    return true;
+  }
+
+  if (zoneFilter === "active") {
+    return row.liveZone.status === "managed";
+  }
+
+  if (zoneFilter === "needs_update" || zoneFilter === "pending") {
+    return row.pendingMethodCount > 0;
+  }
+
+  if (zoneFilter === "missing") {
+    return ["missing", "needs_methods", "unavailable"].includes(row.liveZone.status);
+  }
+
+  return ["manual", "conflict"].includes(row.liveZone.status);
+}
+
+function rowMatchesSearchQuery(wilaya: Wilaya, searchQuery: string): boolean {
+  const query = searchQuery.trim().toLowerCase();
+  if (!query) {
+    return true;
+  }
+
+  return [wilaya.code, wilaya.name, wilaya.ar].some((value) => value.toLowerCase().includes(query));
 }
 
 function pendingPriceCount(pendingPrices: PendingPriceMap): number {
@@ -1259,58 +1501,94 @@ function MethodCell({
   const livePrice = livePriceForKey(liveZone, methodDef.key);
   const inputPrice = pendingPrice !== undefined ? pendingPrice : livePrice;
   const changed = pendingPrice !== undefined;
+  const isFree = inputPrice === 0;
 
   if (!canEdit) {
     return (
-      <div className="space-y-1">
-        <Input
-          type="text"
-          value={livePrice === null ? "" : String(livePrice)}
-          disabled
-          aria-label={`${wilaya.name} ${methodDef.label} protected price`}
-          className="h-8"
-        />
-        <div className="text-[11px] text-muted-foreground">
-          {liveZone.status === "manual" || liveZone.status === "conflict"
-            ? "Protected"
-            : "Not supported yet"}
+      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-muted-foreground">
+            {formatLiveCost(livePrice === null ? null : String(livePrice))}
+          </span>
+          <Badge variant="secondary" className="text-[10px]">
+            {liveZone.status === "manual" || liveZone.status === "conflict"
+              ? "Protected"
+              : "Not available"}
+          </Badge>
+        </div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          Manual or missing methods cannot be changed here.
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-1">
-      <Input
-        type="number"
-        min={0}
-        placeholder="Unset"
-        value={inputPrice ?? ""}
-        onChange={(event) => {
-          if (event.target.value.trim() === "") {
-            onChange(livePrice);
-            return;
-          }
-          const nextPrice = parseOptionalPrice(event.target.value);
-          if (nextPrice !== undefined) {
-            onChange(nextPrice);
-          }
-        }}
-        aria-label={`${wilaya.name} ${methodDef.label} pending price`}
-        className="h-8"
-      />
-      <div className="flex items-center gap-1">
-        <span className="text-[11px] text-muted-foreground">
-          Live: {formatLiveCost(livePrice === null ? null : String(livePrice))}
+    <div
+      className={cn(
+        "rounded-lg border bg-background p-3 transition-colors",
+        changed ? "border-amber-300 bg-amber-50/40" : "border-border",
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          min={0}
+          placeholder="Unset"
+          value={inputPrice ?? ""}
+          onChange={(event) => {
+            if (event.target.value.trim() === "") {
+              onChange(livePrice);
+              return;
+            }
+            const nextPrice = parseOptionalPrice(event.target.value);
+            if (nextPrice !== undefined) {
+              onChange(nextPrice);
+            }
+          }}
+          aria-label={`${wilaya.name} ${methodDef.label} pending price`}
+          className="h-9 border-0 bg-transparent px-0 text-base font-semibold shadow-none focus-visible:ring-0"
+        />
+        <span className="text-xs font-medium text-muted-foreground">DZD</span>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">
+          Live from WooCommerce: {formatLiveCost(livePrice === null ? null : String(livePrice))}
         </span>
         {changed && (
-          <Badge variant="outline" className="border-amber-200 text-[10px] text-amber-700">
-            Changed
+          <Badge
+            variant="outline"
+            className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
+          >
+            Pending change
           </Badge>
         )}
       </div>
+      <div className="mt-3 flex items-center justify-between rounded-md bg-muted/45 px-2 py-1.5">
+        <span className="text-xs text-muted-foreground">
+          {isFree ? "Free shipping" : "Paid shipping"}
+        </span>
+        <Switch
+          checked={isFree}
+          onCheckedChange={(checked) =>
+            onChange(checked ? 0 : nextPaidPrice(livePrice, methodDef.defaultPrice))
+          }
+          aria-label={`${wilaya.name} ${methodDef.label} free shipping`}
+        />
+      </div>
     </div>
   );
+}
+
+function nextPaidPrice(
+  livePrice: number | null,
+  defaultPrice: number | null | undefined,
+): number | null {
+  if (livePrice !== 0 && livePrice !== null) {
+    return livePrice;
+  }
+
+  return defaultPrice ?? null;
 }
 
 function shippingSetupSummary(diagnosticsState: DiagnosticsLoadState): {
@@ -1456,35 +1734,39 @@ function LiveZoneDetails({
   methodDefs: MethodDef[];
 }) {
   if (summary.zones.length === 0) {
-    return <span className="text-xs text-muted-foreground">No live zone matched.</span>;
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-background p-4 text-sm text-muted-foreground">
+        No WooCommerce zone is currently matched to this wilaya.
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-2">
+    <div className="grid gap-3 py-3 md:grid-cols-2">
       {summary.zones.map((zone) => (
-        <div key={zone.zoneId} className="space-y-1">
-          <div className="text-xs font-medium">{zone.name}</div>
-          <div className="flex flex-wrap gap-1">
-            {zone.ownershipHint === "managed_registry" && (
-              <Badge variant="outline" className="text-[10px]">
-                Yaxii-managed
-              </Badge>
-            )}
-            {zone.ownershipHint === "yaxii_hint" && (
-              <Badge variant="outline" className="text-[10px]">
-                Name match only
-              </Badge>
-            )}
-            {zone.ownershipHint === "manual_unknown" && (
-              <Badge variant="secondary" className="text-[10px]">
-                Manual or unknown
-              </Badge>
-            )}
+        <div key={zone.zoneId} className="rounded-lg border border-border bg-background p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="text-sm font-medium">{zone.name}</div>
+              <div className="mt-1 text-xs text-muted-foreground">Live from WooCommerce</div>
+            </div>
+            <OwnershipBadge ownershipHint={zone.ownershipHint} />
           </div>
-          <div className="space-y-0.5 text-xs text-muted-foreground">
-            {methodDefs.slice(0, 2).map((methodDef) => (
-              <div key={methodDef.key}>{liveMethodSummary(zone, methodDef)}</div>
-            ))}
+          <div className="mt-4 grid gap-2">
+            {methodDefs.slice(0, 2).map((methodDef) => {
+              const method = liveMethodForKey(zone, methodDef.key);
+              return (
+                <div
+                  key={methodDef.key}
+                  className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm"
+                >
+                  <span>{methodDef.label}</span>
+                  <span className="font-medium">
+                    {method ? formatLiveCost(method.cost) : "Missing"}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
@@ -1492,14 +1774,20 @@ function LiveZoneDetails({
   );
 }
 
-function liveMethodSummary(zone: ZoneDiagnostic, methodDef: MethodDef): string {
-  const method = liveMethodForKey(zone, methodDef.key);
-  if (!method) {
-    return `${methodDef.label}: missing`;
+function OwnershipBadge({ ownershipHint }: { ownershipHint: ZoneDiagnostic["ownershipHint"] }) {
+  if (ownershipHint === "managed_registry") {
+    return (
+      <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+        Managed by Yaxii
+      </Badge>
+    );
   }
 
-  const enabledLabel = method.enabled ? "enabled" : "disabled";
-  return `${methodDef.label}: ${enabledLabel} - ${formatLiveCost(method.cost)}`;
+  if (ownershipHint === "manual_unknown") {
+    return <Badge variant="secondary">Manual zone protected</Badge>;
+  }
+
+  return <Badge variant="outline">Name match only</Badge>;
 }
 
 function liveMethodForKey(zone: ZoneDiagnostic, methodKey: string) {
