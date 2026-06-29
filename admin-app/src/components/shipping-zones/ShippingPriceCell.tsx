@@ -1,7 +1,6 @@
 import { ArrowRight, Undo2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { formatDzdPrice } from "@/lib/shipping-zones/status";
 import type { ShippingZoneMethodView } from "@/types/shipping-zones";
@@ -9,34 +8,29 @@ import type { ShippingZoneMethodView } from "@/types/shipping-zones";
 export function ShippingPriceCell({
   method,
   onChange,
-  onStatusChange,
   onUndo,
   onUndoStatus,
 }: {
   method: ShippingZoneMethodView;
   onChange: (price: number | null | undefined) => void;
-  onStatusChange: (enabled: boolean | undefined) => void;
   onUndo: () => void;
   onUndoStatus: () => void;
 }) {
   const pending = method.pendingPrice !== undefined;
   const pendingStatus = method.pendingEnabled !== undefined;
-  const displayEnabled = method.pendingEnabled ?? method.enabled ?? false;
+  const displayDisabled =
+    method.pendingEnabled === false ||
+    (method.pendingEnabled === undefined && method.enabled === false);
   const displayPrice = pending ? method.pendingPrice : method.livePrice;
   const freeSelected = displayPrice === 0;
 
   if (!method.canEdit) {
     return (
       <div className="flex flex-col gap-1.5 text-xs text-muted-foreground/70">
-        <MethodStatusSwitch
-          method={method}
-          checked={displayEnabled}
-          pending={pendingStatus}
-          onStatusChange={onStatusChange}
-        />
+        <MethodCellHeader method={method} displayDisabled={displayDisabled} />
         <div className="flex items-center gap-2">
           <span className="inline-flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2.5">
-            {method.enabled === false ? formatShippingPrice(method.livePrice) : "-"}
+            {method.livePrice === null ? "-" : formatShippingPrice(method.livePrice)}
           </span>
           <span className="text-[11px]">{method.disabledReason ?? "Not managed"}</span>
         </div>
@@ -46,15 +40,8 @@ export function ShippingPriceCell({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <MethodStatusSwitch
-          method={method}
-          checked={displayEnabled}
-          pending={pendingStatus}
-          onStatusChange={onStatusChange}
-        />
-      </div>
+    <div className={cn("flex flex-col gap-1.5", displayDisabled && "text-muted-foreground")}>
+      <MethodCellHeader method={method} displayDisabled={displayDisabled} />
       <div className="flex items-center gap-2">
         {freeSelected ? (
           <span
@@ -75,6 +62,7 @@ export function ShippingPriceCell({
               className={cn(
                 "h-8 w-24 rounded-md pr-9 text-sm tabular-nums shadow-none",
                 pending && "border-primary/50 bg-card",
+                displayDisabled && "text-muted-foreground",
               )}
               aria-label={`${method.label} price`}
             />
@@ -90,35 +78,22 @@ export function ShippingPriceCell({
   );
 }
 
-function MethodStatusSwitch({
+function MethodCellHeader({
   method,
-  checked,
-  pending,
-  onStatusChange,
+  displayDisabled,
 }: {
   method: ShippingZoneMethodView;
-  checked: boolean;
-  pending: boolean;
-  onStatusChange: (enabled: boolean | undefined) => void;
+  displayDisabled: boolean;
 }) {
-  if (!method.canToggleStatus) {
-    return (
-      <span className="text-[11px] font-medium text-muted-foreground">
-        {method.enabled === false ? "Disabled" : method.label}
-      </span>
-    );
-  }
-
   return (
-    <label className="inline-flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
-      <Switch
-        checked={checked}
-        onCheckedChange={(value) => onStatusChange(Boolean(value))}
-        className={cn("h-4 w-7", pending && "data-[state=checked]:bg-primary")}
-        aria-label={`${method.label} enabled status`}
-      />
-      <span>{checked ? "Enabled" : "Disabled"}</span>
-    </label>
+    <div className="flex min-h-5 items-center gap-2">
+      <span className="text-[11px] font-medium text-muted-foreground">{method.label}</span>
+      {displayDisabled && (
+        <span className="rounded-full border border-muted-foreground/20 bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          Disabled
+        </span>
+      )}
+    </div>
   );
 }
 

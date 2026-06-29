@@ -33,7 +33,8 @@ Expected result:
 - Home and office price inputs show the live WooCommerce cost when the method is registry-owned.
 - Editing a managed price marks a pending change and shows old price -> new price.
 - The selected-row `Make free` quick tool sets managed pending prices to `0`; method cells display `Free` without a permanent per-cell free toggle.
-- Method-level switches create pending `Enabled -> Disabled` or `Disabled -> Enabled` changes for registry-owned methods.
+- Method cells do not show active enable/disable switches.
+- Disabled methods keep their price visible in a muted state with a `Disabled` badge.
 - The row-level switch disables or enables all existing Yaxii-managed methods for that wilaya; it does not delete the WooCommerce zone.
 - Selected-row quick tools can bulk-enable or bulk-disable selected registry-owned methods.
 - `Save changes` or `Review` opens the focused review dialog for price and status changes.

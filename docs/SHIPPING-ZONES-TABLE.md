@@ -40,6 +40,7 @@ Supported actions:
 - bulk-set selected registry-owned Home, Office, or both method prices
 - bulk-set selected registry-owned Home, Office, or both methods to free shipping
 - bulk-enable or bulk-disable selected registry-owned methods
+- use the row-level active control to enable or disable all existing managed methods for one wilaya
 - adjust selected prices by percent, fixed amount, or rounding as local pending changes
 - copy selected Home prices to Office or Office prices to Home as local pending changes
 - review pending changes through a focused price-update dialog
@@ -65,7 +66,7 @@ It does not show preview hashes, contract versions, zone IDs, method instance ID
 
 Free shipping is represented as price `0`. Method cells display `Free` and old price -> `Free` when pending, but they do not show a permanent per-cell free toggle. Merchants use the selected-row quick tools for bulk free-shipping changes.
 
-Enable/disable changes are represented as method status changes, not deletes. A disabled method instance remains in WooCommerce with its stored price and registry record intact. Pending method status changes display as `Enabled -> Disabled` or `Disabled -> Enabled` and are written only after preview/apply revalidates the managed zone and method.
+Enable/disable changes are represented as method status changes, not deletes. Method cells do not show active enable/disable switches; disabled methods keep their price visible in a muted state with a `Disabled` badge. Merchants enable or disable methods from the selected-row quick tools, or disable the whole wilaya with the row-level active control. A disabled method instance remains in WooCommerce with its stored price and registry record intact. Pending method status changes display as `Enabled -> Disabled` or `Disabled -> Enabled` and are written only after preview/apply revalidates the managed zone and method.
 
 ## Missing Setup Repair
 

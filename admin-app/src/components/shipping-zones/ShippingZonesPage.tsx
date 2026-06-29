@@ -297,7 +297,6 @@ export function ShippingZonesPage({
           }))
         }
         onPriceChange={updatePendingPrice}
-        onStatusChange={updatePendingStatus}
         onWilayaStatusChange={(row, enabled) =>
           methodViewsForBulkTarget(row, "both").forEach((method) => {
             if (method.canToggleStatus) {

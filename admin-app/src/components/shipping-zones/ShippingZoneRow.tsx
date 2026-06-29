@@ -19,7 +19,6 @@ export function ShippingZoneRow({
   onToggleSelect,
   onToggleExpand,
   onPriceChange,
-  onStatusChange,
   onWilayaStatusChange,
   onUndo,
   onUndoStatus,
@@ -33,7 +32,6 @@ export function ShippingZoneRow({
   onToggleSelect: (selected: boolean) => void;
   onToggleExpand: () => void;
   onPriceChange: (method: ShippingMethodKey, price: number | null | undefined) => void;
-  onStatusChange: (method: ShippingMethodKey, enabled: boolean | undefined) => void;
   onWilayaStatusChange: (enabled: boolean) => void;
   onUndo: (method: ShippingMethodKey) => void;
   onUndoStatus: (method: ShippingMethodKey) => void;
@@ -86,7 +84,6 @@ export function ShippingZoneRow({
           <ShippingPriceCell
             method={row.home}
             onChange={(price) => onPriceChange(row.home.key, price)}
-            onStatusChange={(enabled) => onStatusChange(row.home.key, enabled)}
             onUndo={() => onUndo(row.home.key)}
             onUndoStatus={() => onUndoStatus(row.home.key)}
           />
@@ -95,7 +92,6 @@ export function ShippingZoneRow({
           <ShippingPriceCell
             method={row.office}
             onChange={(price) => onPriceChange(row.office.key, price)}
-            onStatusChange={(enabled) => onStatusChange(row.office.key, enabled)}
             onUndo={() => onUndo(row.office.key)}
             onUndoStatus={() => onUndoStatus(row.office.key)}
           />
