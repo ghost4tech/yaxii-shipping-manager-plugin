@@ -43,6 +43,7 @@ export type ShippingZoneMethodView = {
   livePrice: number | null;
   pendingPrice?: number | null;
   defaultPrice: number | null;
+  enabled: boolean | null;
   canEdit: boolean;
   disabledReason?: string;
 };

@@ -32,10 +32,10 @@ Expected result:
 - Technical zone and ownership details are hidden until row details are opened.
 - Home and office price inputs show the live WooCommerce cost when the method is registry-owned.
 - Editing a managed price marks a pending change and shows old price -> new price.
-- `Make free` sets a managed pending price to `0`.
+- The inline `Free shipping` switch and selected-row `Make free` quick tool set managed pending prices to `0`.
 - `Save changes` or `Review` opens the focused price-update dialog.
 - `Update prices` calls preview and then apply through the existing safe backend.
-- Enable/disable controls are hidden because method status updates are not implemented yet.
+- Enable/disable visual state is read-only and clearly disabled because method status updates are not implemented yet.
 - Manual or unknown rows cannot be edited through the table.
 
 ## Runtime Scenarios
@@ -94,6 +94,16 @@ TASK-010C local smoke result:
 - Office delivery stayed `400`.
 - The DZ:01 method count stayed `2` after update and restore.
 - WooCommerce rate calculation for destination `DZ:01` returned Home delivery `700` and Office delivery `400`.
+
+TASK-010D local smoke result:
+
+- Browser automation authenticated into `wp-admin` with a temporary administrator user that was deleted after smoke.
+- Shipping Zones rendered the reference-aligned page with the compact status card, filters, selected-row quick tools, inline free-shipping switches, read-only enable-state switches, row action menus, hidden details, and sticky pending bar.
+- Selected-row quick tools appeared only after selecting rows and supported Home, Office, Both, Set price, Make free, Clear selection, and Review changes.
+- A bulk pending price action created pending changes without writing to WooCommerce; the pending changes were discarded successfully.
+- Chlef Home delivery was changed from `700` to `701` through the review dialog and existing preview/apply flow.
+- Chlef Home delivery was restored from `701` to `700` through the same review/apply flow.
+- Runtime WooCommerce verification after restore found `Yaxii - 02 Chlef - الشلف` with Home delivery enabled at `700` and Office delivery enabled at `400`.
 
 ### Manual-Zone Protection
 

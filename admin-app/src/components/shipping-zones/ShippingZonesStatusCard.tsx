@@ -5,9 +5,11 @@ import type { ShippingZoneStats } from "@/types/shipping-zones";
 
 export function ShippingZonesStatusCard({
   stats,
+  woocommerceSettingsUrl,
   onOpenDiagnostics,
 }: {
   stats: ShippingZoneStats;
+  woocommerceSettingsUrl: string;
   onOpenDiagnostics: () => void;
 }) {
   const items = [
@@ -35,15 +37,25 @@ export function ShippingZonesStatusCard({
           <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 -translate-y-px" />
           WooCommerce will be checked again before updating. Manual zones will not be touched.
         </p>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 gap-1.5 px-2 text-xs"
-          onClick={onOpenDiagnostics}
-        >
-          <Activity className="h-3.5 w-3.5" />
-          Check diagnostics
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 px-2 text-xs"
+            onClick={onOpenDiagnostics}
+          >
+            <Activity className="h-3.5 w-3.5" />
+            Diagnostics
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 px-2 text-xs"
+            onClick={() => window.open(woocommerceSettingsUrl, "_blank", "noopener,noreferrer")}
+          >
+            WooCommerce zones
+          </Button>
+        </div>
       </div>
     </div>
   );

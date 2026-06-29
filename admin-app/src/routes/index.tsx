@@ -279,12 +279,7 @@ export default function AdminApp({
         launchDisabled={!datasetReady || !settingsReady}
       />
       <TopNav tab={tab} setTab={setTab} />
-      <main
-        className={cn(
-          "mx-auto w-full px-6 py-10",
-          tab === "zones" ? "max-w-[1240px]" : "max-w-5xl",
-        )}
-      >
+      <main className="mx-auto w-full max-w-[1240px] px-6 pb-32 pt-8">
         <RuntimeNotices
           bootstrap={bootstrap}
           datasetState={datasetState}

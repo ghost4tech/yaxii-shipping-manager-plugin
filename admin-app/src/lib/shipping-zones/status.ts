@@ -148,6 +148,24 @@ export function liveMethodForKey(zone: ZoneDiagnostic, methodKey: ShippingMethod
   return zone.methods.find((method) => method.instanceId === registryMethod.instanceId);
 }
 
+export function liveMethodEnabledForKey(
+  liveZone: LiveZoneSummary,
+  methodKey: ShippingMethodKey,
+): boolean | null {
+  for (const zone of liveZone.zones) {
+    if (zone.ownershipHint !== "managed_registry") {
+      continue;
+    }
+
+    const method = liveMethodForKey(zone, methodKey);
+    if (method) {
+      return method.enabled;
+    }
+  }
+
+  return null;
+}
+
 export function formatDzdPrice(price: number | null): string {
   if (price === null) {
     return "Not set";
@@ -176,6 +194,7 @@ function methodViewForRow(
 ): ShippingZoneMethodView {
   const key = methodDef && isShippingMethodKey(methodDef.key) ? methodDef.key : "home_delivery";
   const livePrice = livePriceForKey(liveZone, key);
+  const enabled = liveMethodEnabledForKey(liveZone, key);
   const canEdit = canEditManagedMethod(liveZone, key);
 
   return {
@@ -184,8 +203,13 @@ function methodViewForRow(
     livePrice,
     pendingPrice: pendingPrices[wilaya.code]?.[key],
     defaultPrice: methodDef?.defaultPrice ?? null,
+    enabled,
     canEdit,
-    disabledReason: canEdit ? undefined : disabledReasonForStatus(liveZone.status),
+    disabledReason: canEdit
+      ? undefined
+      : enabled === false
+        ? "Enable/disable coming later"
+        : disabledReasonForStatus(liveZone.status),
   };
 }
 
@@ -206,9 +230,14 @@ function disabledReasonForStatus(status: ShippingZoneStatus): string {
 }
 
 function canEditManagedMethod(liveZone: LiveZoneSummary, methodKey: ShippingMethodKey): boolean {
+  if (liveZone.status !== "active" && liveZone.status !== "needs_update") {
+    return false;
+  }
+
   return liveZone.zones.some(
     (zone) =>
-      zone.ownershipHint === "managed_registry" && Boolean(liveMethodForKey(zone, methodKey)),
+      zone.ownershipHint === "managed_registry" &&
+      liveMethodForKey(zone, methodKey)?.enabled === true,
   );
 }
 

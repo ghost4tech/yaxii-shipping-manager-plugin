@@ -31,6 +31,8 @@ import { ShippingZonesStatusCard } from "./ShippingZonesStatusCard";
 import { ShippingZonesTable } from "./ShippingZonesTable";
 import { ShippingZonesToolbar } from "./ShippingZonesToolbar";
 
+type BulkTarget = ShippingMethodKey | "both";
+
 export function ShippingZonesPage({
   config,
   wilayas,
@@ -51,9 +53,7 @@ export function ShippingZonesPage({
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const editableMethodKeys = methodKeys(methodDefs);
-  const [targetMethod, setTargetMethod] = useState<ShippingMethodKey>(
-    editableMethodKeys[0] ?? "home_delivery",
-  );
+  const [bulkTarget, setBulkTarget] = useState<BulkTarget>("both");
 
   const rows = useMemo(
     () => buildShippingZoneRows(wilayas, methodDefs, diagnosticsState, pendingPrices),
@@ -67,7 +67,11 @@ export function ShippingZonesPage({
     selectableVisibleRows.length > 0 &&
     selectableVisibleRows.every((row) => selectedCodes.includes(row.wilaya.code));
   const selectedEditableRows = rows.filter(
-    (row) => selectedCodes.includes(row.wilaya.code) && canEditTargetMethod(row, targetMethod),
+    (row) =>
+      selectedCodes.includes(row.wilaya.code) &&
+      methodsForBulkTarget(bulkTarget, editableMethodKeys).some((method) =>
+        canEditTargetMethod(row, method),
+      ),
   );
   const selectedRows = rows.filter((row) => selectedCodes.includes(row.wilaya.code));
   const protectedSelectionCount = selectedRows.length - selectedEditableRows.length;
@@ -79,9 +83,6 @@ export function ShippingZonesPage({
     methodDefs,
     diagnosticsState,
     pendingPrices,
-  );
-  const hasMissingSetup = rows.some(
-    (row) => row.status === "missing" || row.status === "unavailable",
   );
 
   const updatePendingPrice = (
@@ -101,18 +102,24 @@ export function ShippingZonesPage({
   };
 
   const setBulkPendingPrice = (price: number | null) => {
+    const targetMethods = methodsForBulkTarget(bulkTarget, editableMethodKeys);
+
     setPendingPrices((current) =>
-      selectedEditableRows.reduce(
-        (next, row) =>
-          withPendingPrice(
-            next,
+      selectedEditableRows.reduce((nextPrices, row) => {
+        return targetMethods.reduce((methodPrices, method) => {
+          if (!canEditTargetMethod(row, method)) {
+            return methodPrices;
+          }
+
+          return withPendingPrice(
+            methodPrices,
             row.wilaya.code,
-            targetMethod,
-            livePriceForKey(row.liveZone, targetMethod),
+            method,
+            livePriceForKey(row.liveZone, method),
             price,
-          ),
-        current,
-      ),
+          );
+        }, nextPrices);
+      }, current),
     );
   };
 
@@ -149,13 +156,12 @@ export function ShippingZonesPage({
 
   return (
     <div className="pb-24">
-      <ShippingZonesHeader
-        hasMissingSetup={hasMissingSetup}
+      <ShippingZonesHeader />
+      <ShippingZonesStatusCard
+        stats={stats}
         woocommerceSettingsUrl={woocommerceSettingsUrl}
-        onLaunchWizard={onLaunchWizard}
         onOpenDiagnostics={onOpenDiagnostics}
       />
-      <ShippingZonesStatusCard stats={stats} onOpenDiagnostics={onOpenDiagnostics} />
       <ShippingZonesToolbar
         rows={rows}
         search={search}
@@ -163,16 +169,17 @@ export function ShippingZonesPage({
         pendingCount={pendingCount}
         selectedCount={selectedCodes.length}
         protectedSelectionCount={protectedSelectionCount}
-        targetMethod={targetMethod}
+        bulkTarget={bulkTarget}
         methodDefs={methodDefs.filter((method) => isShippingMethodKey(method.key)).slice(0, 2)}
         bulkPrice={bulkPrice}
         onSearchChange={setSearch}
         onFilterChange={setFilter}
-        onTargetMethodChange={setTargetMethod}
+        onBulkTargetChange={setBulkTarget}
         onBulkPriceChange={setBulkPrice}
         onBulkSetPrice={applyBulkPrice}
         onBulkMakeFree={() => setBulkPendingPrice(0)}
         onClearSelection={() => setSelectedCodes([])}
+        onReviewChanges={() => setReviewOpen(true)}
       />
       <ShippingZonesTable
         rows={visibleRows}
@@ -233,4 +240,15 @@ function canEditTargetMethod(row: ShippingZoneRowView, method: ShippingMethodKey
   }
 
   return false;
+}
+
+function methodsForBulkTarget(
+  target: BulkTarget,
+  editableMethodKeys: ShippingMethodKey[],
+): ShippingMethodKey[] {
+  if (target === "both") {
+    return editableMethodKeys.slice(0, 2);
+  }
+
+  return [target];
 }

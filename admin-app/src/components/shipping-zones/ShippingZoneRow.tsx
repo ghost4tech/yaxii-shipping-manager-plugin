@@ -1,7 +1,15 @@
-import { ChevronDown } from "lucide-react";
+import { Activity, ChevronDown, MoreHorizontal, Power, RotateCcw, Wand2 } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { ShippingMethodKey } from "@/types/generator";
 import type { ShippingZoneRowView } from "@/types/shipping-zones";
@@ -10,7 +18,7 @@ import { ShippingPriceCell } from "./ShippingPriceCell";
 import { ShippingZoneDetails } from "./ShippingZoneDetails";
 import { StatusBadge } from "./StatusBadge";
 
-const DESKTOP_GRID = "lg:grid-cols-[36px_1.25fr_150px_1.35fr_1.35fr_132px_44px]";
+const DESKTOP_GRID = "lg:grid-cols-[36px_1.3fr_140px_1.4fr_1.4fr_110px_44px]";
 
 export function ShippingZoneRow({
   row,
@@ -35,13 +43,15 @@ export function ShippingZoneRow({
 }) {
   const hasPending = row.pendingMethodCount > 0;
   const contextualAction = actionForRow(row.status);
+  const dimmed = rowHasDisabledManagedMethod(row);
 
   return (
     <div
       className={cn(
         "border-b border-border last:border-b-0 transition-colors",
-        selected && "bg-primary/5",
+        selected && "bg-primary/10",
         hasPending && "bg-primary/5",
+        dimmed && "bg-muted/30 text-muted-foreground",
       )}
     >
       <div className={cn("grid grid-cols-[36px_minmax(0,1fr)] gap-3 px-4 py-3", DESKTOP_GRID)}>
@@ -87,28 +97,16 @@ export function ShippingZoneRow({
           />
         </div>
         <div className="col-start-2 flex justify-start lg:col-start-auto lg:justify-end">
-          {contextualAction === "generator" && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8"
-              onClick={onLaunchWizard}
-            >
-              Open Generator
-            </Button>
-          )}
-          {contextualAction === "diagnostics" && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8"
-              onClick={onOpenDiagnostics}
-            >
-              Check diagnostics
-            </Button>
-          )}
+          <RowActions
+            row={row}
+            contextualAction={contextualAction}
+            onOpenDiagnostics={onOpenDiagnostics}
+            onLaunchWizard={onLaunchWizard}
+            onDiscardPending={() => {
+              onUndo(row.home.key);
+              onUndo(row.office.key);
+            }}
+          />
         </div>
         <div className="col-start-2 flex justify-start lg:col-start-auto lg:justify-end">
           <button
@@ -122,6 +120,74 @@ export function ShippingZoneRow({
         </div>
       </div>
       {expanded && <ShippingZoneDetails row={row} />}
+    </div>
+  );
+}
+
+function RowActions({
+  row,
+  contextualAction,
+  onOpenDiagnostics,
+  onLaunchWizard,
+  onDiscardPending,
+}: {
+  row: ShippingZoneRowView;
+  contextualAction: "generator" | "diagnostics" | null;
+  onOpenDiagnostics: () => void;
+  onLaunchWizard: () => void;
+  onDiscardPending: () => void;
+}) {
+  const knownEnabledStates = [row.home.enabled, row.office.enabled].filter(
+    (enabled): enabled is boolean => typeof enabled === "boolean",
+  );
+  const enabled = knownEnabledStates.length > 0 && knownEnabledStates.some(Boolean);
+
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <Switch
+        checked={enabled}
+        disabled
+        aria-label={`${row.wilaya.name} enable status`}
+        title="Enable/disable coming later"
+        className={cn(!enabled && "data-[state=unchecked]:bg-muted")}
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label={`${row.wilaya.name} row actions`}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuLabel className="text-xs">{row.wilaya.name}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled>
+            <Power className="h-3.5 w-3.5" />
+            Enable/disable coming later
+          </DropdownMenuItem>
+          {row.pendingMethodCount > 0 && (
+            <DropdownMenuItem onClick={onDiscardPending}>
+              <RotateCcw className="h-3.5 w-3.5" />
+              Discard pending
+            </DropdownMenuItem>
+          )}
+          {contextualAction === "generator" && (
+            <DropdownMenuItem onClick={onLaunchWizard}>
+              <Wand2 className="h-3.5 w-3.5" />
+              Open Generator
+            </DropdownMenuItem>
+          )}
+          {contextualAction === "diagnostics" && (
+            <DropdownMenuItem onClick={onOpenDiagnostics}>
+              <Activity className="h-3.5 w-3.5" />
+              Check diagnostics
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -163,4 +229,8 @@ function actionForRow(status: ShippingZoneRowView["status"]): "generator" | "dia
   }
 
   return null;
+}
+
+function rowHasDisabledManagedMethod(row: ShippingZoneRowView): boolean {
+  return row.home.enabled === false || row.office.enabled === false;
 }

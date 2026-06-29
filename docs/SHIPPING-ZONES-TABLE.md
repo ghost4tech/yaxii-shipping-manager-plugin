@@ -32,8 +32,8 @@ Supported actions:
 - edit a registry-owned Home delivery price
 - edit a registry-owned Office delivery price
 - set a registry-owned price to `0` with the `Free shipping` switch
-- bulk-set a selected registry-owned method price
-- bulk-set a selected registry-owned method to free shipping
+- bulk-set selected registry-owned Home, Office, or both method prices
+- bulk-set selected registry-owned Home, Office, or both methods to free shipping
 - review pending changes through a focused price-update dialog
 - clear pending changes before review
 
@@ -67,7 +67,11 @@ Unsupported actions must be hidden, disabled, or labeled as later work:
 - updating zone names
 - deleting zones or methods
 
-Enable/disable controls are hidden from the Shipping Zones table until a safe backend task exists.
+Enable/disable state may appear as a disabled, read-only visual control when diagnostics exposes method status. The control must use this copy and must not write until a safe backend task exists:
+
+```text
+Enable/disable coming later
+```
 
 For protected rows:
 
@@ -95,3 +99,4 @@ The table routes merchants to:
 - It does not update manual or unknown zones or methods.
 - It does not delete zones or methods.
 - It does not adopt manual zones.
+- It does not enable or disable shipping methods.

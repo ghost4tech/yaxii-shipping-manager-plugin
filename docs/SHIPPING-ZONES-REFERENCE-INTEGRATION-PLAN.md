@@ -474,16 +474,24 @@ TASK-010C implementation note:
 
 This integration has now been implemented in production components. The reference is used for UX structure and styling, while runtime data comes from the existing dataset, diagnostics, preview, and apply clients.
 
-### TASK-010D: Browser Smoke Polish And Edge States
+### TASK-010D: Strict Reference Fidelity Pass
 
 Acceptance:
 
+- visual structure, spacing, and interaction patterns are brought closer to the approved reference
+- free shipping appears as an inline switch/control, not as a random per-cell action button
+- selected-row quick tools match the reference pattern and support Home, Office, and Both
+- enable/disable is shown only as read-only visual state with `Enable/disable coming later`
 - affected rows are reviewed before write
 - backend preview revalidates ownership/conflicts
 - apply updates only supported Yaxii-managed method labels/prices
 - success uses real apply result counts
 - diagnostics refresh after apply
 - blocked preview shows clear next action
+
+TASK-010D implementation note:
+
+This fidelity pass has now been implemented. The page keeps the production data and safe preview/apply behavior from TASK-010C while aligning the free-shipping control, selected-row quick tools, row action area, status-card footer, and app container spacing more closely with the approved Lovable reference.
 
 ### TASK-010E: Follow-Up Cleanup If Needed
 
@@ -514,4 +522,4 @@ Only if approved, scope backend support for enabling/disabling managed shipping 
 
 ## Next Recommended Task
 
-TASK-010C should integrate the reference Shipping Zones component shell with real diagnostics and local pending price changes only. It should not add backend behavior. The first implementation task should focus on replacing the daily-management surface while keeping the existing preview/apply contract untouched.
+TASK-010E should run a focused responsive/accessibility/browser-polish pass on the integrated Shipping Zones page. It should not add new backend write behavior.
