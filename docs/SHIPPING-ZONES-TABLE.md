@@ -10,13 +10,14 @@ Rows combine the current wilaya dataset with read-only WooCommerce diagnostics.
 
 The page shows:
 
-- a compact live status card with active wilayas, managed methods, and pending changes
+- a reference-based management page with the table as the primary workspace
+- a compact live status card with active wilayas, managed methods, pending changes, and protected manual zones
 - secondary actions for diagnostics and WooCommerce's native shipping settings
 - search by wilaya name, Arabic name, or code
-- filters for all, active, needs update, missing setup, manual conflict, and pending changes
+- filters for all, active, pending changes, needs update, missing setup, and protected/manual rows
 - whether a direct WooCommerce zone exists for the wilaya
 - whether the zone is recorded in the Yaxii managed registry
-- simple row status such as `Active`, `Missing setup`, `Needs update`, `Manual conflict`, `Protected`, or `Not managed`
+- simple row status such as `Active`, `Missing setup`, `Needs update`, `Conflict detected`, `Protected manual zone`, or `Not managed`
 - home and office live flat-rate method prices when the methods are registry-owned
 - technical zone and ownership details only after the merchant opens row details
 
@@ -33,7 +34,7 @@ Supported actions:
 - set a registry-owned price to `0` with the `Free shipping` switch
 - bulk-set a selected registry-owned method price
 - bulk-set a selected registry-owned method to free shipping
-- review pending changes through the existing preview/apply panel
+- review pending changes through a focused price-update dialog
 - clear pending changes before review
 
 Required copy:
@@ -43,6 +44,16 @@ Changes will be reviewed before WooCommerce is updated.
 ```
 
 Review/apply uses the same preview endpoint and apply endpoint as the Generator. The table does not create a second apply engine.
+
+The price-update dialog shows only:
+
+- affected wilaya
+- affected method
+- old price
+- new price
+- safety copy that WooCommerce will be checked again and manual zones will not be touched
+
+It does not show preview hashes, contract versions, zone IDs, method instance IDs, raw preview groups, or other backend details.
 
 ## Unsupported Actions
 
@@ -56,16 +67,12 @@ Unsupported actions must be hidden, disabled, or labeled as later work:
 - updating zone names
 - deleting zones or methods
 
-Current copy:
-
-```text
-Enable/disable controls are coming later.
-```
+Enable/disable controls are hidden from the Shipping Zones table until a safe backend task exists.
 
 For protected rows:
 
 ```text
-Manual methods are protected. Use WooCommerce to edit them.
+Protected manual zone
 ```
 
 ## Supported Actions
@@ -75,7 +82,8 @@ The table routes merchants to:
 - `Open Generator`
 - `Diagnostics`
 - `WooCommerce zones`
-- `Review changes`
+- `Save changes`
+- `Update prices`
 - `Clear changes`
 
 `Open WooCommerce zones` opens WooCommerce's native shipping settings in a new browser tab for inspection.

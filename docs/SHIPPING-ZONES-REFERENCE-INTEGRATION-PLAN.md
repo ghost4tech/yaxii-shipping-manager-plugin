@@ -447,14 +447,14 @@ Deletes/reset:
 
 ## Implementation Phases
 
-### TASK-010C: Component Shell And Data Mapping
+### TASK-010C: Reference Page Integration
 
-Port the reference Shipping Zones UI into production components using current diagnostics, wilayas, method definitions, and pending price state.
+Port the reference Shipping Zones UI into production components using current diagnostics, wilayas, method definitions, pending price state, and the existing preview/apply clients.
 
 Constraints:
 
 - no backend changes
-- no apply behavior change
+- no new backend write behavior
 - no active enable/disable
 - no reset/delete/adoption
 - reference app files are not copied wholesale
@@ -468,10 +468,13 @@ Acceptance:
 - old -> new pending state appears
 - pending bar appears
 - no fake success state
+- review dialog calls preview/apply and refreshes diagnostics after successful method updates
 
-### TASK-010D: Review Drawer To Safe Preview/Apply
+TASK-010C implementation note:
 
-Wire the review dialog/drawer to existing `fetchPreview` and `fetchApply`.
+This integration has now been implemented in production components. The reference is used for UX structure and styling, while runtime data comes from the existing dataset, diagnostics, preview, and apply clients.
+
+### TASK-010D: Browser Smoke Polish And Edge States
 
 Acceptance:
 
@@ -482,7 +485,7 @@ Acceptance:
 - diagnostics refresh after apply
 - blocked preview shows clear next action
 
-### TASK-010E: Browser Smoke And Old Code Removal
+### TASK-010E: Follow-Up Cleanup If Needed
 
 Polish and verify the integrated page in WordPress admin.
 

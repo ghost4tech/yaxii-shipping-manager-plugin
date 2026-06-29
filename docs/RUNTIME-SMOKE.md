@@ -6,7 +6,7 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 
 1. Open `wp-admin/admin.php?page=yaxii-shipping-manager` as an administrator.
 2. Confirm the plugin admin page loads without console errors.
-3. Confirm Shipping Zones shows live WooCommerce status and pending-change controls for supported prices.
+3. Confirm Shipping Zones shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices.
 4. Open the generator.
 5. Confirm setup modes are distinct:
    - Fresh setup: create a new shipping setup for selected wilayas.
@@ -27,14 +27,15 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 
 Expected result:
 
-- The table shows `Shipping setup is active` when diagnostics are low-risk and all selected Yaxii-managed zones/methods are present.
+- The table-centered Shipping Zones page shows active managed rows when diagnostics are low-risk and Yaxii-managed zones/methods are present.
 - Each row shows live WooCommerce status from diagnostics, not only local draft state.
-- Technical zone and ownership details are hidden until `Show details` is opened.
+- Technical zone and ownership details are hidden until row details are opened.
 - Home and office price inputs show the live WooCommerce cost when the method is registry-owned.
-- Editing a managed price marks a pending change.
+- Editing a managed price marks a pending change and shows old price -> new price.
 - `Make free` sets a managed pending price to `0`.
-- `Review changes` opens the same preview/apply review panel used by the Generator.
-- Enable/disable controls are not active because method status updates are not implemented yet.
+- `Save changes` or `Review` opens the focused price-update dialog.
+- `Update prices` calls preview and then apply through the existing safe backend.
+- Enable/disable controls are hidden because method status updates are not implemented yet.
 - Manual or unknown rows cannot be edited through the table.
 
 ## Runtime Scenarios
@@ -80,6 +81,19 @@ Expected result:
 
 - WooCommerce matches the Yaxii-managed zone for that wilaya.
 - Enabled flat-rate methods return the expected labels and restored prices.
+
+TASK-010C local smoke result:
+
+- Browser automation reached the WordPress login screen, so authenticated browser smoke was blocked in this turn.
+- WP-CLI/REST smoke used the normal preview and apply REST controllers in-process with an administrator user and REST nonce.
+- DZ:01 started with Home delivery `700` and Office delivery `400`.
+- Preview reported one managed method update for Home delivery `700` to `701`.
+- Apply updated one method and changed Home delivery to `701`.
+- Restore preview reported one managed method update back to `700`.
+- Restore apply updated one method and returned Home delivery to `700`.
+- Office delivery stayed `400`.
+- The DZ:01 method count stayed `2` after update and restore.
+- WooCommerce rate calculation for destination `DZ:01` returned Home delivery `700` and Office delivery `400`.
 
 ### Manual-Zone Protection
 
