@@ -358,6 +358,7 @@ export function GeneratorWizard({
             priceForWilaya(wilaya.code, method, priceOverrides),
           ]),
         ) as Partial<Record<ShippingMethodKey, number | null>>,
+        methodStatuses: Object.fromEntries(methods.map((method) => [method.key, method.enabled])),
       })),
       methods,
       zoneNameFormat,
@@ -385,8 +386,9 @@ export function GeneratorWizard({
       communeCoverageSummary: communeCoverageSummary(communeMode, selectedCodes, communesByWilaya),
       enabledMethodLabels: enabledMethods.map((method) => method.label),
       priceSummary: priceSummary(enabledMethods, selectedCodes, priceOverrides),
+      regionFormatLabel: regionFormatLabel(labelFormat),
     }),
-    [communeMode, communesByWilaya, enabledMethods, priceOverrides, selectedCodes],
+    [communeMode, communesByWilaya, enabledMethods, labelFormat, priceOverrides, selectedCodes],
   );
   const previewDraftValid = selectedCodes.length > 0 && enabledMethods.length > 0 && !priceError;
 
@@ -1828,6 +1830,11 @@ function priceSummary(
   }
 
   return `${enabledMethods.length} method defaults, ${overrideCount} wilaya overrides.`;
+}
+
+function regionFormatLabel(format: RegionLabelFormat): string {
+  const option = REGION_LABEL_FORMAT_OPTIONS.find((item) => item.value === format);
+  return option?.label ?? format;
 }
 
 function setupModeBadgeLabel(mode: SetupMode): string {

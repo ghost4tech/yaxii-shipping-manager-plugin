@@ -222,3 +222,33 @@ Recommended checks for the implementation task:
 - browser smoke of Generator final preview in wp-admin
 
 No PHP checks are needed unless backend files change.
+
+## TASK-011C Implementation Result
+
+Implemented on branch `task/011c-generator-preview-reference-ui`.
+
+Production UI now uses the prototype preview-plan shape while keeping the real preview/apply contracts:
+
+- `PreviewPlanPanel.tsx` is a thin compatibility export to `GeneratorFinalStep`.
+- Final-step UI is split into summary, preview group, preview sample, apply action, apply result, and advanced-details components.
+- Real `PreviewResponse` data drives readiness, stat tiles, group cards, samples, blocked/manual-zone alerts, and advanced support details.
+- Preview-only mode keeps apply controls hidden in the active wizard and shows a read-only action message.
+- Apply still goes only through `fetchApply` with preview hash, generated timestamp, accepted plan summary, safety policy snapshot, contract version, confirmation phrase, and the original preview request.
+- Main UI keeps hash, contract version, generated timestamp, zone IDs, method keys, ownership hints, and raw plan lists inside collapsed advanced details.
+
+Implementation files:
+
+```text
+admin-app/src/components/generator/GeneratorFinalStep.tsx
+admin-app/src/components/generator/GeneratorPreviewSummary.tsx
+admin-app/src/components/generator/GeneratorPreviewGroups.tsx
+admin-app/src/components/generator/GeneratorPreviewSample.tsx
+admin-app/src/components/generator/GeneratorApplyActionCard.tsx
+admin-app/src/components/generator/GeneratorApplyResult.tsx
+admin-app/src/components/generator/GeneratorAdvancedDetails.tsx
+admin-app/src/lib/generator/preview-summary.ts
+admin-app/src/lib/generator/apply-summary.ts
+admin-app/src/lib/generator/preview-plan-item.ts
+```
+
+No backend write behavior was changed.

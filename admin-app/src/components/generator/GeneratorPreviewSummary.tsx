@@ -1,0 +1,129 @@
+import {
+  AlertCircle,
+  AlertTriangle,
+  Ban,
+  Building2,
+  CheckCircle2,
+  MapPin,
+  Package,
+  ShieldAlert,
+  Tag,
+} from "lucide-react";
+
+import type { GeneratorPreviewContext } from "@/components/generator/types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import type { ApplyReadinessSeverity, PreviewResponse } from "@/types/preview";
+
+import type { SetupMode } from "@/lib/generator/preview-summary";
+
+export function GeneratorPreviewSummary({
+  response,
+  context,
+  setupMode,
+}: {
+  response: PreviewResponse;
+  context?: GeneratorPreviewContext;
+  setupMode: SetupMode;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-2xl font-semibold tracking-tight">Preview plan</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{previewDescription(setupMode)}</p>
+        </div>
+        <ReadinessBadge severity={response.applyReadiness.severity} />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="Wilayas selected"
+          value={String(response.summary.selectedWilayas)}
+          icon={<MapPin className="h-4 w-4" />}
+        />
+        <StatTile
+          label="Coverage"
+          value={context?.communeCoverageSummary ?? "Wilaya-level coverage"}
+          icon={<Building2 className="h-4 w-4" />}
+        />
+        <StatTile
+          label="Methods enabled"
+          value={String(context?.enabledMethodLabels.length ?? 0)}
+          icon={<Package className="h-4 w-4" />}
+        />
+        <StatTile
+          label="Region format"
+          value={context?.regionFormatLabel ?? "Wilaya label"}
+          icon={<Tag className="h-4 w-4" />}
+        />
+      </div>
+
+      {response.summary.conflicts > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Conflicts block apply</AlertTitle>
+          <AlertDescription>{response.applyReadiness.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {response.summary.conflicts === 0 && response.summary.skipManualZones > 0 && (
+        <Alert className="border-amber-200 bg-amber-50/60">
+          <ShieldAlert className="h-4 w-4 text-amber-700" />
+          <AlertTitle className="text-amber-900">Manual zones detected</AlertTitle>
+          <AlertDescription className="text-amber-800/90">
+            {response.summary.skipManualZones} manual zone(s) are protected and will be skipped.
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+function ReadinessBadge({ severity }: { severity: ApplyReadinessSeverity }) {
+  if (severity === "ready") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+        <CheckCircle2 className="h-3.5 w-3.5" /> Ready
+      </span>
+    );
+  }
+
+  if (severity === "attention") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+        <AlertTriangle className="h-3.5 w-3.5" /> Attention
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700">
+      <Ban className="h-3.5 w-3.5" /> Blocked
+    </span>
+  );
+}
+
+function StatTile({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {icon}
+          <span>{label}</span>
+        </div>
+        <div className="mt-1 break-words text-xl font-semibold tracking-tight">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function previewDescription(setupMode: SetupMode): string {
+  if (setupMode === "preview") {
+    return "This is a preview only. No WooCommerce changes will be applied from this mode.";
+  }
+
+  return "Review supported WooCommerce changes before applying them.";
+}

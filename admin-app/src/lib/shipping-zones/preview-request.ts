@@ -53,6 +53,7 @@ export function reviewContextFromPendingChanges(
       priceSummary: pendingReviewSummary(
         pendingReviewItems(changedRows, pendingPrices, pendingStatuses),
       ),
+      regionFormatLabel: "Default region label",
     },
   };
 }
@@ -83,6 +84,7 @@ export function repairContextFromRows(
       communeCoverageSummary: "Wilaya-level WooCommerce shipping zones.",
       enabledMethodLabels: supportedMethodDefs.map((method) => method.label),
       priceSummary: "Repair missing managed setup with current default prices.",
+      regionFormatLabel: "Default region label",
     },
   };
 }

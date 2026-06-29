@@ -51,6 +51,20 @@ TASK-011B local smoke result:
 - In-process REST smoke for `GET /wp-json/yaxii-shipping-manager/v1/diagnostics` returned `woocommerceActive=true`, `configuredWilayas=69`, `missingWilayas=0`, `duplicateConflictCount=0`, `zonesWithoutMethods=0`, and `checkoutFallbackRisk=low`.
 - No WooCommerce write action was performed during the smoke.
 
+### Generator Preview Reference UI Smoke
+
+TASK-011C local smoke result:
+
+- Browser automation authenticated into `wp-admin` with a temporary administrator user that was deleted after smoke.
+- Generator reached the final preview step through the real wizard and rendered the reference-style `Preview plan` UI.
+- The visible final preview showed readiness, selected-wilaya count, coverage summary, enabled-method count, region format, preview group cards, preview samples, safety copy, review checkbox, and collapsed advanced details from real preview data.
+- Main final-preview UI did not show preview hash, contract version, generated timestamp, zone IDs, method keys, ownership-source codes, or raw plan arrays.
+- Advanced details were collapsed by default; keyboard activation opened them and showed preview hash, contract version, generated timestamp, raw group counts, warnings, zone IDs, method keys, ownership hints, and support-only plan rows.
+- Preview-only wizard mode rendered the same preview-plan layout and showed that apply controls are hidden for that mode.
+- Browser console had no page errors; it only showed the normal WordPress jQuery Migrate logs.
+- In-process REST smoke for `POST /wp-json/yaxii-shipping-manager/v1/preview` returned `status=200`, `selectedWilayas=69`, `createZones=0`, `addMethods=0`, `updateMethods=0`, `updateMethodStatuses=0`, `conflicts=0`, `readiness=ready`, a valid 64-character preview hash, and `apply-contract-v1`.
+- No apply action was triggered in browser or runtime smoke, so no WooCommerce write occurred during TASK-011C smoke.
+
 ## Shipping Zones Table Smoke
 
 Expected result:

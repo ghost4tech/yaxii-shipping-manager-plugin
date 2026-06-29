@@ -36,6 +36,7 @@ export type GeneratorPreviewContext = {
   communeCoverageSummary: string;
   enabledMethodLabels: string[];
   priceSummary: string;
+  regionFormatLabel: string;
 };
 
 export type GeneratorPreviewSnapshot = {
