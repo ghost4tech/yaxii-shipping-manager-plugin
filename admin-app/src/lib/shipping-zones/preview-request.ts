@@ -49,7 +49,7 @@ export function reviewContextFromPendingChanges(
     previewContext: {
       selectedWilayaCount: changedRows.length,
       communeCoverageSummary: "Wilaya-level WooCommerce shipping zones.",
-      enabledMethodLabels: methodDefs.slice(0, 2).map((method) => method.label),
+      enabledMethodLabels: methodDefs.map((method) => method.label),
       priceSummary: pendingReviewSummary(
         pendingReviewItems(changedRows, pendingPrices, pendingStatuses),
       ),
@@ -67,12 +67,10 @@ export function repairContextFromRows(
     return null;
   }
 
-  const supportedMethodDefs = methodDefs.slice(0, 2);
-
   return {
     request: {
       selectedWilayaCodes: repairRows.map((row) => row.wilaya.code),
-      methods: methodTemplatesFromDefs(supportedMethodDefs),
+      methods: methodTemplatesFromDefs(methodDefs),
       pricingRows: repairRows.map((row) => ({
         wilayaCode: row.wilaya.code,
         enabled: true,
@@ -82,7 +80,7 @@ export function repairContextFromRows(
     previewContext: {
       selectedWilayaCount: repairRows.length,
       communeCoverageSummary: "Wilaya-level WooCommerce shipping zones.",
-      enabledMethodLabels: supportedMethodDefs.map((method) => method.label),
+      enabledMethodLabels: methodDefs.map((method) => method.label),
       priceSummary: "Repair missing managed setup with current default prices.",
       regionFormatLabel: "Default region label",
     },
@@ -142,18 +140,16 @@ function previewRequestForRows(
   pendingPrices: PendingPriceMap,
   pendingStatuses: PendingStatusMap,
 ): PreviewRequest {
-  const supportedMethodDefs = methodDefs.slice(0, 2);
-
   return {
     selectedWilayaCodes: rows.map((row) => row.wilaya.code),
-    methods: methodTemplatesFromDefs(supportedMethodDefs),
+    methods: methodTemplatesFromDefs(methodDefs),
     pricingRows: rows.map((row) => ({
       wilayaCode: row.wilaya.code,
       enabled: true,
-      methods: pendingRowMethods(row.wilaya, supportedMethodDefs, row.liveZone, pendingPrices),
+      methods: pendingRowMethods(row.wilaya, methodDefs, row.liveZone, pendingPrices),
       methodStatuses: pendingRowMethodStatuses(
         row.wilaya,
-        supportedMethodDefs,
+        methodDefs,
         row.liveZone,
         pendingStatuses,
       ),
@@ -164,10 +160,9 @@ function previewRequestForRows(
 function repairDefaultPrices(
   row: ShippingZoneRowView,
 ): Partial<Record<ShippingMethodTemplate["key"], number | null>> {
-  return {
-    [row.home.key]: row.home.defaultPrice,
-    [row.office.key]: row.office.defaultPrice,
-  };
+  return Object.fromEntries(
+    row.methods.map((method) => [method.key, method.defaultPrice]),
+  ) as Partial<Record<ShippingMethodTemplate["key"], number | null>>;
 }
 
 function hasShippingMethodKey(

@@ -16,6 +16,7 @@ import {
   methodKeys,
   rowMatchesFilter,
   rowMatchesSearch,
+  shippingZoneMethodDefs,
   shippingZoneStats,
 } from "@/lib/shipping-zones/status";
 import type { ShippingMethodKey } from "@/types/generator";
@@ -37,7 +38,7 @@ import { ShippingZonesStatusCard } from "./ShippingZonesStatusCard";
 import { ShippingZonesTable } from "./ShippingZonesTable";
 import { ShippingZonesToolbar } from "./ShippingZonesToolbar";
 
-type BulkTarget = "home" | "office" | "both";
+type BulkTarget = ShippingMethodKey | "all";
 
 export function ShippingZonesPage({
   config,
@@ -59,14 +60,24 @@ export function ShippingZonesPage({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [repairRows, setRepairRows] = useState<ShippingZoneRowView[]>([]);
 
-  const editableMethodKeys = methodKeys(methodDefs);
+  const displayMethodDefs = useMemo(
+    () => shippingZoneMethodDefs(methodDefs, diagnosticsState),
+    [diagnosticsState, methodDefs],
+  );
+  const editableMethodKeys = methodKeys(displayMethodDefs);
 
   const rows = useMemo(
     () =>
-      buildShippingZoneRows(wilayas, methodDefs, diagnosticsState, pendingPrices, pendingStatuses),
-    [diagnosticsState, methodDefs, pendingPrices, pendingStatuses, wilayas],
+      buildShippingZoneRows(
+        wilayas,
+        displayMethodDefs,
+        diagnosticsState,
+        pendingPrices,
+        pendingStatuses,
+      ),
+    [diagnosticsState, displayMethodDefs, pendingPrices, pendingStatuses, wilayas],
   );
-  const bulkMethodKeys = bulkTargetMethodKeys(rows, editableMethodKeys);
+  const bulkTargetMethods = bulkTargetMethodViews(rows, editableMethodKeys);
   const visibleRows = rows.filter(
     (row) => rowMatchesFilter(row, filter) && rowMatchesSearch(row, search),
   );
@@ -76,10 +87,10 @@ export function ShippingZonesPage({
     selectableVisibleRows.every((row) => selectedCodes.includes(row.wilaya.code));
   const selectedRows = rows.filter((row) => selectedCodes.includes(row.wilaya.code));
   const selectedRowsWithEditableMethods = selectedRows.filter((row) =>
-    methodViewsForBulkTarget(row, "both").some((method) => method.canEdit),
+    methodViewsForBulkTarget(row, "all").some((method) => method.canEdit),
   );
   const selectedRowsWithToggleableMethods = selectedRows.filter((row) =>
-    methodViewsForBulkTarget(row, "both").some((method) => method.canToggleStatus),
+    methodViewsForBulkTarget(row, "all").some((method) => method.canToggleStatus),
   );
   const selectedRepairableRows = selectedRows.filter((row) => row.canRepair);
   const actionableSelectionCodes = new Set([
@@ -93,12 +104,12 @@ export function ShippingZonesPage({
   const changes = pendingReviewItems(rows, pendingPrices, pendingStatuses);
   const reviewContext = reviewContextFromPendingChanges(
     wilayas,
-    methodDefs,
+    displayMethodDefs,
     diagnosticsState,
     pendingPrices,
     pendingStatuses,
   );
-  const repairContext = repairContextFromRows(repairRows, methodDefs);
+  const repairContext = repairContextFromRows(repairRows, displayMethodDefs);
 
   const updatePendingPrice = (
     row: ShippingZoneRowView,
@@ -275,7 +286,7 @@ export function ShippingZonesPage({
         statusSelectionCount={selectedRowsWithToggleableMethods.length}
         repairableSelectionCount={selectedRepairableRows.length}
         protectedSelectionCount={protectedSelectionCount}
-        targetMethodKeys={bulkMethodKeys}
+        targetMethods={bulkTargetMethods}
         onSearchChange={setSearch}
         onFilterChange={setFilter}
         onRunQuickTool={runQuickTool}
@@ -298,7 +309,7 @@ export function ShippingZonesPage({
         }
         onPriceChange={updatePendingPrice}
         onWilayaStatusChange={(row, enabled) =>
-          methodViewsForBulkTarget(row, "both").forEach((method) => {
+          methodViewsForBulkTarget(row, "all").forEach((method) => {
             if (method.canToggleStatus) {
               updatePendingStatus(row, method.key, enabled);
             }
@@ -359,23 +370,23 @@ function methodViewsForBulkTarget(
   row: ShippingZoneRowView,
   target: BulkTarget,
 ): ShippingZoneMethodView[] {
-  if (target === "both") {
-    return [row.home, row.office];
+  if (target === "all") {
+    return row.methods;
   }
 
-  return target === "home" ? [row.home] : [row.office];
+  return row.methods.filter((method) => method.key === target);
 }
 
-function bulkTargetMethodKeys(
+function bulkTargetMethodViews(
   rows: ShippingZoneRowView[],
   fallbackKeys: ShippingMethodKey[],
-): ShippingMethodKey[] {
-  const firstRow = rows[0];
-  const keys = [firstRow?.home.key, firstRow?.office.key].filter((key): key is ShippingMethodKey =>
-    Boolean(key),
-  );
+): Array<{ key: ShippingMethodKey; label: string }> {
+  const methods = rows[0]?.methods ?? [];
+  if (methods.length > 0) {
+    return methods.map((method) => ({ key: method.key, label: method.label }));
+  }
 
-  return keys.length > 0 ? keys : fallbackKeys.slice(0, 2);
+  return fallbackKeys.map((key) => ({ key, label: fallbackMethodLabel(key) }));
 }
 
 function copySelectedMethodPrice(
@@ -384,7 +395,7 @@ function copySelectedMethodPrice(
   to: ShippingMethodKey,
   pendingPrices: PendingPriceMap,
 ): PendingPriceMap {
-  const targetMethod = row.home.key === to ? row.home : row.office.key === to ? row.office : null;
+  const targetMethod = row.methods.find((method) => method.key === to);
   if (!targetMethod?.canEdit) {
     return pendingPrices;
   }
@@ -421,8 +432,7 @@ function currentMethodPrice(
   row: ShippingZoneRowView,
   method: ShippingMethodKey,
 ): number | null | undefined {
-  const methodView =
-    row.home.key === method ? row.home : row.office.key === method ? row.office : null;
+  const methodView = row.methods.find((item) => item.key === method);
   if (!methodView) {
     return undefined;
   }
@@ -431,8 +441,19 @@ function currentMethodPrice(
 }
 
 function liveMethodEnabled(row: ShippingZoneRowView, method: ShippingMethodKey): boolean | null {
-  const methodView =
-    row.home.key === method ? row.home : row.office.key === method ? row.office : null;
+  const methodView = row.methods.find((item) => item.key === method);
 
   return methodView?.enabled ?? null;
+}
+
+function fallbackMethodLabel(key: ShippingMethodKey): string {
+  if (key === "home_delivery") {
+    return "Home delivery";
+  }
+
+  if (key === "office_delivery") {
+    return "Office delivery";
+  }
+
+  return key === "custom_1" ? "Custom method 1" : "Custom method 2";
 }

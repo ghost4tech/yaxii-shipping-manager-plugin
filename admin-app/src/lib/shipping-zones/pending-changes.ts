@@ -110,7 +110,7 @@ export function pendingChangeItems(
   pendingPrices: PendingPriceMap,
 ): PendingChangeItem[] {
   return rows.flatMap((row) =>
-    ([row.home, row.office] as const).flatMap((method) => {
+    row.methods.flatMap((method) => {
       const pendingPrice = pendingPrices[row.wilaya.code]?.[method.key];
       if (pendingPrice === undefined) {
         return [];
@@ -136,7 +136,7 @@ export function pendingStatusChangeItems(
   pendingStatuses: PendingStatusMap,
 ): PendingStatusChangeItem[] {
   return rows.flatMap((row) =>
-    ([row.home, row.office] as const).flatMap((method) => {
+    row.methods.flatMap((method) => {
       const pendingEnabled = pendingStatuses[row.wilaya.code]?.[method.key];
       if (pendingEnabled === undefined || method.enabled === null) {
         return [];

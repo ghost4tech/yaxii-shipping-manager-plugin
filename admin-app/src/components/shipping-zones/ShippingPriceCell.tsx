@@ -27,6 +27,7 @@ export function ShippingPriceCell({
   if (!method.canEdit) {
     return (
       <div className="flex flex-col gap-1.5 text-xs text-muted-foreground/70">
+        <MethodLabel method={method} />
         <div className="flex items-center gap-2">
           <span className="inline-flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2.5">
             {method.livePrice === null ? "-" : formatShippingPrice(method.livePrice)}
@@ -41,6 +42,7 @@ export function ShippingPriceCell({
 
   return (
     <div className={cn("flex flex-col gap-1.5", displayDisabled && "text-muted-foreground")}>
+      <MethodLabel method={method} />
       <div className="flex items-center gap-2">
         {freeSelected ? (
           <span
@@ -75,6 +77,14 @@ export function ShippingPriceCell({
       <PendingPriceLine method={method} pending={pending} onUndo={onUndo} />
       <PendingStatusLine method={method} pending={pendingStatus} onUndo={onUndoStatus} />
     </div>
+  );
+}
+
+function MethodLabel({ method }: { method: ShippingZoneMethodView }) {
+  return (
+    <span className="max-w-32 truncate text-[11px] font-semibold text-foreground/70">
+      {method.label}
+    </span>
   );
 }
 

@@ -10,7 +10,7 @@ import { ShippingPriceCell } from "./ShippingPriceCell";
 import { ShippingZoneDetails } from "./ShippingZoneDetails";
 import { StatusBadge } from "./StatusBadge";
 
-const DESKTOP_GRID = "lg:grid-cols-[36px_1.3fr_140px_1.4fr_1.4fr_150px_44px]";
+const DESKTOP_GRID = "lg:grid-cols-[36px_1.2fr_130px_minmax(280px,2fr)_150px_44px]";
 
 export function ShippingZoneRow({
   row,
@@ -80,21 +80,16 @@ export function ShippingZoneRow({
             </span>
           )}
         </div>
-        <div className="col-start-2 lg:col-start-auto">
-          <ShippingPriceCell
-            method={row.home}
-            onChange={(price) => onPriceChange(row.home.key, price)}
-            onUndo={() => onUndo(row.home.key)}
-            onUndoStatus={() => onUndoStatus(row.home.key)}
-          />
-        </div>
-        <div className="col-start-2 lg:col-start-auto">
-          <ShippingPriceCell
-            method={row.office}
-            onChange={(price) => onPriceChange(row.office.key, price)}
-            onUndo={() => onUndo(row.office.key)}
-            onUndoStatus={() => onUndoStatus(row.office.key)}
-          />
+        <div className="col-start-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3 lg:col-start-auto">
+          {row.methods.map((method) => (
+            <ShippingPriceCell
+              key={method.key}
+              method={method}
+              onChange={(price) => onPriceChange(method.key, price)}
+              onUndo={() => onUndo(method.key)}
+              onUndoStatus={() => onUndoStatus(method.key)}
+            />
+          ))}
         </div>
         <div className="col-start-2 flex justify-start lg:col-start-auto lg:justify-end">
           <RowActions
@@ -105,10 +100,10 @@ export function ShippingZoneRow({
             onRepairSetup={onRepairSetup}
             onWilayaStatusChange={onWilayaStatusChange}
             onDiscardPending={() => {
-              onUndo(row.home.key);
-              onUndo(row.office.key);
-              onUndoStatus(row.home.key);
-              onUndoStatus(row.office.key);
+              row.methods.forEach((method) => {
+                onUndo(method.key);
+                onUndoStatus(method.key);
+              });
             }}
           />
         </div>
@@ -145,12 +140,11 @@ function RowActions({
   onWilayaStatusChange: (enabled: boolean) => void;
   onDiscardPending: () => void;
 }) {
-  const knownDisplayStates = [
-    row.home.pendingEnabled ?? row.home.enabled,
-    row.office.pendingEnabled ?? row.office.enabled,
-  ].filter((enabled): enabled is boolean => typeof enabled === "boolean");
+  const knownDisplayStates = row.methods
+    .map((method) => method.pendingEnabled ?? method.enabled)
+    .filter((enabled): enabled is boolean => typeof enabled === "boolean");
   const enabled = knownDisplayStates.length > 0 && knownDisplayStates.some(Boolean);
-  const canToggle = row.home.canToggleStatus || row.office.canToggleStatus;
+  const canToggle = row.methods.some((method) => method.canToggleStatus);
 
   return (
     <div className="flex items-center justify-end gap-1.5">
@@ -225,8 +219,7 @@ export function ShippingZoneTableHeader({
       </div>
       <div>Wilaya</div>
       <div>Status</div>
-      <div>Home delivery</div>
-      <div>Office / Stopdesk</div>
+      <div>Methods</div>
       <div className="text-right">Active</div>
       <div />
     </div>
@@ -246,5 +239,5 @@ function actionForRow(status: ShippingZoneRowView["status"]): "generator" | "dia
 }
 
 function rowHasDisabledManagedMethod(row: ShippingZoneRowView): boolean {
-  return row.home.enabled === false || row.office.enabled === false;
+  return row.methods.some((method) => method.enabled === false);
 }

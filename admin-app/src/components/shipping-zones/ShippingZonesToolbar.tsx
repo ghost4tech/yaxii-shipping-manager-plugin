@@ -27,7 +27,8 @@ import type {
 } from "@/types/shipping-zones";
 import { filterCount, SHIPPING_ZONE_FILTERS } from "@/lib/shipping-zones/status";
 
-type BulkTarget = "home" | "office" | "both";
+type MethodTarget = ShippingMethodKey | "all";
+type ToolbarMethodTarget = { key: ShippingMethodKey; label: string };
 
 export function ShippingZonesToolbar({
   rows,
@@ -39,7 +40,7 @@ export function ShippingZonesToolbar({
   statusSelectionCount,
   repairableSelectionCount,
   protectedSelectionCount,
-  targetMethodKeys,
+  targetMethods,
   onSearchChange,
   onFilterChange,
   onRunQuickTool,
@@ -56,22 +57,20 @@ export function ShippingZonesToolbar({
   statusSelectionCount: number;
   repairableSelectionCount: number;
   protectedSelectionCount: number;
-  targetMethodKeys: ShippingMethodKey[];
+  targetMethods: ToolbarMethodTarget[];
   onSearchChange: (search: string) => void;
   onFilterChange: (filter: ShippingZoneFilter) => void;
-  onRunQuickTool: (tool: ShippingZoneQuickTool, target: BulkTarget) => void;
+  onRunQuickTool: (tool: ShippingZoneQuickTool, target: MethodTarget) => void;
   onClearSelection: () => void;
   onReviewChanges: () => void;
   onRepairSelected: () => void;
 }) {
-  const homeMethod = targetMethodKeys[0];
-  const officeMethod = targetMethodKeys[1];
-  const defaultTarget: BulkTarget = homeMethod && officeMethod ? "both" : "home";
-  const [bulkTarget, setBulkTarget] = useState<BulkTarget>(defaultTarget);
-  const targetOptions = [
-    ...(homeMethod ? [{ value: "home" as const, label: "Home" }] : []),
-    ...(officeMethod ? [{ value: "office" as const, label: "Office" }] : []),
-    ...(homeMethod && officeMethod ? [{ value: "both" as const, label: "Both" }] : []),
+  const homeMethod = targetMethods.find((method) => method.key === "home_delivery");
+  const officeMethod = targetMethods.find((method) => method.key === "office_delivery");
+  const [bulkTarget, setBulkTarget] = useState<MethodTarget>("all");
+  const targetOptions: Array<{ value: MethodTarget; label: string }> = [
+    { value: "all", label: "All" },
+    ...targetMethods.map((method) => ({ value: method.key, label: method.label })),
   ];
   const canCopyBetweenMethods = Boolean(homeMethod && officeMethod);
   const hasEditableSelection = editableSelectionCount > 0;
@@ -177,7 +176,7 @@ export function ShippingZonesToolbar({
                   onClick={() => {
                     if (homeMethod && officeMethod) {
                       onRunQuickTool(
-                        { kind: "copy", from: homeMethod, to: officeMethod },
+                        { kind: "copy", from: homeMethod.key, to: officeMethod.key },
                         bulkTarget,
                       );
                     }
@@ -190,7 +189,7 @@ export function ShippingZonesToolbar({
                   onClick={() => {
                     if (homeMethod && officeMethod) {
                       onRunQuickTool(
-                        { kind: "copy", from: officeMethod, to: homeMethod },
+                        { kind: "copy", from: officeMethod.key, to: homeMethod.key },
                         bulkTarget,
                       );
                     }

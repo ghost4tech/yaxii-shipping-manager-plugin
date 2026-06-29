@@ -28,18 +28,15 @@ export function ShippingZoneDetails({ row }: { row: ShippingZoneRowView }) {
             <div className="font-medium text-foreground/80">{zone.name}</div>
             <DetailLine label={ownershipLabel(zone.ownershipHint)} ok />
             <DetailLine label="WooCommerce zone exists" ok />
-            <DetailLine
-              label={`${row.home.label}: ${formatDzdPrice(
-                liveMethodForKey(zone, row.home.key) ? row.home.livePrice : null,
-              )}`}
-              ok={Boolean(liveMethodForKey(zone, row.home.key))}
-            />
-            <DetailLine
-              label={`${row.office.label}: ${formatDzdPrice(
-                liveMethodForKey(zone, row.office.key) ? row.office.livePrice : null,
-              )}`}
-              ok={Boolean(liveMethodForKey(zone, row.office.key))}
-            />
+            {row.methods.map((method) => (
+              <DetailLine
+                key={method.key}
+                label={`${method.label}: ${formatDzdPrice(
+                  liveMethodForKey(zone, method.key) ? method.livePrice : null,
+                )}`}
+                ok={Boolean(liveMethodForKey(zone, method.key))}
+              />
+            ))}
           </div>
         ))}
       </div>

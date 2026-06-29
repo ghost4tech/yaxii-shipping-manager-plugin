@@ -225,6 +225,16 @@ TASK-010G local smoke result:
 - Restoring the entire DZ:01 wilaya produced two `updateMethodStatuses` items and restored Home delivery `700` and Office delivery `400`.
 - The DZ:01 managed flat-rate method count stayed `2` throughout the disable/enable flow.
 
+TASK-011E local smoke result:
+
+- Browser automation authenticated into `wp-admin` as the local `dev` administrator.
+- Shipping Zones rendered the table with Home delivery, Office delivery, and `Custom method 1` price inputs for managed wilayas.
+- Chlef rendered Home delivery `700`, Office delivery `400`, and `Custom method 1` `450`.
+- The persisted plugin settings still had `custom_1` and `custom_2` disabled, which reproduced the original display gap.
+- A read-only WP-CLI settings check found 68 WooCommerce flat-rate option rows titled `Custom method 1`.
+- No generator/apply action was triggered during the smoke.
+- No WooCommerce write was performed by this fix.
+
 ### Manual-Zone Protection
 
 Do this only in a disposable local store or with explicit approval to create and remove temporary WooCommerce zones.

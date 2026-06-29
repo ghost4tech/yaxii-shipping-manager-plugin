@@ -33,6 +33,13 @@ const STATUS_LABELS: Record<ShippingZoneStatus, string> = {
   not_managed: "Not managed",
 };
 
+const FALLBACK_HOME_METHOD: MethodDef = {
+  key: "home_delivery",
+  label: "Home delivery",
+  defaultPrice: 700,
+  locked: true,
+};
+
 export function buildShippingZoneRows(
   wilayas: Wilaya[],
   methodDefs: MethodDef[],
@@ -40,12 +47,18 @@ export function buildShippingZoneRows(
   pendingPrices: PendingPriceMap,
   pendingStatuses: PendingStatusMap,
 ): ShippingZoneRowView[] {
-  const [homeMethod, officeMethod] = methodDefs;
+  const displayMethodDefs = shippingZoneMethodDefs(methodDefs, diagnosticsState);
 
   return wilayas.map((wilaya) => {
-    const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, methodDefs);
-    const home = methodViewForRow(wilaya, homeMethod, liveZone, pendingPrices, pendingStatuses);
-    const office = methodViewForRow(wilaya, officeMethod, liveZone, pendingPrices, pendingStatuses);
+    const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, displayMethodDefs);
+    const methods = displayMethodDefs.map((methodDef) =>
+      methodViewForRow(wilaya, methodDef, liveZone, pendingPrices, pendingStatuses),
+    );
+    const home =
+      methodByKey(methods, "home_delivery") ??
+      methods[0] ??
+      methodViewForRow(wilaya, FALLBACK_HOME_METHOD, liveZone, pendingPrices, pendingStatuses);
+    const office = methodByKey(methods, "office_delivery") ?? methods[1] ?? home;
     const pendingMethodCount =
       Object.keys(pendingPrices[wilaya.code] ?? {}).length +
       Object.keys(pendingStatuses[wilaya.code] ?? {}).length;
@@ -57,18 +70,50 @@ export function buildShippingZoneRows(
       status: liveZone.status,
       statusLabel: STATUS_LABELS[liveZone.status],
       statusMessage: liveZone.message,
+      methods,
       home,
       office,
       pendingMethodCount,
       canRepair,
-      canSelect:
-        home.canEdit ||
-        office.canEdit ||
-        home.canToggleStatus ||
-        office.canToggleStatus ||
-        canRepair,
+      canSelect: methods.some((method) => method.canEdit || method.canToggleStatus) || canRepair,
     };
   });
+}
+
+export function shippingZoneMethodDefs(
+  methodDefs: MethodDef[],
+  diagnosticsState: DiagnosticsLoadState,
+): MethodDef[] {
+  if (diagnosticsState.status !== "ready") {
+    return methodDefs;
+  }
+
+  const methodMap = new Map<string, MethodDef>();
+  methodDefs.filter(hasShippingMethodKey).forEach((methodDef) => {
+    methodMap.set(methodDef.key, methodDef);
+  });
+
+  diagnosticsState.response.zoneResults.forEach((zone) => {
+    if (zone.ownershipHint !== "managed_registry") {
+      return;
+    }
+
+    zone.managedMethods.forEach((managedMethod) => {
+      const key = managedMethod.methodKey;
+      if (!isShippingMethodKey(key) || methodMap.has(key)) {
+        return;
+      }
+
+      methodMap.set(key, {
+        key,
+        label: managedMethod.title || fallbackMethodLabel(key),
+        defaultPrice: priceNumberFromCost(managedMethod.lastKnownCost),
+        locked: key === "home_delivery" || key === "office_delivery",
+      });
+    });
+  });
+
+  return methodOrder(Array.from(methodMap.values()));
 }
 
 export function shippingZoneStats(rows: ShippingZoneRowView[]): ShippingZoneStats {
@@ -76,7 +121,7 @@ export function shippingZoneStats(rows: ShippingZoneRowView[]): ShippingZoneStat
     activeWilayas: rows.filter((row) => row.status === "active" || row.status === "needs_update")
       .length,
     managedMethods: rows.reduce(
-      (total, row) => total + Number(row.home.canEdit) + Number(row.office.canEdit),
+      (total, row) => total + row.methods.filter((method) => method.canEdit).length,
       0,
     ),
     pendingChanges: rows.reduce((total, row) => total + row.pendingMethodCount, 0),
@@ -124,10 +169,7 @@ export function rowMatchesSearch(row: ShippingZoneRowView, search: string): bool
 }
 
 export function methodKeys(methodDefs: MethodDef[]): ShippingMethodKey[] {
-  return methodDefs
-    .slice(0, 2)
-    .map((method) => method.key)
-    .filter(isShippingMethodKey);
+  return methodDefs.map((method) => method.key).filter(isShippingMethodKey);
 }
 
 export function isShippingMethodKey(key: string): key is ShippingMethodKey {
@@ -320,7 +362,7 @@ function liveStatusForWilaya(
     return { status: "not_managed", message: "Name match only", zones };
   }
 
-  if (!zone.hasHomeLikeMethod || !zone.hasOfficeLikeMethod) {
+  if (!hasRequiredManagedMethods(zone, methodDefs)) {
     return { status: "missing", message: "Missing managed methods", zones };
   }
 
@@ -336,7 +378,7 @@ function hasDraftPriceDifference(
   zone: ZoneDiagnostic,
   methodDefs: MethodDef[],
 ): boolean {
-  return methodDefs.slice(0, 2).some((methodDef) => {
+  return methodDefs.some((methodDef) => {
     if (!isShippingMethodKey(methodDef.key)) {
       return false;
     }
@@ -367,4 +409,50 @@ function normalizedPrice(value: number | string | null | undefined): string {
 
   const numeric = Number(value);
   return Number.isFinite(numeric) ? String(numeric) : String(value);
+}
+
+function hasRequiredManagedMethods(zone: ZoneDiagnostic, methodDefs: MethodDef[]): boolean {
+  const requiredKeys = methodDefs.map((methodDef) => methodDef.key).filter(isShippingMethodKey);
+  if (requiredKeys.length === 0) {
+    return zone.hasHomeLikeMethod && zone.hasOfficeLikeMethod;
+  }
+
+  return requiredKeys.every((methodKey) => Boolean(liveMethodForKey(zone, methodKey)));
+}
+
+function hasShippingMethodKey(
+  methodDef: MethodDef,
+): methodDef is MethodDef & { key: ShippingMethodKey } {
+  return isShippingMethodKey(methodDef.key);
+}
+
+function methodByKey(methods: ShippingZoneMethodView[], key: ShippingMethodKey) {
+  return methods.find((method) => method.key === key);
+}
+
+function methodOrder(methodDefs: MethodDef[]): MethodDef[] {
+  const order: Record<ShippingMethodKey, number> = {
+    home_delivery: 0,
+    office_delivery: 1,
+    custom_1: 2,
+    custom_2: 3,
+  };
+
+  return [...methodDefs].sort((first, second) => {
+    const firstOrder = isShippingMethodKey(first.key) ? order[first.key] : 99;
+    const secondOrder = isShippingMethodKey(second.key) ? order[second.key] : 99;
+    return firstOrder - secondOrder;
+  });
+}
+
+function fallbackMethodLabel(key: ShippingMethodKey): string {
+  if (key === "home_delivery") {
+    return "Home delivery";
+  }
+
+  if (key === "office_delivery") {
+    return "Office delivery";
+  }
+
+  return key === "custom_1" ? "Custom method 1" : "Custom method 2";
 }

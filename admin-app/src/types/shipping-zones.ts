@@ -67,6 +67,7 @@ export type ShippingZoneRowView = {
   status: ShippingZoneStatus;
   statusLabel: string;
   statusMessage: string;
+  methods: ShippingZoneMethodView[];
   home: ShippingZoneMethodView;
   office: ShippingZoneMethodView;
   pendingMethodCount: number;
