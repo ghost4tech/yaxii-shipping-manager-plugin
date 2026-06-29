@@ -93,6 +93,7 @@ final class SafeApplyEngine {
 			0 === count( $preview['plan']['createZones'] ?? array() )
 			&& 0 === count( $preview['plan']['addMethods'] ?? array() )
 			&& 0 === count( $preview['plan']['updateMethods'] ?? array() )
+			&& 0 === count( $preview['plan']['updateMethodStatuses'] ?? array() )
 			&& $this->has_unsupported_operations( $preview['plan'] )
 		) {
 			return $this->blocked_error( __( 'This preview only contains unsupported updates. No supported shipping changes were made.', 'yaxii-shipping-manager' ), 409 );
@@ -164,6 +165,11 @@ final class SafeApplyEngine {
 
 		foreach ( $preview['plan']['updateMethods'] as $method_item ) {
 			$method_result = $this->update_method( $method_item );
+			$this->collect_method_result( $method_result, $updated_methods, $skipped_method_updates, $warnings, $registry_ok );
+		}
+
+		foreach ( $preview['plan']['updateMethodStatuses'] ?? array() as $method_item ) {
+			$method_result = $this->update_method_status( $method_item );
 			$this->collect_method_result( $method_result, $updated_methods, $skipped_method_updates, $warnings, $registry_ok );
 		}
 
@@ -283,6 +289,7 @@ final class SafeApplyEngine {
 			'instanceId'    => $instance_id,
 			'title'         => $title,
 			'lastKnownCost' => $method_price,
+			'enabled'       => true,
 		);
 
 		return array(
@@ -346,8 +353,68 @@ final class SafeApplyEngine {
 			'instanceId'    => $instance_id,
 			'title'         => $title,
 			'lastKnownCost' => $method_price,
+			'enabled'       => $this->current_method_enabled( $method ),
 			'titleUpdated'  => $title_updated,
 			'priceUpdated'  => $price_updated,
+		);
+
+		return array(
+			'method'          => $updated_method,
+			'registryUpdated' => $this->managed_registry->record_method_instance( (int) $target['zone']->get_id(), $updated_method ),
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $method_item Preview method status item.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function update_method_status( array $method_item ): array {
+		if ( ! $this->valid_method_status_item( $method_item ) ) {
+			return $this->skipped_method_item( $method_item, __( 'Method status update item is not valid for apply.', 'yaxii-shipping-manager' ) );
+		}
+
+		$target = $this->managed_zone_target( $method_item );
+		if ( is_wp_error( $target ) ) {
+			return $this->skipped_method_item( $method_item, $target->get_error_message() );
+		}
+
+		$recorded_method = $this->recorded_method_for_key( $target['record'], (string) $method_item['methodKey'] );
+		if ( null === $recorded_method ) {
+			return $this->skipped_method_item( $method_item, __( 'Target method is not recorded in the Yaxii managed registry.', 'yaxii-shipping-manager' ) );
+		}
+
+		$instance_id = (int) $recorded_method['instanceId'];
+		if ( $instance_id <= 0 || 'flat_rate' !== (string) $recorded_method['methodId'] ) {
+			return $this->skipped_method_item( $method_item, __( 'Target method is not a recorded flat-rate method instance.', 'yaxii-shipping-manager' ) );
+		}
+
+		$method = $this->shipping_method_for_instance( (int) $target['zone']->get_id(), $instance_id );
+		if ( null === $method || 'flat_rate' !== (string) $method->id ) {
+			return $this->skipped_method_item( $method_item, __( 'WooCommerce no longer returns the recorded flat-rate method instance.', 'yaxii-shipping-manager' ) );
+		}
+
+		$current_enabled = $this->current_method_enabled( $method );
+		$next_enabled    = (bool) $method_item['enabled'];
+		$status_saved    = $this->save_zone_method_status( (int) $target['zone']->get_id(), $instance_id, $next_enabled );
+		if ( ! $status_saved ) {
+			return $this->skipped_method_item( $method_item, __( 'WooCommerce method status could not be saved.', 'yaxii-shipping-manager' ) );
+		}
+
+		$updated_method_instance = $this->shipping_method_for_instance( (int) $target['zone']->get_id(), $instance_id ) ?? $method;
+		$updated_method = array(
+			'wilayaCode'     => (string) $method_item['wilayaCode'],
+			'wilayaName'     => (string) ( $method_item['wilayaName'] ?? '' ),
+			'zoneId'         => (int) $target['zone']->get_id(),
+			'zoneName'       => (string) $method_item['zoneName'],
+			'methodKey'      => (string) $method_item['methodKey'],
+			'methodId'       => 'flat_rate',
+			'instanceId'     => $instance_id,
+			'title'          => (string) $updated_method_instance->get_option( 'title', '' ),
+			'lastKnownCost'  => $this->current_method_cost( $updated_method_instance ),
+			'enabled'        => $next_enabled,
+			'currentEnabled' => $current_enabled,
+			'statusUpdated'  => $next_enabled !== $current_enabled,
 		);
 
 		return array(
@@ -373,6 +440,17 @@ final class SafeApplyEngine {
 	private function valid_method_update_item( array $method_item ): bool {
 		return 'method_update' === ( $method_item['type'] ?? '' )
 			&& isset( $method_item['wilayaCode'], $method_item['zoneId'], $method_item['zoneName'], $method_item['methodKey'], $method_item['label'], $method_item['price'] )
+			&& 1 === preg_match( '/^\d{2}$/', (string) $method_item['wilayaCode'] )
+			&& in_array( (string) $method_item['methodKey'], self::METHOD_KEYS, true )
+			&& 'managed_registry' === (string) ( $method_item['ownershipSource'] ?? '' );
+	}
+
+	/**
+	 * @param array<string,mixed> $method_item Preview method status item.
+	 */
+	private function valid_method_status_item( array $method_item ): bool {
+		return 'method_status_update' === ( $method_item['type'] ?? '' )
+			&& isset( $method_item['wilayaCode'], $method_item['zoneId'], $method_item['zoneName'], $method_item['methodKey'], $method_item['label'], $method_item['enabled'] )
 			&& 1 === preg_match( '/^\d{2}$/', (string) $method_item['wilayaCode'] )
 			&& in_array( (string) $method_item['methodKey'], self::METHOD_KEYS, true )
 			&& 'managed_registry' === (string) ( $method_item['ownershipSource'] ?? '' );
@@ -499,17 +577,50 @@ final class SafeApplyEngine {
 		return wc_format_decimal( $settings['cost'] ?? '' );
 	}
 
-	private function save_method_settings( \WC_Shipping_Method $method, string $title, string $cost ): bool {
+	private function current_method_enabled( \WC_Shipping_Method $method ): bool {
+		return method_exists( $method, 'is_enabled' ) ? (bool) $method->is_enabled() : false;
+	}
+
+	private function save_method_settings( \WC_Shipping_Method $method, ?string $title, ?string $cost ): bool {
 		$method->init_instance_settings();
-		$settings          = is_array( $method->instance_settings ) ? $method->instance_settings : array();
-		$settings['title'] = $title;
-		$settings['cost']  = $cost;
+		$settings = is_array( $method->instance_settings ) ? $method->instance_settings : array();
+		if ( null !== $title ) {
+			$settings['title'] = $title;
+		}
+		if ( null !== $cost ) {
+			$settings['cost'] = $cost;
+		}
 		$option_key        = $method->get_instance_option_key();
 		$payload           = apply_filters( 'woocommerce_shipping_' . $method->id . '_instance_settings_values', $settings, $method );
 
 		$saved = update_option( $option_key, $payload );
 
 		return $saved || $payload === get_option( $option_key, array() );
+	}
+
+	private function save_zone_method_status( int $zone_id, int $instance_id, bool $enabled ): bool {
+		global $wpdb;
+
+		$updated = $wpdb->update(
+			$wpdb->prefix . 'woocommerce_shipping_zone_methods',
+			array( 'is_enabled' => $enabled ? 1 : 0 ),
+			array(
+				'zone_id'     => $zone_id,
+				'instance_id' => $instance_id,
+				'method_id'   => 'flat_rate',
+			),
+			array( '%d' ),
+			array( '%d', '%d', '%s' )
+		);
+
+		if ( false === $updated ) {
+			return false;
+		}
+
+		do_action( 'woocommerce_shipping_zone_method_status_toggled', $instance_id, 'flat_rate', $zone_id, $enabled ? 1 : 0 );
+		\WC_Cache_Helper::get_transient_version( 'shipping', true );
+
+		return true;
 	}
 
 	/**
@@ -698,15 +809,18 @@ final class SafeApplyEngine {
 			'wooCommerceChanged'   => $changed,
 			'previewHash'          => $preview['previewHash'],
 			'applyContractVersion' => ApplyRequestSanitizer::CONTRACT_VERSION,
-			'message'              => $this->response_message( $created_zone_count, $created_method_count, $updated_method_count, count( $preview['plan']['skipManualZones'] ) ),
+			'message'              => $this->response_message( $created_zone_count, $created_method_count, $updated_methods, count( $preview['plan']['skipManualZones'] ) ),
 		);
 	}
 
-	private function response_message( int $created_zone_count, int $created_method_count, int $updated_method_count, int $manual_skip_count ): string {
+	private function response_message( int $created_zone_count, int $created_method_count, array $updated_methods, int $manual_skip_count ): string {
+		$updated_method_count = count( $updated_methods );
+		$status_counts        = $this->status_update_counts( $updated_methods );
+
 		if ( ( $created_zone_count > 0 || $created_method_count > 0 ) && $updated_method_count > 0 ) {
 			return sprintf(
 				/* translators: 1: created zone count, 2: created method count, 3: updated method count, 4: skipped manual zone count. */
-				__( 'Created %1$d Yaxii-managed zones, added %2$d shipping methods, and updated %3$d Yaxii-managed method prices or labels. Manual zones skipped: %4$d.', 'yaxii-shipping-manager' ),
+				__( 'Created %1$d Yaxii-managed zones, added %2$d shipping methods, and updated %3$d Yaxii-managed methods. Manual zones skipped: %4$d.', 'yaxii-shipping-manager' ),
 				$created_zone_count,
 				$created_method_count,
 				$updated_method_count,
@@ -725,6 +839,15 @@ final class SafeApplyEngine {
 		}
 
 		if ( $updated_method_count > 0 ) {
+			if ( $status_counts['enabled'] > 0 || $status_counts['disabled'] > 0 ) {
+				return sprintf(
+					/* translators: 1: enabled method count, 2: disabled method count. */
+					__( '%1$d methods enabled and %2$d methods disabled. Manual zones were not touched.', 'yaxii-shipping-manager' ),
+					$status_counts['enabled'],
+					$status_counts['disabled']
+				);
+			}
+
 			return sprintf(
 				/* translators: 1: updated method count. */
 				__( 'Updated %1$d Yaxii-managed method prices or labels. Manual zones were not touched.', 'yaxii-shipping-manager' ),
@@ -751,6 +874,32 @@ final class SafeApplyEngine {
 		}
 
 		return __( 'No supported changes were needed.', 'yaxii-shipping-manager' );
+	}
+
+	/**
+	 * @param array<int,array<string,mixed>> $updated_methods Updated methods.
+	 *
+	 * @return array{enabled:int,disabled:int}
+	 */
+	private function status_update_counts( array $updated_methods ): array {
+		$counts = array(
+			'enabled'  => 0,
+			'disabled' => 0,
+		);
+
+		foreach ( $updated_methods as $method ) {
+			if ( true !== (bool) ( $method['statusUpdated'] ?? false ) ) {
+				continue;
+			}
+
+			if ( true === (bool) ( $method['enabled'] ?? false ) ) {
+				++$counts['enabled'];
+			} else {
+				++$counts['disabled'];
+			}
+		}
+
+		return $counts;
 	}
 
 	private function blocked_error( string $message, int $status ): WP_Error {

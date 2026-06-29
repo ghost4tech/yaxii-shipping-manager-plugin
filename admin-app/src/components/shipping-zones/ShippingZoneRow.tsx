@@ -1,14 +1,6 @@
-import { Activity, ChevronDown, MoreHorizontal, Power, RotateCcw, Wrench } from "lucide-react";
+import { Activity, ChevronDown, RotateCcw, Wrench } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { ShippingMethodKey } from "@/types/generator";
@@ -18,7 +10,7 @@ import { ShippingPriceCell } from "./ShippingPriceCell";
 import { ShippingZoneDetails } from "./ShippingZoneDetails";
 import { StatusBadge } from "./StatusBadge";
 
-const DESKTOP_GRID = "lg:grid-cols-[36px_1.3fr_140px_1.4fr_1.4fr_110px_44px]";
+const DESKTOP_GRID = "lg:grid-cols-[36px_1.3fr_140px_1.4fr_1.4fr_150px_44px]";
 
 export function ShippingZoneRow({
   row,
@@ -27,7 +19,10 @@ export function ShippingZoneRow({
   onToggleSelect,
   onToggleExpand,
   onPriceChange,
+  onStatusChange,
+  onWilayaStatusChange,
   onUndo,
+  onUndoStatus,
   onOpenDiagnostics,
   onLaunchWizard,
   onRepairSetup,
@@ -38,7 +33,10 @@ export function ShippingZoneRow({
   onToggleSelect: (selected: boolean) => void;
   onToggleExpand: () => void;
   onPriceChange: (method: ShippingMethodKey, price: number | null | undefined) => void;
+  onStatusChange: (method: ShippingMethodKey, enabled: boolean | undefined) => void;
+  onWilayaStatusChange: (enabled: boolean) => void;
   onUndo: (method: ShippingMethodKey) => void;
+  onUndoStatus: (method: ShippingMethodKey) => void;
   onOpenDiagnostics: () => void;
   onLaunchWizard: () => void;
   onRepairSetup: () => void;
@@ -88,14 +86,18 @@ export function ShippingZoneRow({
           <ShippingPriceCell
             method={row.home}
             onChange={(price) => onPriceChange(row.home.key, price)}
+            onStatusChange={(enabled) => onStatusChange(row.home.key, enabled)}
             onUndo={() => onUndo(row.home.key)}
+            onUndoStatus={() => onUndoStatus(row.home.key)}
           />
         </div>
         <div className="col-start-2 lg:col-start-auto">
           <ShippingPriceCell
             method={row.office}
             onChange={(price) => onPriceChange(row.office.key, price)}
+            onStatusChange={(enabled) => onStatusChange(row.office.key, enabled)}
             onUndo={() => onUndo(row.office.key)}
+            onUndoStatus={() => onUndoStatus(row.office.key)}
           />
         </div>
         <div className="col-start-2 flex justify-start lg:col-start-auto lg:justify-end">
@@ -105,9 +107,12 @@ export function ShippingZoneRow({
             onOpenDiagnostics={onOpenDiagnostics}
             onLaunchWizard={onLaunchWizard}
             onRepairSetup={onRepairSetup}
+            onWilayaStatusChange={onWilayaStatusChange}
             onDiscardPending={() => {
               onUndo(row.home.key);
               onUndo(row.office.key);
+              onUndoStatus(row.home.key);
+              onUndoStatus(row.office.key);
             }}
           />
         </div>
@@ -133,6 +138,7 @@ function RowActions({
   onOpenDiagnostics,
   onLaunchWizard,
   onRepairSetup,
+  onWilayaStatusChange,
   onDiscardPending,
 }: {
   row: ShippingZoneRowView;
@@ -140,12 +146,15 @@ function RowActions({
   onOpenDiagnostics: () => void;
   onLaunchWizard: () => void;
   onRepairSetup: () => void;
+  onWilayaStatusChange: (enabled: boolean) => void;
   onDiscardPending: () => void;
 }) {
-  const knownEnabledStates = [row.home.enabled, row.office.enabled].filter(
-    (enabled): enabled is boolean => typeof enabled === "boolean",
-  );
-  const enabled = knownEnabledStates.length > 0 && knownEnabledStates.some(Boolean);
+  const knownDisplayStates = [
+    row.home.pendingEnabled ?? row.home.enabled,
+    row.office.pendingEnabled ?? row.office.enabled,
+  ].filter((enabled): enabled is boolean => typeof enabled === "boolean");
+  const enabled = knownDisplayStates.length > 0 && knownDisplayStates.some(Boolean);
+  const canToggle = row.home.canToggleStatus || row.office.canToggleStatus;
 
   return (
     <div className="flex items-center justify-end gap-1.5">
@@ -161,54 +170,42 @@ function RowActions({
       )}
       <Switch
         checked={enabled}
-        disabled
+        disabled={!canToggle}
+        onCheckedChange={(value) => onWilayaStatusChange(Boolean(value))}
         aria-label={`${row.wilaya.name} enable status`}
-        title="Enable/disable coming later"
+        title={canToggle ? "Enable or disable managed methods for this wilaya" : undefined}
         className={cn(!enabled && "data-[state=unchecked]:bg-muted")}
       />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={`${row.wilaya.name} row actions`}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuLabel className="text-xs">{row.wilaya.name}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem disabled>
-            <Power className="h-3.5 w-3.5" />
-            Enable/disable coming later
-          </DropdownMenuItem>
-          {row.pendingMethodCount > 0 && (
-            <DropdownMenuItem onClick={onDiscardPending}>
-              <RotateCcw className="h-3.5 w-3.5" />
-              Discard pending
-            </DropdownMenuItem>
-          )}
-          {row.canRepair && (
-            <DropdownMenuItem onClick={onRepairSetup}>
-              <Wrench className="h-3.5 w-3.5" />
-              Repair setup
-            </DropdownMenuItem>
-          )}
-          {contextualAction === "generator" && !row.canRepair && (
-            <DropdownMenuItem onClick={onLaunchWizard}>
-              <Wrench className="h-3.5 w-3.5" />
-              Open Generator
-            </DropdownMenuItem>
-          )}
-          {contextualAction === "diagnostics" && (
-            <DropdownMenuItem onClick={onOpenDiagnostics}>
-              <Activity className="h-3.5 w-3.5" />
-              Check diagnostics
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {row.pendingMethodCount > 0 && (
+        <button
+          type="button"
+          onClick={onDiscardPending}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label={`Discard ${row.wilaya.name} pending changes`}
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+        </button>
+      )}
+      {contextualAction === "generator" && !row.canRepair && (
+        <button
+          type="button"
+          onClick={onLaunchWizard}
+          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+        >
+          <Wrench className="h-3.5 w-3.5" />
+          Open Generator
+        </button>
+      )}
+      {contextualAction === "diagnostics" && (
+        <button
+          type="button"
+          onClick={onOpenDiagnostics}
+          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+        >
+          <Activity className="h-3.5 w-3.5" />
+          Check diagnostics
+        </button>
+      )}
     </div>
   );
 }
@@ -234,7 +231,7 @@ export function ShippingZoneTableHeader({
       <div>Status</div>
       <div>Home delivery</div>
       <div>Office / Stopdesk</div>
-      <div className="text-right">Actions</div>
+      <div className="text-right">Active</div>
       <div />
     </div>
   );

@@ -4,6 +4,7 @@ import type {
   DiagnosticsLoadState,
   LiveZoneSummary,
   PendingPriceMap,
+  PendingStatusMap,
   ShippingZoneFilter,
   ShippingZoneMethodView,
   ShippingZoneRowView,
@@ -37,14 +38,17 @@ export function buildShippingZoneRows(
   methodDefs: MethodDef[],
   diagnosticsState: DiagnosticsLoadState,
   pendingPrices: PendingPriceMap,
+  pendingStatuses: PendingStatusMap,
 ): ShippingZoneRowView[] {
   const [homeMethod, officeMethod] = methodDefs;
 
   return wilayas.map((wilaya) => {
     const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, methodDefs);
-    const home = methodViewForRow(wilaya, homeMethod, liveZone, pendingPrices);
-    const office = methodViewForRow(wilaya, officeMethod, liveZone, pendingPrices);
-    const pendingMethodCount = Object.keys(pendingPrices[wilaya.code] ?? {}).length;
+    const home = methodViewForRow(wilaya, homeMethod, liveZone, pendingPrices, pendingStatuses);
+    const office = methodViewForRow(wilaya, officeMethod, liveZone, pendingPrices, pendingStatuses);
+    const pendingMethodCount =
+      Object.keys(pendingPrices[wilaya.code] ?? {}).length +
+      Object.keys(pendingStatuses[wilaya.code] ?? {}).length;
     const canRepair = canRepairMissingSetup(liveZone);
 
     return {
@@ -57,7 +61,12 @@ export function buildShippingZoneRows(
       office,
       pendingMethodCount,
       canRepair,
-      canSelect: home.canEdit || office.canEdit || canRepair,
+      canSelect:
+        home.canEdit ||
+        office.canEdit ||
+        home.canToggleStatus ||
+        office.canToggleStatus ||
+        canRepair,
     };
   });
 }
@@ -193,11 +202,13 @@ function methodViewForRow(
   methodDef: MethodDef | undefined,
   liveZone: LiveZoneSummary,
   pendingPrices: PendingPriceMap,
+  pendingStatuses: PendingStatusMap,
 ): ShippingZoneMethodView {
   const key = methodDef && isShippingMethodKey(methodDef.key) ? methodDef.key : "home_delivery";
   const livePrice = livePriceForKey(liveZone, key);
   const enabled = liveMethodEnabledForKey(liveZone, key);
   const canEdit = canEditManagedMethod(liveZone, key);
+  const canToggleStatus = canToggleManagedMethod(liveZone, key);
 
   return {
     key,
@@ -206,11 +217,13 @@ function methodViewForRow(
     pendingPrice: pendingPrices[wilaya.code]?.[key],
     defaultPrice: methodDef?.defaultPrice ?? null,
     enabled,
+    pendingEnabled: pendingStatuses[wilaya.code]?.[key],
     canEdit,
+    canToggleStatus,
     disabledReason: canEdit
       ? undefined
       : enabled === false
-        ? "Enable/disable coming later"
+        ? "Disabled"
         : disabledReasonForStatus(liveZone.status),
   };
 }
@@ -240,6 +253,17 @@ function canEditManagedMethod(liveZone: LiveZoneSummary, methodKey: ShippingMeth
     (zone) =>
       zone.ownershipHint === "managed_registry" &&
       liveMethodForKey(zone, methodKey)?.enabled === true,
+  );
+}
+
+function canToggleManagedMethod(liveZone: LiveZoneSummary, methodKey: ShippingMethodKey): boolean {
+  if (liveZone.status !== "active" && liveZone.status !== "needs_update") {
+    return false;
+  }
+
+  return liveZone.zones.some(
+    (zone) =>
+      zone.ownershipHint === "managed_registry" && Boolean(liveMethodForKey(zone, methodKey)),
   );
 }
 
@@ -296,7 +320,7 @@ function liveStatusForWilaya(
     return { status: "not_managed", message: "Name match only", zones };
   }
 
-  if (zone.enabledMethodCount === 0 || !zone.hasHomeLikeMethod || !zone.hasOfficeLikeMethod) {
+  if (!zone.hasHomeLikeMethod || !zone.hasOfficeLikeMethod) {
     return { status: "missing", message: "Missing managed methods", zones };
   }
 

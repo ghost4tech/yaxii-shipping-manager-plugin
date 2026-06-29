@@ -92,7 +92,8 @@ function isApplyReadinessCounts(counts: unknown): counts is ApplyReadiness["coun
     typeof counts.manualSkips === "number" &&
     typeof counts.conflicts === "number" &&
     typeof counts.methodAdditions === "number" &&
-    typeof counts.methodUpdates === "number"
+    typeof counts.methodUpdates === "number" &&
+    typeof counts.methodStatusUpdates === "number"
   );
 }
 
@@ -120,6 +121,7 @@ function isPreviewSummary(summary: unknown): summary is PreviewSummary {
     typeof summary.updateZones === "number" &&
     typeof summary.addMethods === "number" &&
     typeof summary.updateMethods === "number" &&
+    typeof summary.updateMethodStatuses === "number" &&
     typeof summary.skipManualZones === "number" &&
     typeof summary.conflicts === "number" &&
     typeof summary.warnings === "number" &&
@@ -136,6 +138,7 @@ function isPreviewPlanGroups(plan: unknown): plan is PreviewPlanGroups {
     isPreviewItems(plan.updateZones) &&
     isPreviewItems(plan.addMethods) &&
     isPreviewItems(plan.updateMethods) &&
+    isPreviewItems(plan.updateMethodStatuses) &&
     isPreviewItems(plan.skipManualZones) &&
     isPreviewItems(plan.conflicts) &&
     isPreviewItems(plan.warnings) &&

@@ -15,7 +15,10 @@ export function ShippingZonesTable({
   onToggleSelect,
   onToggleExpand,
   onPriceChange,
+  onStatusChange,
+  onWilayaStatusChange,
   onUndo,
+  onUndoStatus,
   onOpenDiagnostics,
   onLaunchWizard,
   onRepairSetup,
@@ -33,7 +36,14 @@ export function ShippingZonesTable({
     method: ShippingMethodKey,
     price: number | null | undefined,
   ) => void;
+  onStatusChange: (
+    row: ShippingZoneRowView,
+    method: ShippingMethodKey,
+    enabled: boolean | undefined,
+  ) => void;
+  onWilayaStatusChange: (row: ShippingZoneRowView, enabled: boolean) => void;
   onUndo: (row: ShippingZoneRowView, method: ShippingMethodKey) => void;
+  onUndoStatus: (row: ShippingZoneRowView, method: ShippingMethodKey) => void;
   onOpenDiagnostics: () => void;
   onLaunchWizard: () => void;
   onRepairSetup: (row: ShippingZoneRowView) => void;
@@ -65,7 +75,10 @@ export function ShippingZonesTable({
             onToggleSelect={(selected) => onToggleSelect(row.wilaya.code, selected)}
             onToggleExpand={() => onToggleExpand(row.wilaya.code)}
             onPriceChange={(method, price) => onPriceChange(row, method, price)}
+            onStatusChange={(method, enabled) => onStatusChange(row, method, enabled)}
+            onWilayaStatusChange={(enabled) => onWilayaStatusChange(row, enabled)}
             onUndo={(method) => onUndo(row, method)}
+            onUndoStatus={(method) => onUndoStatus(row, method)}
             onOpenDiagnostics={onOpenDiagnostics}
             onLaunchWizard={onLaunchWizard}
             onRepairSetup={() => onRepairSetup(row)}

@@ -32,9 +32,14 @@ Supported actions:
 
 - edit a registry-owned Home delivery price
 - edit a registry-owned Office delivery price
+- enable or disable an existing registry-owned Home delivery method
+- enable or disable an existing registry-owned Office delivery method
+- disable a wilaya by disabling all existing Yaxii-managed methods for that wilaya
+- enable a wilaya by enabling all existing Yaxii-managed methods for that wilaya
 - set selected registry-owned prices to `0` with the selected-row `Make free` quick tool
 - bulk-set selected registry-owned Home, Office, or both method prices
 - bulk-set selected registry-owned Home, Office, or both methods to free shipping
+- bulk-enable or bulk-disable selected registry-owned methods
 - adjust selected prices by percent, fixed amount, or rounding as local pending changes
 - copy selected Home prices to Office or Office prices to Home as local pending changes
 - review pending changes through a focused price-update dialog
@@ -48,17 +53,19 @@ Changes will be reviewed before WooCommerce is updated.
 
 Review/apply uses the same preview endpoint and apply endpoint as the Generator. The table does not create a second apply engine.
 
-The price-update dialog shows only:
+The review dialog shows only:
 
 - affected wilaya
 - affected method
-- old price
-- new price
+- old price or status
+- new price or status
 - safety copy that WooCommerce will be checked again and manual zones will not be touched
 
 It does not show preview hashes, contract versions, zone IDs, method instance IDs, raw preview groups, or other backend details.
 
 Free shipping is represented as price `0`. Method cells display `Free` and old price -> `Free` when pending, but they do not show a permanent per-cell free toggle. Merchants use the selected-row quick tools for bulk free-shipping changes.
+
+Enable/disable changes are represented as method status changes, not deletes. A disabled method instance remains in WooCommerce with its stored price and registry record intact. Pending method status changes display as `Enabled -> Disabled` or `Disabled -> Enabled` and are written only after preview/apply revalidates the managed zone and method.
 
 ## Missing Setup Repair
 
@@ -92,19 +99,11 @@ If a missing-looking wilaya also has a duplicate/manual conflict, the row is tre
 
 Unsupported actions must be hidden, disabled, or labeled as later work:
 
-- enabling or disabling methods
-- enabling or disabling rows
 - updating manual or unknown methods
 - updating manual or unknown zones
 - adopting manual zones
 - updating zone names
 - deleting zones or methods
-
-Enable/disable state may appear as a disabled, read-only visual control when diagnostics exposes method status. The control must use this copy and must not write until a safe backend task exists:
-
-```text
-Enable/disable coming later
-```
 
 For protected rows:
 
@@ -123,6 +122,7 @@ The table routes merchants to:
 - `Repair selected`
 - `Save changes`
 - `Update prices`
+- `Update status`
 - `Clear changes`
 
 `Open WooCommerce zones` opens WooCommerce's native shipping settings in a new browser tab for inspection.
@@ -134,4 +134,4 @@ The table routes merchants to:
 - It does not update manual or unknown zones or methods.
 - It does not delete zones or methods.
 - It does not adopt manual zones.
-- It does not enable or disable shipping methods.
+- It does not create missing methods through enable/disable controls; missing setup uses the repair flow.

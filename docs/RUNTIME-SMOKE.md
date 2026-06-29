@@ -6,7 +6,7 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 
 1. Open `wp-admin/admin.php?page=yaxii-shipping-manager` as an administrator.
 2. Confirm the plugin admin page loads without console errors.
-3. Confirm Shipping Zones shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices.
+3. Confirm Shipping Zones shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices and method enabled status.
 4. Open the generator.
 5. Confirm setup modes are distinct:
    - Fresh setup: create a new shipping setup for selected wilayas.
@@ -33,11 +33,13 @@ Expected result:
 - Home and office price inputs show the live WooCommerce cost when the method is registry-owned.
 - Editing a managed price marks a pending change and shows old price -> new price.
 - The selected-row `Make free` quick tool sets managed pending prices to `0`; method cells display `Free` without a permanent per-cell free toggle.
-- `Save changes` or `Review` opens the focused price-update dialog.
-- `Update prices` calls preview and then apply through the existing safe backend.
+- Method-level switches create pending `Enabled -> Disabled` or `Disabled -> Enabled` changes for registry-owned methods.
+- The row-level switch disables or enables all existing Yaxii-managed methods for that wilaya; it does not delete the WooCommerce zone.
+- Selected-row quick tools can bulk-enable or bulk-disable selected registry-owned methods.
+- `Save changes` or `Review` opens the focused review dialog for price and status changes.
+- `Update prices`, `Update status`, or `Save changes` calls preview and then apply through the existing safe backend.
 - Missing setup rows keep price inputs disabled, show `Repair setup`, and use the existing preview/apply backend to recreate missing managed zones or methods.
 - Selecting one or more missing setup rows shows `Repair selected` without showing price quick tools for those rows.
-- Enable/disable visual state is read-only and clearly disabled because method status updates are not implemented yet.
 - Manual or unknown rows cannot be edited through the table.
 
 ## Runtime Scenarios
@@ -51,6 +53,7 @@ Expected result:
 - `createZones` is `0`.
 - `addMethods` is `0`.
 - `updateMethods` is `0`.
+- `updateMethodStatuses` is `0`.
 - The matched WooCommerce zone and method count do not change.
 
 ### Method Price Update
@@ -64,6 +67,19 @@ Expected result:
 - The registry method record updates `lastKnownCost`.
 - Repeating preview with the same draft becomes a no-op.
 - Restoring the original draft price updates the same method instance back.
+
+### Method Status Update
+
+Use one Yaxii-managed wilaya and one registry-owned flat-rate method.
+
+Expected result:
+
+- Preview reports one `updateMethodStatuses` item.
+- Apply updates only that method instance's `enabled` setting.
+- The registry method record updates `enabled`.
+- Disabling the method removes it from WooCommerce rate output while preserving its stored price.
+- Re-enabling the method returns it to WooCommerce rate output with the original price.
+- No zones or methods are created or deleted.
 
 ### No Duplicates
 
@@ -83,6 +99,7 @@ Expected result:
 
 - WooCommerce matches the Yaxii-managed zone for that wilaya.
 - Enabled flat-rate methods return the expected labels and restored prices.
+- Disabled flat-rate methods do not return in the rate output.
 
 ### Missing Setup Repair
 
@@ -133,6 +150,22 @@ TASK-010E local smoke result:
 - The review dialog opened from `Save changes`; `Update prices` used the existing preview/apply flow and reported `Prices updated`.
 - Adrar was restored through selected-row Set price quick tools to Home delivery `700` and Office delivery `400`.
 - Runtime WooCommerce verification after restore found Adrar and Chlef each with Home delivery `700` and Office delivery `400`, with one matched zone per wilaya in the smoke script.
+
+TASK-010G local smoke result:
+
+- Browser automation authenticated into `wp-admin` with a temporary administrator user that was deleted after smoke.
+- Shipping Zones rendered method-level Home/Office enabled switches and row-level wilaya enabled switches.
+- The 3-dot row action menu was absent from the visible row action area.
+- Adrar rendered live Home delivery `700` and Office delivery `400`.
+- Keyboard activation selected Adrar and revealed the selected-row quick tools, including Home, Office, Both, Set price, Make free, Copy Home -> Office, Copy Office -> Home, Discard pending, Enable, Disable, and Review changes.
+- Browser quick tools created a pending disable batch for Adrar without writing immediately; the row showed two pending status changes and `Save changes`/`Review` controls.
+- Browser pending status changes were discarded; pending changes returned to `0`.
+- WP-CLI/REST smoke used the normal preview and apply REST controllers in-process with an administrator user and REST nonce.
+- Disabling DZ:01 Office delivery produced one `updateMethodStatuses` item and removed Office delivery from enabled rate output while Home delivery stayed enabled at `700`.
+- Re-enabling DZ:01 Office delivery produced one `updateMethodStatuses` item and restored Office delivery at `400`.
+- Disabling the entire DZ:01 wilaya produced two `updateMethodStatuses` items and removed both managed methods from enabled rate output without deleting methods.
+- Restoring the entire DZ:01 wilaya produced two `updateMethodStatuses` items and restored Home delivery `700` and Office delivery `400`.
+- The DZ:01 managed flat-rate method count stayed `2` throughout the disable/enable flow.
 
 ### Manual-Zone Protection
 

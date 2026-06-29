@@ -37,8 +37,11 @@ export type ApplyResultMethod = {
   instanceId?: number | null;
   title?: string;
   lastKnownCost?: string | null;
+  enabled?: boolean;
+  currentEnabled?: boolean;
   titleUpdated?: boolean;
   priceUpdated?: boolean;
+  statusUpdated?: boolean;
   type?: string;
   reason?: string;
 };

@@ -36,6 +36,7 @@ export function ShippingZonesToolbar({
   pendingCount,
   selectedCount,
   editableSelectionCount,
+  statusSelectionCount,
   repairableSelectionCount,
   protectedSelectionCount,
   targetMethodKeys,
@@ -52,6 +53,7 @@ export function ShippingZonesToolbar({
   pendingCount: number;
   selectedCount: number;
   editableSelectionCount: number;
+  statusSelectionCount: number;
   repairableSelectionCount: number;
   protectedSelectionCount: number;
   targetMethodKeys: ShippingMethodKey[];
@@ -73,6 +75,7 @@ export function ShippingZonesToolbar({
   ];
   const canCopyBetweenMethods = Boolean(homeMethod && officeMethod);
   const hasEditableSelection = editableSelectionCount > 0;
+  const hasStatusSelection = statusSelectionCount > 0;
   const hasRepairableSelection = repairableSelectionCount > 0;
 
   return (
@@ -131,7 +134,7 @@ export function ShippingZonesToolbar({
               </span>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              {hasEditableSelection && (
+              {(hasEditableSelection || hasStatusSelection) && (
                 <>
                   <span className="text-xs text-muted-foreground">Apply to</span>
                   <Segmented value={bulkTarget} onChange={setBulkTarget} options={targetOptions} />
@@ -198,21 +201,21 @@ export function ShippingZonesToolbar({
                   label="Discard pending"
                   onClick={() => onRunQuickTool({ kind: "reset" }, bulkTarget)}
                 />
+              </>
+            )}
+            {hasStatusSelection && (
+              <>
                 <div className="mx-1 h-6 w-px self-center bg-primary/15" />
                 <ToolButton
                   icon={Power}
                   label="Enable"
-                  disabled
-                  title="Enable/disable coming later"
-                  onClick={() => undefined}
+                  onClick={() => onRunQuickTool({ kind: "setEnabled", enabled: true }, bulkTarget)}
                 />
                 <ToolButton
                   icon={Power}
                   label="Disable"
-                  disabled
                   destructiveSoft
-                  title="Enable/disable coming later"
-                  onClick={() => undefined}
+                  onClick={() => onRunQuickTool({ kind: "setEnabled", enabled: false }, bulkTarget)}
                 />
               </>
             )}

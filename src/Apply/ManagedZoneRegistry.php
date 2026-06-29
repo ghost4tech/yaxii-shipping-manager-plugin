@@ -241,6 +241,7 @@ final class ManagedZoneRegistry {
 			'methodId'      => $this->sanitize_string( $method_instance['methodId'] ?? '' ),
 			'title'         => $this->sanitize_string( $method_instance['title'] ?? '' ),
 			'lastKnownCost' => isset( $method_instance['lastKnownCost'] ) ? $this->sanitize_string( $method_instance['lastKnownCost'] ) : null,
+			'enabled'       => array_key_exists( 'enabled', $method_instance ) ? (bool) $method_instance['enabled'] : true,
 		);
 	}
 

@@ -46,6 +46,7 @@ final class ApplyReadinessEvaluator {
 			'conflicts'       => count( $plan_groups['conflicts'] ?? array() ),
 			'methodAdditions' => count( $plan_groups['addMethods'] ?? array() ),
 			'methodUpdates'   => count( $plan_groups['updateMethods'] ?? array() ),
+			'methodStatusUpdates' => count( $plan_groups['updateMethodStatuses'] ?? array() ),
 		);
 	}
 
@@ -78,7 +79,7 @@ final class ApplyReadinessEvaluator {
 			return 'manual_zones_detected';
 		}
 
-		if ( $counts['methodAdditions'] > 0 || $counts['methodUpdates'] > 0 ) {
+		if ( $counts['methodAdditions'] > 0 || $counts['methodUpdates'] > 0 || $counts['methodStatusUpdates'] > 0 ) {
 			return 'methods_missing';
 		}
 
@@ -179,8 +180,8 @@ final class ApplyReadinessEvaluator {
 			),
 			'methods_missing'        => array(
 				'title'             => __( 'Missing methods can be added to managed zones', 'yaxii-shipping-manager' ),
-				'message'           => __( 'Some Yaxii-managed zones are missing enabled shipping methods. Existing method updates still need a later apply step.', 'yaxii-shipping-manager' ),
-				'recommendedAction' => __( 'Review the missing methods and prices before applying.', 'yaxii-shipping-manager' ),
+				'message'           => __( 'Some Yaxii-managed zones have missing methods, price changes, or status changes ready for review.', 'yaxii-shipping-manager' ),
+				'recommendedAction' => __( 'Review the method changes before applying.', 'yaxii-shipping-manager' ),
 			),
 			'yaxii_managed_ready'    => array(
 				'title'             => __( 'Yaxii-managed zones are already present', 'yaxii-shipping-manager' ),

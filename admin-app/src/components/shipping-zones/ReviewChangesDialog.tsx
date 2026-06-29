@@ -43,7 +43,7 @@ export function ReviewChangesDialog({
 }: ReviewChangesDialogProps) {
   const [reviewState, setReviewState] = useState<ReviewState>({ status: "idle" });
 
-  const updatePrices = async () => {
+  const saveChanges = async () => {
     if (!reviewContext) {
       setReviewState({ status: "error", message: "No supported pending changes to review." });
       return;
@@ -59,7 +59,7 @@ export function ReviewChangesDialog({
           status: "blocked",
           message:
             preview.plan.conflicts.length > 0
-              ? "WooCommerce reported a conflict. No prices were updated."
+              ? "WooCommerce reported a conflict. No changes were saved."
               : preview.canApplyLater
                 ? "This review includes setup work. Open the Generator to handle missing setup safely."
                 : preview.canApplyLaterMessage,
@@ -87,7 +87,7 @@ export function ReviewChangesDialog({
     } catch (error) {
       setReviewState({
         status: "error",
-        message: error instanceof Error ? error.message : "Unable to update prices.",
+        message: error instanceof Error ? error.message : "Unable to save changes.",
       });
     }
   };
@@ -103,7 +103,7 @@ export function ReviewChangesDialog({
     <Dialog open={open} onOpenChange={closeDialog}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Review price updates</DialogTitle>
+          <DialogTitle>Review changes</DialogTitle>
           <DialogDescription>
             WooCommerce will be checked again before updating. Manual zones will not be touched.
           </DialogDescription>
@@ -119,20 +119,22 @@ export function ReviewChangesDialog({
                 <div className="truncate font-medium">
                   {change.wilayaCode} - {change.wilayaName}
                 </div>
-                <div className="text-xs text-muted-foreground">{change.methodLabel}</div>
+                <div className="text-xs text-muted-foreground">
+                  {change.methodLabel} {change.kind === "status" ? "status" : "price"}
+                </div>
               </div>
               <div className="flex items-center gap-2 text-sm tabular-nums">
                 <span className="text-muted-foreground line-through">
-                  {formatDzdPrice(change.from)}
+                  {formatChangeFrom(change)}
                 </span>
                 <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-semibold text-foreground">{formatDzdPrice(change.to)}</span>
+                <span className="font-semibold text-foreground">{formatChangeTo(change)}</span>
               </div>
             </div>
           ))}
           {changes.length === 0 && (
             <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No supported pending price changes.
+              No supported pending changes.
             </div>
           )}
         </div>
@@ -155,7 +157,9 @@ export function ReviewChangesDialog({
           <Alert className="border-emerald-200 bg-emerald-50 text-emerald-950">
             <CheckCircle2 className="h-4 w-4" />
             <AlertTitle>
-              {reviewState.response.wooCommerceChanged ? "Prices updated" : "No price changes made"}
+              {reviewState.response.wooCommerceChanged
+                ? "Shipping changes updated"
+                : "No changes made"}
             </AlertTitle>
             <AlertDescription>{reviewState.response.message}</AlertDescription>
           </Alert>
@@ -173,15 +177,27 @@ export function ReviewChangesDialog({
           {reviewState.status !== "applied" && (
             <Button
               type="button"
-              onClick={() => void updatePrices()}
+              onClick={() => void saveChanges()}
               disabled={changes.length === 0 || reviewState.status === "loading"}
             >
               {reviewState.status === "loading" && <RefreshCw className="h-4 w-4 animate-spin" />}
-              Update prices
+              Save changes
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function formatChangeFrom(change: ReviewChangesDialogProps["changes"][number]): string {
+  return change.kind === "status" ? statusLabel(change.from) : formatDzdPrice(change.from);
+}
+
+function formatChangeTo(change: ReviewChangesDialogProps["changes"][number]): string {
+  return change.kind === "status" ? statusLabel(change.to) : formatDzdPrice(change.to);
+}
+
+function statusLabel(enabled: boolean): string {
+  return enabled ? "Enabled" : "Disabled";
 }

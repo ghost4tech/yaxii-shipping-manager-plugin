@@ -4,11 +4,18 @@ import type { PreviewRequest, PreviewResponse } from "@/types/preview";
 import type {
   DiagnosticsLoadState,
   PendingPriceMap,
+  PendingStatusMap,
   ReviewContext,
   ShippingZoneRowView,
 } from "@/types/shipping-zones";
 
-import { pendingPriceCount, pendingReviewPriceSummary, pendingRowMethods } from "./pending-changes";
+import {
+  pendingChangeCount,
+  pendingReviewItems,
+  pendingReviewSummary,
+  pendingRowMethods,
+  pendingRowMethodStatuses,
+} from "./pending-changes";
 import { buildShippingZoneRows, isShippingMethodKey } from "./status";
 
 export function reviewContextFromPendingChanges(
@@ -16,41 +23,35 @@ export function reviewContextFromPendingChanges(
   methodDefs: MethodDef[],
   diagnosticsState: DiagnosticsLoadState,
   pendingPrices: PendingPriceMap,
+  pendingStatuses: PendingStatusMap = {},
 ): ReviewContext | null {
-  if (diagnosticsState.status !== "ready" || pendingPriceCount(pendingPrices) === 0) {
+  if (
+    diagnosticsState.status !== "ready" ||
+    pendingChangeCount(pendingPrices, pendingStatuses) === 0
+  ) {
     return null;
   }
 
-  const rows = buildShippingZoneRows(wilayas, methodDefs, diagnosticsState, pendingPrices);
+  const rows = buildShippingZoneRows(
+    wilayas,
+    methodDefs,
+    diagnosticsState,
+    pendingPrices,
+    pendingStatuses,
+  );
   const changedRows = rows.filter((row) => row.pendingMethodCount > 0);
   if (changedRows.length === 0) {
     return null;
   }
 
   return {
-    request: previewRequestForRows(changedRows, methodDefs, pendingPrices),
+    request: previewRequestForRows(changedRows, methodDefs, pendingPrices, pendingStatuses),
     previewContext: {
       selectedWilayaCount: changedRows.length,
       communeCoverageSummary: "Wilaya-level WooCommerce shipping zones.",
       enabledMethodLabels: methodDefs.slice(0, 2).map((method) => method.label),
-      priceSummary: pendingReviewPriceSummary(
-        changedRows.flatMap((row) =>
-          ([row.home, row.office] as const).flatMap((method) =>
-            pendingPrices[row.wilaya.code]?.[method.key] === undefined
-              ? []
-              : [
-                  {
-                    id: `${row.wilaya.code}-${method.key}`,
-                    wilayaCode: row.wilaya.code,
-                    wilayaName: row.wilaya.name,
-                    methodKey: method.key,
-                    methodLabel: method.label,
-                    from: method.livePrice,
-                    to: pendingPrices[row.wilaya.code]?.[method.key] ?? null,
-                  },
-                ],
-          ),
-        ),
+      priceSummary: pendingReviewSummary(
+        pendingReviewItems(changedRows, pendingPrices, pendingStatuses),
       ),
     },
   };
@@ -104,6 +105,7 @@ export function acceptedPlanSummary(response: PreviewResponse) {
     updateZones: response.summary.updateZones,
     addMethods: response.summary.addMethods,
     updateMethods: response.summary.updateMethods,
+    updateMethodStatuses: response.summary.updateMethodStatuses,
     skipManualZones: response.summary.skipManualZones,
     conflicts: response.summary.conflicts,
     warnings: response.summary.warnings,
@@ -117,7 +119,7 @@ export function previewHasOnlySafeMethodUpdates(response: PreviewResponse): bool
     response.canApplyLater &&
     response.applyReadiness.severity !== "blocked" &&
     response.plan.conflicts.length === 0 &&
-    response.plan.updateMethods.length > 0 &&
+    (response.plan.updateMethods.length > 0 || response.plan.updateMethodStatuses.length > 0) &&
     response.plan.createZones.length === 0 &&
     response.plan.addMethods.length === 0
   );
@@ -136,6 +138,7 @@ function previewRequestForRows(
   rows: ShippingZoneRowView[],
   methodDefs: MethodDef[],
   pendingPrices: PendingPriceMap,
+  pendingStatuses: PendingStatusMap,
 ): PreviewRequest {
   const supportedMethodDefs = methodDefs.slice(0, 2);
 
@@ -146,6 +149,12 @@ function previewRequestForRows(
       wilayaCode: row.wilaya.code,
       enabled: true,
       methods: pendingRowMethods(row.wilaya, supportedMethodDefs, row.liveZone, pendingPrices),
+      methodStatuses: pendingRowMethodStatuses(
+        row.wilaya,
+        supportedMethodDefs,
+        row.liveZone,
+        pendingStatuses,
+      ),
     })),
   };
 }

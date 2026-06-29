@@ -2,7 +2,7 @@
 
 The apply workflow state model explains whether the current preview can be applied safely.
 
-TASK-008C allows three narrow write paths: create missing Yaxii-managed zones from the preview `createZones` group, add enabled flat-rate methods with prices to managed zones, and update labels or prices for existing registry-owned flat-rate method instances. The readiness model is still informational; the apply endpoint revalidates the preview before any write.
+TASK-010G allows four narrow write paths: create missing Yaxii-managed zones from the preview `createZones` group, add enabled flat-rate methods with prices to managed zones, update labels or prices for existing registry-owned flat-rate method instances, and enable or disable existing registry-owned flat-rate method instances. The readiness model is still informational; the apply endpoint revalidates the preview before any write.
 
 ## Source Inputs
 
@@ -36,7 +36,8 @@ Response field:
       "manualSkips": 0,
       "conflicts": 0,
       "methodAdditions": 0,
-      "methodUpdates": 0
+      "methodUpdates": 0,
+      "methodStatusUpdates": 0
     }
   }
 }
@@ -86,7 +87,7 @@ Resolve conflicts before applying
 
 ### `methods_missing`
 
-Matching zones exist but required enabled methods are missing or need updates.
+Matching zones exist but required enabled methods are missing, need price or label updates, or need enabled-status updates.
 
 UX title:
 
@@ -128,11 +129,11 @@ The current plugin returns:
   "previewGeneratedAt": "2026-06-28T00:00:00+00:00",
   "applyContractVersion": "apply-contract-v1",
   "canApplyLater": true,
-  "canApplyLaterMessage": "Apply can create missing Yaxii-managed zones, add missing methods, or update Yaxii-managed method prices and labels."
+  "canApplyLaterMessage": "Apply can create missing Yaxii-managed zones, add missing methods, or update Yaxii-managed method prices, labels, and enabled status."
 }
 ```
 
-`canApplyLater` is true only when the preview has supported Yaxii-managed work to apply and no blocking conflicts. Supported work currently means missing zones, missing methods, or registry-owned method label/price updates. The preview hash is a reference for a confirmed apply request. It is not stored and does not allow apply by itself.
+`canApplyLater` is true only when the preview has supported Yaxii-managed work to apply and no blocking conflicts. Supported work currently means missing zones, missing methods, registry-owned method label/price updates, or registry-owned method enabled-status updates. The preview hash is a reference for a confirmed apply request. It is not stored and does not allow apply by itself.
 
 ## Counts
 
@@ -144,6 +145,7 @@ Readiness counts are derived from preview groups:
 - `conflicts`
 - `methodAdditions`
 - `methodUpdates`
+- `methodStatusUpdates`
 
 These counts are explanatory only. They do not persist a preview plan.
 
@@ -156,7 +158,7 @@ The readiness model does not:
 - update unknown, manual, or unrecorded shipping methods
 - persist a preview plan
 
-Zone creation, method creation, method updates, and registry writes happen only inside `POST /apply` after explicit confirmation and fresh preview revalidation.
+Zone creation, method creation, method price/label updates, method enabled-status updates, and registry writes happen only inside `POST /apply` after explicit confirmation and fresh preview revalidation.
 
 ## Final Step UX
 
@@ -171,7 +173,7 @@ The main view shows one status/action card, one short setup summary, and collaps
 Merchant-facing states:
 
 - `ready_to_apply`: title `Ready to prepare shipping`; shown when the preview has safe zone creates or method additions. The action button is `Create shipping setup`, `Create zones`, or `Add methods and prices` depending on the supported work.
-- `ready_to_update_methods`: title `Ready to update prices`; shown when only registry-owned method label or price updates are available. The action button is `Update prices`.
+- `ready_to_update_methods`: title `Ready to update prices`; shown when only registry-owned method label, price, or enabled-status updates are available. The action button is `Update methods`.
 - `setup_already_created`: title `Shipping setup already exists`; shown when no missing zones or methods and no conflicts are found. Primary action is `Done`; secondary action is `Check diagnostics`.
 - `updates_pending_next`: title `Setup exists. Updates are coming next.`; shown when only unsupported existing zone updates remain for a later implementation step. This is not treated as an error.
 - `blocked`: title `Needs review before applying`; shown only for real blockers such as conflicts, WooCommerce inactive, invalid selected wilayas, preview errors, or safety policy issues.
@@ -181,7 +183,7 @@ The setup summary includes:
 - wilayas selected
 - zones to create
 - methods to add
-- registry-owned method updates, only when present
+- registry-owned method updates and status updates, only when present
 - zone name updates reserved for later, only when present
 - manual zones protected
 - conflicts, only when present
@@ -197,4 +199,4 @@ Preview-only mode hides the apply action and shows:
 Preview-only mode. Switch setup mode if you want to apply changes.
 ```
 
-TASK-008C keeps manual zones protected, skips manual overlaps, and blocks conflicts.
+TASK-010G keeps manual zones protected, skips manual overlaps, and blocks conflicts.

@@ -23,7 +23,7 @@ final class PreviewRequestSanitizer {
 
 	private const METHOD_KEYS = array( 'home_delivery', 'office_delivery', 'custom_1', 'custom_2' );
 	private const METHOD_FIELDS = array( 'key', 'enabled', 'label', 'defaultPrice', 'type', 'locked' );
-	private const PRICING_FIELDS = array( 'wilayaCode', 'enabled', 'methods' );
+	private const PRICING_FIELDS = array( 'wilayaCode', 'enabled', 'methods', 'methodStatuses' );
 	private const REGION_LABEL_FORMATS = array( 'fr', 'ar', 'fr_ar', 'ar_fr' );
 	private const ZONE_NAME_FORMATS = array( 'prefix_code_name', 'code_name', 'name_only', 'prefix_name' );
 
@@ -264,10 +264,16 @@ final class PreviewRequestSanitizer {
 			return $methods;
 		}
 
+		$method_statuses = $this->pricing_method_statuses( $raw_row['methodStatuses'] ?? array() );
+		if ( is_wp_error( $method_statuses ) ) {
+			return $method_statuses;
+		}
+
 		return array(
-			'wilayaCode' => $code,
-			'enabled'    => array_key_exists( 'enabled', $raw_row ) ? (bool) $raw_row['enabled'] : true,
-			'methods'    => $methods,
+			'wilayaCode'     => $code,
+			'enabled'        => array_key_exists( 'enabled', $raw_row ) ? (bool) $raw_row['enabled'] : true,
+			'methods'        => $methods,
+			'methodStatuses' => $method_statuses,
 		);
 	}
 
@@ -295,6 +301,28 @@ final class PreviewRequestSanitizer {
 		}
 
 		return $methods;
+	}
+
+	/**
+	 * @param mixed $raw_statuses Raw pricing method status map.
+	 *
+	 * @return array<string,bool>|WP_Error
+	 */
+	private function pricing_method_statuses( $raw_statuses ) {
+		if ( ! is_array( $raw_statuses ) || $this->is_list( $raw_statuses ) ) {
+			return $this->validation_error( __( 'Pricing row methodStatuses must be an object.', 'yaxii-shipping-manager' ) );
+		}
+
+		$statuses = array();
+		foreach ( $raw_statuses as $method_key => $raw_status ) {
+			$method_key = sanitize_key( (string) $method_key );
+			if ( ! in_array( $method_key, self::METHOD_KEYS, true ) ) {
+				return $this->validation_error( __( 'Pricing row method status key is invalid.', 'yaxii-shipping-manager' ) );
+			}
+			$statuses[ $method_key ] = (bool) $raw_status;
+		}
+
+		return $statuses;
 	}
 
 	/**

@@ -7,6 +7,7 @@ TASK-008C enables the next narrow WooCommerce write path:
 - Create missing Yaxii-managed shipping zones from the fresh preview `createZones` group.
 - Add enabled `flat_rate` shipping method instances with prices to Yaxii-managed zones only.
 - Update labels and costs for existing `flat_rate` method instances only when the target method is already recorded in the Yaxii managed registry.
+- Enable or disable existing registry-owned `flat_rate` method instances from fresh `updateMethodStatuses` items.
 - Record created zones and method instances in `yaxii_shipping_manager_managed_zones`.
 - Return a clear apply result with created, updated, skipped, blocked, warning, registry, and WooCommerce-change fields.
 
@@ -54,7 +55,8 @@ Before creating or updating any zone or method, the engine:
 6. Blocks if readiness is blocked or conflicts exist.
 7. Creates only fresh `createZones` items.
 8. Adds methods only from fresh create-zone method data or fresh `addMethods` items.
-9. Updates methods only from fresh `updateMethods` items whose target zone and method are registry-owned.
+9. Updates method labels and prices only from fresh `updateMethods` items whose target zone and method are registry-owned.
+10. Updates method enabled status only from fresh `updateMethodStatuses` items whose target zone and method are registry-owned.
 
 This re-read happens immediately before the WooCommerce write loop.
 
@@ -112,6 +114,24 @@ Successful updates write only the WooCommerce instance `title` and `cost`, then 
 
 If any ownership, location, method, or price check fails, the method update is skipped and reported. The engine does not adopt manual methods, search for replacement methods, delete methods, or update unknown instances.
 
+## Method Status Updates
+
+TASK-010G can enable or disable an existing method only when all ownership checks pass:
+
+- The preview item is a fresh `method_status_update` item.
+- The preview item has `ownershipSource: managed_registry`.
+- The target zone ID is recorded in `yaxii_shipping_manager_managed_zones`.
+- The registry wilaya code matches the preview wilaya code.
+- The WooCommerce zone still exists.
+- The WooCommerce zone still has the expected `DZ:NN` state location.
+- The target method key is already recorded in the registry for that zone.
+- The recorded WooCommerce method instance still exists in that same zone.
+- The recorded method and current WooCommerce method are `flat_rate`.
+
+Successful status updates write only WooCommerce's zone-method `is_enabled` flag for the verified `zone_id`, `instance_id`, and `flat_rate` method row, then update the registry method record `enabled` and the zone record `updatedAt`.
+
+Disabling a method does not delete the method, does not clear its stored price, and does not remove registry records. Disabling a wilaya means disabling its existing Yaxii-managed methods; it does not delete or disable the WooCommerce zone itself.
+
 ## Managed Registry
 
 Created zones and methods are recorded in:
@@ -139,6 +159,7 @@ Each method instance record includes:
 - `methodId`
 - `title`
 - `lastKnownCost`
+- `enabled`
 
 The option is written with autoload disabled. The registry does not store dataset rows, secrets, raw preview payloads, or unrelated WooCommerce data.
 

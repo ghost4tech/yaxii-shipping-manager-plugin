@@ -34,6 +34,7 @@ final class ApplyRequestSanitizer {
 		'updateZones',
 		'addMethods',
 		'updateMethods',
+		'updateMethodStatuses',
 		'skipManualZones',
 		'conflicts',
 		'warnings',

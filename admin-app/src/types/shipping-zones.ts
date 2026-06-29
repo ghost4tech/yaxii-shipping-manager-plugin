@@ -30,6 +30,7 @@ export type ShippingZoneFilter =
   | "protected";
 
 export type PendingPriceMap = Record<string, Partial<Record<ShippingMethodKey, number | null>>>;
+export type PendingStatusMap = Record<string, Partial<Record<ShippingMethodKey, boolean>>>;
 
 export type ShippingZoneQuickTool =
   | { kind: "set"; value: number }
@@ -54,7 +55,9 @@ export type ShippingZoneMethodView = {
   pendingPrice?: number | null;
   defaultPrice: number | null;
   enabled: boolean | null;
+  pendingEnabled?: boolean;
   canEdit: boolean;
+  canToggleStatus: boolean;
   disabledReason?: string;
 };
 
@@ -88,6 +91,20 @@ export type PendingChangeItem = {
   to: number | null;
 };
 
+export type PendingStatusChangeItem = {
+  id: string;
+  wilayaCode: string;
+  wilayaName: string;
+  methodKey: ShippingMethodKey;
+  methodLabel: string;
+  from: boolean;
+  to: boolean;
+};
+
+export type PendingReviewItem =
+  | ({ kind: "price" } & PendingChangeItem)
+  | ({ kind: "status" } & PendingStatusChangeItem);
+
 export type ReviewContext = {
   request: PreviewRequest;
   previewContext: GeneratorPreviewContext;
@@ -96,7 +113,7 @@ export type ReviewContext = {
 export type ReviewChangesDialogProps = {
   open: boolean;
   config: AdminBootstrapConfig;
-  changes: PendingChangeItem[];
+  changes: PendingReviewItem[];
   reviewContext: ReviewContext | null;
   onOpenChange: (open: boolean) => void;
   onPreviewReady: (

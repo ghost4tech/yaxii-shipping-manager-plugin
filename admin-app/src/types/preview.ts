@@ -9,6 +9,7 @@ export type PreviewRequest = {
     wilayaCode: string;
     enabled: boolean;
     methods: Partial<Record<ShippingMethodKey, number | null>>;
+    methodStatuses?: Partial<Record<ShippingMethodKey, boolean>>;
   }>;
   methods?: ShippingMethodTemplate[];
   zoneNameFormat?: ZoneNameFormat;
@@ -29,6 +30,8 @@ export type PreviewPlanItem = {
   methodKey?: ShippingMethodKey;
   label?: string;
   price?: number | null;
+  currentEnabled?: boolean;
+  enabled?: boolean;
   methods?: Array<{
     key: string;
     label: string;
@@ -45,6 +48,7 @@ export type PreviewPlanGroups = {
   updateZones: PreviewPlanItem[];
   addMethods: PreviewPlanItem[];
   updateMethods: PreviewPlanItem[];
+  updateMethodStatuses: PreviewPlanItem[];
   skipManualZones: PreviewPlanItem[];
   conflicts: PreviewPlanItem[];
   warnings: PreviewPlanItem[];
@@ -57,6 +61,7 @@ export type PreviewSummary = {
   updateZones: number;
   addMethods: number;
   updateMethods: number;
+  updateMethodStatuses: number;
   skipManualZones: number;
   conflicts: number;
   warnings: number;
@@ -90,6 +95,7 @@ export type ApplyReadiness = {
     conflicts: number;
     methodAdditions: number;
     methodUpdates: number;
+    methodStatusUpdates: number;
   };
 };
 

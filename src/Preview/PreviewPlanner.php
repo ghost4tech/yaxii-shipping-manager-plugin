@@ -74,7 +74,7 @@ final class PreviewPlanner {
 			'safetyPolicy'         => $settings['safetyPolicy'],
 			'canApplyLater'        => $can_apply_later,
 			'canApplyLaterMessage' => $can_apply_later
-				? __( 'Apply can create missing Yaxii-managed zones, add missing methods, or update Yaxii-managed method prices and labels.', 'yaxii-shipping-manager' )
+				? __( 'Apply can create missing Yaxii-managed zones, add missing methods, or update Yaxii-managed method prices, labels, and enabled status.', 'yaxii-shipping-manager' )
 				: __( 'Apply is available only when the preview has supported Yaxii-managed work and no blocking conflicts.', 'yaxii-shipping-manager' ),
 		);
 	}
@@ -85,7 +85,7 @@ final class PreviewPlanner {
 	 */
 	private function can_apply_later( array $plan_groups, array $apply_readiness ): bool {
 		return 'blocked' !== ( $apply_readiness['severity'] ?? '' )
-			&& ( count( $plan_groups['createZones'] ) > 0 || count( $plan_groups['addMethods'] ) > 0 || count( $plan_groups['updateMethods'] ) > 0 )
+			&& ( count( $plan_groups['createZones'] ) > 0 || count( $plan_groups['addMethods'] ) > 0 || count( $plan_groups['updateMethods'] ) > 0 || count( $plan_groups['updateMethodStatuses'] ) > 0 )
 			&& count( $plan_groups['conflicts'] ) === 0;
 	}
 
@@ -174,7 +174,7 @@ final class PreviewPlanner {
 			'wilayas'        => $wilayas,
 			'selectedCodes'  => $this->selected_codes( $wilayas, $overrides ),
 			'pricingRows'    => $this->pricing_rows_by_code( $overrides['pricingRows'] ?? array() ),
-			'methods'        => $this->enabled_methods( $settings['methods'] ?? array() ),
+			'methods'        => $this->flat_rate_methods( $settings['methods'] ?? array() ),
 			'zoneResults'    => $diagnostics['zoneResults'] ?? array(),
 		);
 	}
@@ -188,6 +188,7 @@ final class PreviewPlanner {
 			'updateZones'     => array(),
 			'addMethods'      => array(),
 			'updateMethods'   => array(),
+			'updateMethodStatuses' => array(),
 			'skipManualZones' => array(),
 			'conflicts'       => array(),
 			'warnings'        => array(),
@@ -252,6 +253,11 @@ final class PreviewPlanner {
 				$plan_groups['updateMethods'][] = $this->method_item( $wilaya, $zone, $desired_method, 'method_update' );
 				$changed                        = true;
 			}
+
+			if ( 'update_status' === $method_change['statusAction'] ) {
+				$plan_groups['updateMethodStatuses'][] = $this->method_status_item( $wilaya, $zone, $desired_method, $method_change );
+				$changed                              = true;
+			}
 		}
 
 		if ( ! $changed ) {
@@ -263,25 +269,36 @@ final class PreviewPlanner {
 	 * @param array<string,mixed> $zone Zone diagnostics.
 	 * @param array<string,mixed> $desired_method Desired method.
 	 *
-	 * @return array<string,string>
+	 * @return array<string,mixed>
 	 */
 	private function method_change( array $zone, array $desired_method ): array {
 		$existing_method = $this->registry_method( $zone, $desired_method )
 			?? $this->matching_method( $zone['methods'] ?? array(), $desired_method );
 		if ( null === $existing_method ) {
-			return array( 'action' => 'add' );
+			return array(
+				'action'       => (bool) $desired_method['enabled'] ? 'add' : 'none',
+				'statusAction' => 'none',
+			);
 		}
 
-		$desired_cost = $this->price_to_string( $desired_method['price'] );
-		if ( (string) ( $existing_method['title'] ?? '' ) !== $desired_method['label'] ) {
-			return array( 'action' => 'update' );
+		$desired_cost = null === $desired_method['price'] ? null : $this->price_to_string( $desired_method['price'] );
+		$desired_enabled = (bool) $desired_method['enabled'];
+		$current_enabled = (bool) ( $existing_method['enabled'] ?? false );
+		$price_action = 'none';
+		if ( null !== $desired_cost && (string) ( $existing_method['title'] ?? '' ) !== $desired_method['label'] ) {
+			$price_action = 'update';
 		}
 
-		if ( $desired_cost !== (string) ( $existing_method['cost'] ?? '' ) ) {
-			return array( 'action' => 'update' );
+		if ( null !== $desired_cost && $desired_cost !== (string) ( $existing_method['cost'] ?? '' ) ) {
+			$price_action = 'update';
 		}
 
-		return array( 'action' => 'none' );
+		return array(
+			'action'         => $price_action,
+			'statusAction'   => $desired_enabled === $current_enabled ? 'none' : 'update_status',
+			'currentEnabled' => $current_enabled,
+			'enabled'        => $desired_enabled,
+		);
 	}
 
 	/**
@@ -369,14 +386,16 @@ final class PreviewPlanner {
 
 		foreach ( $context['methods'] as $method ) {
 			$price = $pricing_row['methods'][ $method['key'] ] ?? $method['defaultPrice'];
-			if ( null === $price ) {
+			$enabled = $pricing_row['methodStatuses'][ $method['key'] ] ?? (bool) $method['enabled'];
+			if ( null === $price && $enabled ) {
 				continue;
 			}
 
 			$methods[] = array(
-				'key'   => (string) $method['key'],
-				'label' => (string) $method['label'],
-				'price' => $price,
+				'key'     => (string) $method['key'],
+				'label'   => (string) $method['label'],
+				'price'   => $price,
+				'enabled' => (bool) $enabled,
 			);
 		}
 
@@ -396,7 +415,12 @@ final class PreviewPlanner {
 			'wilayaName'      => (string) $wilaya['name_fr'],
 			'zoneName'        => $this->zone_name( $wilaya, $context['settings'] ),
 			'location'        => 'DZ:' . (string) $wilaya['code'],
-			'methods'         => $this->desired_methods( $wilaya, $context ),
+			'methods'         => array_values(
+				array_filter(
+					$this->desired_methods( $wilaya, $context ),
+					static fn( array $method ): bool => (bool) $method['enabled']
+				)
+			),
 			'ownershipSource' => 'managed_registry',
 			'reason'          => __( 'No direct WooCommerce zone exists for this wilaya. Apply can create and record it in the Yaxii managed registry.', 'yaxii-shipping-manager' ),
 		);
@@ -434,6 +458,27 @@ final class PreviewPlanner {
 			'methodKey'       => (string) $method['key'],
 			'label'           => (string) $method['label'],
 			'price'           => $method['price'],
+			'ownershipSource' => $this->ownership_source( $zone ),
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $wilaya Dataset wilaya.
+	 * @param array<string,mixed> $zone Zone diagnostics.
+	 * @param array<string,mixed> $method Desired method.
+	 * @param array<string,mixed> $method_change Method change summary.
+	 */
+	private function method_status_item( array $wilaya, array $zone, array $method, array $method_change ): array {
+		return array(
+			'type'            => 'method_status_update',
+			'wilayaCode'      => (string) $wilaya['code'],
+			'wilayaName'      => (string) $wilaya['name_fr'],
+			'zoneId'          => (int) $zone['zoneId'],
+			'zoneName'        => (string) $zone['name'],
+			'methodKey'       => (string) $method['key'],
+			'label'           => (string) $method['label'],
+			'currentEnabled'  => (bool) ( $method_change['currentEnabled'] ?? false ),
+			'enabled'         => (bool) ( $method_change['enabled'] ?? false ),
 			'ownershipSource' => $this->ownership_source( $zone ),
 		);
 	}
@@ -538,7 +583,7 @@ final class PreviewPlanner {
 	 *
 	 * @return array<int,array<string,mixed>>
 	 */
-	private function enabled_methods( $methods ): array {
+	private function flat_rate_methods( $methods ): array {
 		if ( ! is_array( $methods ) ) {
 			return array();
 		}
@@ -546,7 +591,7 @@ final class PreviewPlanner {
 		return array_values(
 			array_filter(
 				$methods,
-				static fn( array $method ): bool => (bool) ( $method['enabled'] ?? false ) && 'flat_rate' === ( $method['type'] ?? '' )
+				static fn( array $method ): bool => 'flat_rate' === ( $method['type'] ?? '' )
 			)
 		);
 	}
@@ -662,6 +707,7 @@ final class PreviewPlanner {
 			'updateZones'       => count( $plan_groups['updateZones'] ),
 			'addMethods'        => count( $plan_groups['addMethods'] ),
 			'updateMethods'     => count( $plan_groups['updateMethods'] ),
+			'updateMethodStatuses' => count( $plan_groups['updateMethodStatuses'] ),
 			'skipManualZones'   => count( $plan_groups['skipManualZones'] ),
 			'conflicts'         => count( $plan_groups['conflicts'] ),
 			'warnings'          => count( $plan_groups['warnings'] ),
@@ -693,6 +739,10 @@ final class PreviewPlanner {
 
 		if ( count( $plan_groups['updateMethods'] ) > 0 ) {
 			return __( 'Review this preview. Apply can update Yaxii-managed method prices and labels.', 'yaxii-shipping-manager' );
+		}
+
+		if ( count( $plan_groups['updateMethodStatuses'] ) > 0 ) {
+			return __( 'Review this preview. Apply can enable or disable Yaxii-managed methods.', 'yaxii-shipping-manager' );
 		}
 
 		if ( count( $plan_groups['createZones'] ) > 0 ) {

@@ -47,11 +47,11 @@ final class ApplyContract {
 			'safetyPolicy'             => $settings_payload['settings']['safetyPolicy'],
 			'requiredNextSteps'        => array(
 				__( 'Generate and review a fresh preview plan.', 'yaxii-shipping-manager' ),
-				__( 'Confirm the exact apply phrase before creating zones or methods.', 'yaxii-shipping-manager' ),
-				__( 'Create missing zones and add missing methods only for Yaxii-managed zones.', 'yaxii-shipping-manager' ),
+				__( 'Confirm the exact apply phrase before creating zones or updating methods.', 'yaxii-shipping-manager' ),
+				__( 'Create missing zones and add or update methods only for Yaxii-managed zones.', 'yaxii-shipping-manager' ),
 			),
 			'warnings'                 => array(
-				__( 'This apply step does not update existing zones or methods.', 'yaxii-shipping-manager' ),
+				__( 'This apply step does not update existing zone names, delete zones, or touch manual methods.', 'yaxii-shipping-manager' ),
 				__( 'Manual WooCommerce zones remain protected by default.', 'yaxii-shipping-manager' ),
 			),
 			'generatedAt'              => gmdate( 'c' ),

@@ -91,7 +91,10 @@ export function PreviewPlanPanel({
     ? affectedWilayas
     : affectedWilayas.slice(0, AFFECTED_WILAYA_LIMIT);
   const canApply = canApplyPreview(response);
-  const updateCount = response.summary.updateMethods + response.summary.updateZones;
+  const updateCount =
+    response.summary.updateMethods +
+    response.summary.updateMethodStatuses +
+    response.summary.updateZones;
   const unsupportedUpdateCount = response.summary.updateZones;
   const finalStatus = finalApplyStatus(response, plannedMethods.length, plannedUpdates.length);
   const isPreviewOnly = setupMode === "preview";
@@ -482,6 +485,7 @@ function AdvancedDetails({ response }: { response: PreviewResponse }) {
         title="Method price and label updates"
         items={response.plan.updateMethods}
       />
+      <PreviewPlanGroup title="Method status updates" items={response.plan.updateMethodStatuses} />
       <PreviewPlanGroup title="Manual zones skipped" items={response.plan.skipManualZones} />
       <PreviewPlanGroup title="Conflicts" items={response.plan.conflicts} />
       <PreviewPlanGroup title="Planner warnings" items={response.plan.warnings} />
@@ -593,6 +597,7 @@ function acceptedPlanSummary(response: PreviewResponse) {
     updateZones: response.summary.updateZones,
     addMethods: response.summary.addMethods,
     updateMethods: response.summary.updateMethods,
+    updateMethodStatuses: response.summary.updateMethodStatuses,
     skipManualZones: response.summary.skipManualZones,
     conflicts: response.summary.conflicts,
     warnings: response.summary.warnings,
@@ -606,7 +611,8 @@ function canApplyPreview(response: PreviewResponse): boolean {
     response.canApplyLater &&
     (response.plan.createZones.length > 0 ||
       response.plan.addMethods.length > 0 ||
-      response.plan.updateMethods.length > 0) &&
+      response.plan.updateMethods.length > 0 ||
+      response.plan.updateMethodStatuses.length > 0) &&
     response.applyReadiness.severity !== "blocked" &&
     response.plan.conflicts.length === 0
   );
@@ -625,7 +631,7 @@ function finalApplyStatus(
     return "ready_to_apply";
   }
 
-  if (plannedUpdateCount > 0) {
+  if (plannedUpdateCount > 0 || response.summary.updateMethodStatuses > 0) {
     return "ready_to_update_methods";
   }
 
@@ -666,7 +672,7 @@ function finalStatusMessage(
   }
 
   if (status === "ready_to_update_methods") {
-    return "Yaxii will update prices and labels only for methods it created.";
+    return "Yaxii will update prices, labels, or enabled status only for methods it created.";
   }
 
   if (status === "setup_already_created") {
@@ -741,8 +747,8 @@ function applyButtonLabel(response: PreviewResponse): string {
     return "Create zones";
   }
 
-  if (response.plan.updateMethods.length > 0) {
-    return "Update prices";
+  if (response.plan.updateMethods.length > 0 || response.plan.updateMethodStatuses.length > 0) {
+    return "Update methods";
   }
 
   return "Refresh preview";
