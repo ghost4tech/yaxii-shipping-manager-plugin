@@ -45,6 +45,7 @@ export function buildShippingZoneRows(
     const home = methodViewForRow(wilaya, homeMethod, liveZone, pendingPrices);
     const office = methodViewForRow(wilaya, officeMethod, liveZone, pendingPrices);
     const pendingMethodCount = Object.keys(pendingPrices[wilaya.code] ?? {}).length;
+    const canRepair = canRepairMissingSetup(liveZone);
 
     return {
       wilaya,
@@ -55,7 +56,8 @@ export function buildShippingZoneRows(
       home,
       office,
       pendingMethodCount,
-      canSelect: home.canEdit || office.canEdit,
+      canRepair,
+      canSelect: home.canEdit || office.canEdit || canRepair,
     };
   });
 }
@@ -239,6 +241,10 @@ function canEditManagedMethod(liveZone: LiveZoneSummary, methodKey: ShippingMeth
       zone.ownershipHint === "managed_registry" &&
       liveMethodForKey(zone, methodKey)?.enabled === true,
   );
+}
+
+function canRepairMissingSetup(liveZone: LiveZoneSummary): boolean {
+  return liveZone.status === "missing";
 }
 
 function liveStatusForWilaya(

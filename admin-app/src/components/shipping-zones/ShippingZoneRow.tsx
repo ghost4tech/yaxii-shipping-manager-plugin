@@ -1,4 +1,4 @@
-import { Activity, ChevronDown, MoreHorizontal, Power, RotateCcw, Wand2 } from "lucide-react";
+import { Activity, ChevronDown, MoreHorizontal, Power, RotateCcw, Wrench } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -30,6 +30,7 @@ export function ShippingZoneRow({
   onUndo,
   onOpenDiagnostics,
   onLaunchWizard,
+  onRepairSetup,
 }: {
   row: ShippingZoneRowView;
   selected: boolean;
@@ -40,6 +41,7 @@ export function ShippingZoneRow({
   onUndo: (method: ShippingMethodKey) => void;
   onOpenDiagnostics: () => void;
   onLaunchWizard: () => void;
+  onRepairSetup: () => void;
 }) {
   const hasPending = row.pendingMethodCount > 0;
   const contextualAction = actionForRow(row.status);
@@ -102,6 +104,7 @@ export function ShippingZoneRow({
             contextualAction={contextualAction}
             onOpenDiagnostics={onOpenDiagnostics}
             onLaunchWizard={onLaunchWizard}
+            onRepairSetup={onRepairSetup}
             onDiscardPending={() => {
               onUndo(row.home.key);
               onUndo(row.office.key);
@@ -129,12 +132,14 @@ function RowActions({
   contextualAction,
   onOpenDiagnostics,
   onLaunchWizard,
+  onRepairSetup,
   onDiscardPending,
 }: {
   row: ShippingZoneRowView;
   contextualAction: "generator" | "diagnostics" | null;
   onOpenDiagnostics: () => void;
   onLaunchWizard: () => void;
+  onRepairSetup: () => void;
   onDiscardPending: () => void;
 }) {
   const knownEnabledStates = [row.home.enabled, row.office.enabled].filter(
@@ -144,6 +149,16 @@ function RowActions({
 
   return (
     <div className="flex items-center justify-end gap-1.5">
+      {row.canRepair && (
+        <button
+          type="button"
+          onClick={onRepairSetup}
+          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2 text-xs font-medium text-primary hover:border-primary/40 hover:bg-primary/15"
+        >
+          <Wrench className="h-3.5 w-3.5" />
+          Repair setup
+        </button>
+      )}
       <Switch
         checked={enabled}
         disabled
@@ -174,9 +189,15 @@ function RowActions({
               Discard pending
             </DropdownMenuItem>
           )}
-          {contextualAction === "generator" && (
+          {row.canRepair && (
+            <DropdownMenuItem onClick={onRepairSetup}>
+              <Wrench className="h-3.5 w-3.5" />
+              Repair setup
+            </DropdownMenuItem>
+          )}
+          {contextualAction === "generator" && !row.canRepair && (
             <DropdownMenuItem onClick={onLaunchWizard}>
-              <Wand2 className="h-3.5 w-3.5" />
+              <Wrench className="h-3.5 w-3.5" />
               Open Generator
             </DropdownMenuItem>
           )}

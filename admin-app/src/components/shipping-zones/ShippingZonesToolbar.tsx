@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Search,
   Sparkles,
+  Wrench,
   X,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -34,6 +35,8 @@ export function ShippingZonesToolbar({
   filter,
   pendingCount,
   selectedCount,
+  editableSelectionCount,
+  repairableSelectionCount,
   protectedSelectionCount,
   targetMethodKeys,
   onSearchChange,
@@ -41,12 +44,15 @@ export function ShippingZonesToolbar({
   onRunQuickTool,
   onClearSelection,
   onReviewChanges,
+  onRepairSelected,
 }: {
   rows: ShippingZoneRowView[];
   search: string;
   filter: ShippingZoneFilter;
   pendingCount: number;
   selectedCount: number;
+  editableSelectionCount: number;
+  repairableSelectionCount: number;
   protectedSelectionCount: number;
   targetMethodKeys: ShippingMethodKey[];
   onSearchChange: (search: string) => void;
@@ -54,6 +60,7 @@ export function ShippingZonesToolbar({
   onRunQuickTool: (tool: ShippingZoneQuickTool, target: BulkTarget) => void;
   onClearSelection: () => void;
   onReviewChanges: () => void;
+  onRepairSelected: () => void;
 }) {
   const homeMethod = targetMethodKeys[0];
   const officeMethod = targetMethodKeys[1];
@@ -65,6 +72,8 @@ export function ShippingZonesToolbar({
     ...(homeMethod && officeMethod ? [{ value: "both" as const, label: "Both" }] : []),
   ];
   const canCopyBetweenMethods = Boolean(homeMethod && officeMethod);
+  const hasEditableSelection = editableSelectionCount > 0;
+  const hasRepairableSelection = repairableSelectionCount > 0;
 
   return (
     <div className="mt-6 space-y-4">
@@ -122,8 +131,12 @@ export function ShippingZonesToolbar({
               </span>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Apply to</span>
-              <Segmented value={bulkTarget} onChange={setBulkTarget} options={targetOptions} />
+              {hasEditableSelection && (
+                <>
+                  <span className="text-xs text-muted-foreground">Apply to</span>
+                  <Segmented value={bulkTarget} onChange={setBulkTarget} options={targetOptions} />
+                </>
+              )}
               <button
                 type="button"
                 onClick={onClearSelection}
@@ -135,70 +148,91 @@ export function ShippingZonesToolbar({
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <SetPriceTool onApply={(value) => onRunQuickTool({ kind: "set", value }, bulkTarget)} />
-            <PercentTool
-              onApply={(value) => onRunQuickTool({ kind: "percent", value }, bulkTarget)}
-            />
-            <AmountTool
-              onApply={(value) => onRunQuickTool({ kind: "amount", value }, bulkTarget)}
-            />
-            <RoundTool
-              onApply={(nearest) => onRunQuickTool({ kind: "round", nearest }, bulkTarget)}
-            />
-            <ToolButton
-              icon={Gift}
-              label="Make free"
-              onClick={() => onRunQuickTool({ kind: "free" }, bulkTarget)}
-            />
-            <ToolButton
-              icon={Copy}
-              label="Copy Home -> Office"
-              disabled={!canCopyBetweenMethods}
-              onClick={() => {
-                if (homeMethod && officeMethod) {
-                  onRunQuickTool({ kind: "copy", from: homeMethod, to: officeMethod }, bulkTarget);
-                }
-              }}
-            />
-            <ToolButton
-              icon={ArrowLeftRight}
-              label="Copy Office -> Home"
-              disabled={!canCopyBetweenMethods}
-              onClick={() => {
-                if (homeMethod && officeMethod) {
-                  onRunQuickTool({ kind: "copy", from: officeMethod, to: homeMethod }, bulkTarget);
-                }
-              }}
-            />
-            <ToolButton
-              icon={RotateCcw}
-              label="Discard pending"
-              onClick={() => onRunQuickTool({ kind: "reset" }, bulkTarget)}
-            />
-            <div className="mx-1 h-6 w-px self-center bg-primary/15" />
-            <ToolButton
-              icon={Power}
-              label="Enable"
-              disabled
-              title="Enable/disable coming later"
-              onClick={() => undefined}
-            />
-            <ToolButton
-              icon={Power}
-              label="Disable"
-              disabled
-              destructiveSoft
-              title="Enable/disable coming later"
-              onClick={() => undefined}
-            />
+            {hasEditableSelection && (
+              <>
+                <SetPriceTool
+                  onApply={(value) => onRunQuickTool({ kind: "set", value }, bulkTarget)}
+                />
+                <PercentTool
+                  onApply={(value) => onRunQuickTool({ kind: "percent", value }, bulkTarget)}
+                />
+                <AmountTool
+                  onApply={(value) => onRunQuickTool({ kind: "amount", value }, bulkTarget)}
+                />
+                <RoundTool
+                  onApply={(nearest) => onRunQuickTool({ kind: "round", nearest }, bulkTarget)}
+                />
+                <ToolButton
+                  icon={Gift}
+                  label="Make free"
+                  onClick={() => onRunQuickTool({ kind: "free" }, bulkTarget)}
+                />
+                <ToolButton
+                  icon={Copy}
+                  label="Copy Home -> Office"
+                  disabled={!canCopyBetweenMethods}
+                  onClick={() => {
+                    if (homeMethod && officeMethod) {
+                      onRunQuickTool(
+                        { kind: "copy", from: homeMethod, to: officeMethod },
+                        bulkTarget,
+                      );
+                    }
+                  }}
+                />
+                <ToolButton
+                  icon={ArrowLeftRight}
+                  label="Copy Office -> Home"
+                  disabled={!canCopyBetweenMethods}
+                  onClick={() => {
+                    if (homeMethod && officeMethod) {
+                      onRunQuickTool(
+                        { kind: "copy", from: officeMethod, to: homeMethod },
+                        bulkTarget,
+                      );
+                    }
+                  }}
+                />
+                <ToolButton
+                  icon={RotateCcw}
+                  label="Discard pending"
+                  onClick={() => onRunQuickTool({ kind: "reset" }, bulkTarget)}
+                />
+                <div className="mx-1 h-6 w-px self-center bg-primary/15" />
+                <ToolButton
+                  icon={Power}
+                  label="Enable"
+                  disabled
+                  title="Enable/disable coming later"
+                  onClick={() => undefined}
+                />
+                <ToolButton
+                  icon={Power}
+                  label="Disable"
+                  disabled
+                  destructiveSoft
+                  title="Enable/disable coming later"
+                  onClick={() => undefined}
+                />
+              </>
+            )}
+            {hasRepairableSelection && (
+              <ToolButton icon={Wrench} label="Repair selected" onClick={onRepairSelected} />
+            )}
             {pendingCount > 0 && (
               <ToolButton icon={ArrowRight} label="Review changes" onClick={onReviewChanges} />
             )}
           </div>
+          {hasRepairableSelection && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {repairableSelectionCount} selected row(s) are missing setup. Repair uses
+              preview/apply and manual zones will not be touched.
+            </p>
+          )}
           {protectedSelectionCount > 0 && (
             <p className="mt-2 text-xs text-muted-foreground">
-              {protectedSelectionCount} selected row(s) are protected or missing setup and will not
-              receive bulk price changes.
+              {protectedSelectionCount} selected row(s) are protected and will not receive bulk
+              actions.
             </p>
           )}
         </div>

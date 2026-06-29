@@ -8,32 +8,41 @@ export function ShippingZoneDetails({ row }: { row: ShippingZoneRowView }) {
   if (row.liveZone.zones.length === 0) {
     return (
       <div className="mx-4 mb-3 rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
-        No WooCommerce zone is currently matched to this wilaya.
+        {row.status === "missing"
+          ? "This wilaya is missing its Yaxii-managed WooCommerce setup."
+          : "No WooCommerce zone is currently matched to this wilaya."}
       </div>
     );
   }
 
   return (
-    <div className="mx-4 mb-3 grid grid-cols-1 gap-2 rounded-md border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground md:grid-cols-2">
-      {row.liveZone.zones.map((zone) => (
-        <div key={zone.zoneId} className="space-y-2">
-          <div className="font-medium text-foreground/80">{zone.name}</div>
-          <DetailLine label={ownershipLabel(zone.ownershipHint)} ok />
-          <DetailLine label="WooCommerce zone exists" ok />
-          <DetailLine
-            label={`${row.home.label}: ${formatDzdPrice(
-              liveMethodForKey(zone, row.home.key) ? row.home.livePrice : null,
-            )}`}
-            ok={Boolean(liveMethodForKey(zone, row.home.key))}
-          />
-          <DetailLine
-            label={`${row.office.label}: ${formatDzdPrice(
-              liveMethodForKey(zone, row.office.key) ? row.office.livePrice : null,
-            )}`}
-            ok={Boolean(liveMethodForKey(zone, row.office.key))}
-          />
+    <div className="mx-4 mb-3 rounded-md border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+      {row.status === "missing" && (
+        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+          This wilaya is missing its Yaxii-managed zone or methods.
         </div>
-      ))}
+      )}
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+        {row.liveZone.zones.map((zone) => (
+          <div key={zone.zoneId} className="space-y-2">
+            <div className="font-medium text-foreground/80">{zone.name}</div>
+            <DetailLine label={ownershipLabel(zone.ownershipHint)} ok />
+            <DetailLine label="WooCommerce zone exists" ok />
+            <DetailLine
+              label={`${row.home.label}: ${formatDzdPrice(
+                liveMethodForKey(zone, row.home.key) ? row.home.livePrice : null,
+              )}`}
+              ok={Boolean(liveMethodForKey(zone, row.home.key))}
+            />
+            <DetailLine
+              label={`${row.office.label}: ${formatDzdPrice(
+                liveMethodForKey(zone, row.office.key) ? row.office.livePrice : null,
+              )}`}
+              ok={Boolean(liveMethodForKey(zone, row.office.key))}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

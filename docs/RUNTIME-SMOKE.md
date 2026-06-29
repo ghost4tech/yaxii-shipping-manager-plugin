@@ -35,6 +35,8 @@ Expected result:
 - The selected-row `Make free` quick tool sets managed pending prices to `0`; method cells display `Free` without a permanent per-cell free toggle.
 - `Save changes` or `Review` opens the focused price-update dialog.
 - `Update prices` calls preview and then apply through the existing safe backend.
+- Missing setup rows keep price inputs disabled, show `Repair setup`, and use the existing preview/apply backend to recreate missing managed zones or methods.
+- Selecting one or more missing setup rows shows `Repair selected` without showing price quick tools for those rows.
 - Enable/disable visual state is read-only and clearly disabled because method status updates are not implemented yet.
 - Manual or unknown rows cannot be edited through the table.
 
@@ -81,6 +83,22 @@ Expected result:
 
 - WooCommerce matches the Yaxii-managed zone for that wilaya.
 - Enabled flat-rate methods return the expected labels and restored prices.
+
+### Missing Setup Repair
+
+Use a disposable LocalWP store where a Yaxii-managed wilaya zone or required managed method was deleted manually.
+
+Expected result:
+
+- Shipping Zones shows the affected wilaya as `Missing setup`.
+- Price inputs stay disabled for that row.
+- `Repair setup` or `Repair selected` opens a repair dialog.
+- The repair dialog says manual zones will not be touched.
+- Repair calls preview, then apply, through the existing safe backend.
+- Preview reports supported `createZones` or `addMethods` work and no conflicts.
+- Apply recreates the missing managed zone or method and updates the managed registry.
+- Diagnostics refresh and the repaired row becomes Active when WooCommerce returns the expected zone and methods.
+- Manual conflicts block repair and route the merchant to Diagnostics.
 
 TASK-010C local smoke result:
 

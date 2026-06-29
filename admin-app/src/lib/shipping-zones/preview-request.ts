@@ -56,6 +56,36 @@ export function reviewContextFromPendingChanges(
   };
 }
 
+export function repairContextFromRows(
+  rows: ShippingZoneRowView[],
+  methodDefs: MethodDef[],
+): ReviewContext | null {
+  const repairRows = rows.filter((row) => row.canRepair);
+  if (repairRows.length === 0) {
+    return null;
+  }
+
+  const supportedMethodDefs = methodDefs.slice(0, 2);
+
+  return {
+    request: {
+      selectedWilayaCodes: repairRows.map((row) => row.wilaya.code),
+      methods: methodTemplatesFromDefs(supportedMethodDefs),
+      pricingRows: repairRows.map((row) => ({
+        wilayaCode: row.wilaya.code,
+        enabled: true,
+        methods: repairDefaultPrices(row),
+      })),
+    },
+    previewContext: {
+      selectedWilayaCount: repairRows.length,
+      communeCoverageSummary: "Wilaya-level WooCommerce shipping zones.",
+      enabledMethodLabels: supportedMethodDefs.map((method) => method.label),
+      priceSummary: "Repair missing managed setup with current default prices.",
+    },
+  };
+}
+
 export function methodTemplatesFromDefs(methodDefs: MethodDef[]): ShippingMethodTemplate[] {
   return methodDefs.filter(hasShippingMethodKey).map((methodDef) => ({
     key: methodDef.key,
@@ -93,6 +123,15 @@ export function previewHasOnlySafeMethodUpdates(response: PreviewResponse): bool
   );
 }
 
+export function previewHasSafeSetupRepair(response: PreviewResponse): boolean {
+  return (
+    response.canApplyLater &&
+    response.applyReadiness.severity !== "blocked" &&
+    response.plan.conflicts.length === 0 &&
+    (response.plan.createZones.length > 0 || response.plan.addMethods.length > 0)
+  );
+}
+
 function previewRequestForRows(
   rows: ShippingZoneRowView[],
   methodDefs: MethodDef[],
@@ -108,6 +147,15 @@ function previewRequestForRows(
       enabled: true,
       methods: pendingRowMethods(row.wilaya, supportedMethodDefs, row.liveZone, pendingPrices),
     })),
+  };
+}
+
+function repairDefaultPrices(
+  row: ShippingZoneRowView,
+): Partial<Record<ShippingMethodTemplate["key"], number | null>> {
+  return {
+    [row.home.key]: row.home.defaultPrice,
+    [row.office.key]: row.office.defaultPrice,
   };
 }
 

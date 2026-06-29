@@ -20,6 +20,7 @@ The page shows:
 - simple row status such as `Active`, `Missing setup`, `Needs update`, `Conflict detected`, `Protected manual zone`, or `Not managed`
 - home and office live flat-rate method prices when the methods are registry-owned
 - technical zone and ownership details only after the merchant opens row details
+- a `Repair setup` action when a row is missing its Yaxii-managed WooCommerce setup
 
 Diagnostics remain read-only. They do not create, update, or delete zones or methods.
 
@@ -59,6 +60,34 @@ It does not show preview hashes, contract versions, zone IDs, method instance ID
 
 Free shipping is represented as price `0`. Method cells display `Free` and old price -> `Free` when pending, but they do not show a permanent per-cell free toggle. Merchants use the selected-row quick tools for bulk free-shipping changes.
 
+## Missing Setup Repair
+
+`Missing setup` means WooCommerce data is missing or incomplete for a Yaxii-managed wilaya. This can happen when:
+
+- the direct Yaxii-managed WooCommerce zone is missing
+- the managed registry points to a zone or method that WooCommerce no longer returns
+- one or more required Yaxii-managed methods are missing from a managed zone
+
+Missing rows keep price inputs disabled. Row details explain:
+
+```text
+This wilaya is missing its Yaxii-managed zone or methods.
+```
+
+Single missing rows show `Repair setup`. Selecting one or more missing rows shows `Repair selected`.
+
+Repair uses the existing preview/apply path:
+
+- the selected missing wilayas are previewed again
+- current Home/Office default prices from settings are used for missing methods
+- WooCommerce is re-read before apply
+- safe previews can create missing managed zones or add missing managed methods through `SafeApplyEngine`
+- diagnostics refresh after a successful repair
+
+Repair does not bypass preview/apply and does not write directly from the table.
+
+If a missing-looking wilaya also has a duplicate/manual conflict, the row is treated as `Conflict detected` or `Protected manual zone`; direct repair is not offered and the merchant is sent to Diagnostics.
+
 ## Unsupported Actions
 
 Unsupported actions must be hidden, disabled, or labeled as later work:
@@ -90,6 +119,8 @@ The table routes merchants to:
 - `Open Generator`
 - `Diagnostics`
 - `WooCommerce zones`
+- `Repair setup`
+- `Repair selected`
 - `Save changes`
 - `Update prices`
 - `Clear changes`

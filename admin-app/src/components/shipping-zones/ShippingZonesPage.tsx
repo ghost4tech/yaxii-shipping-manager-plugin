@@ -5,7 +5,10 @@ import {
   pendingPriceCount,
   withPendingPrice,
 } from "@/lib/shipping-zones/pending-changes";
-import { reviewContextFromPendingChanges } from "@/lib/shipping-zones/preview-request";
+import {
+  repairContextFromRows,
+  reviewContextFromPendingChanges,
+} from "@/lib/shipping-zones/preview-request";
 import {
   buildShippingZoneRows,
   livePriceForKey,
@@ -25,6 +28,7 @@ import type {
 } from "@/types/shipping-zones";
 
 import { PendingChangesBar } from "./PendingChangesBar";
+import { RepairSetupDialog } from "./RepairSetupDialog";
 import { ReviewChangesDialog } from "./ReviewChangesDialog";
 import { ShippingZonesHeader } from "./ShippingZonesHeader";
 import { ShippingZonesStatusCard } from "./ShippingZonesStatusCard";
@@ -50,6 +54,7 @@ export function ShippingZonesPage({
   const [search, setSearch] = useState("");
   const [pendingPrices, setPendingPrices] = useState<PendingPriceMap>({});
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [repairRows, setRepairRows] = useState<ShippingZoneRowView[]>([]);
 
   const editableMethodKeys = methodKeys(methodDefs);
 
@@ -69,7 +74,9 @@ export function ShippingZonesPage({
   const selectedRowsWithEditableMethods = selectedRows.filter((row) =>
     methodViewsForBulkTarget(row, "both").some((method) => method.canEdit),
   );
-  const protectedSelectionCount = selectedRows.length - selectedRowsWithEditableMethods.length;
+  const selectedRepairableRows = selectedRows.filter((row) => row.canRepair);
+  const protectedSelectionCount =
+    selectedRows.length - selectedRowsWithEditableMethods.length - selectedRepairableRows.length;
   const stats = shippingZoneStats(rows);
   const pendingCount = pendingPriceCount(pendingPrices);
   const changes = pendingChangeItems(rows, pendingPrices);
@@ -79,6 +86,7 @@ export function ShippingZonesPage({
     diagnosticsState,
     pendingPrices,
   );
+  const repairContext = repairContextFromRows(repairRows, methodDefs);
 
   const updatePendingPrice = (
     row: ShippingZoneRowView,
@@ -191,6 +199,20 @@ export function ShippingZonesPage({
     setReviewOpen(false);
   };
 
+  const openRepairDialog = (nextRepairRows: ShippingZoneRowView[]) => {
+    setRepairRows(nextRepairRows.filter((row) => row.canRepair));
+  };
+
+  const closeRepairDialog = (open: boolean) => {
+    if (!open) {
+      setRepairRows([]);
+    }
+  };
+
+  const handleSetupRepaired = () => {
+    setSelectedCodes([]);
+  };
+
   return (
     <div className="pb-24">
       <ShippingZonesHeader />
@@ -205,6 +227,8 @@ export function ShippingZonesPage({
         filter={filter}
         pendingCount={pendingCount}
         selectedCount={selectedCodes.length}
+        editableSelectionCount={selectedRowsWithEditableMethods.length}
+        repairableSelectionCount={selectedRepairableRows.length}
         protectedSelectionCount={protectedSelectionCount}
         targetMethodKeys={bulkMethodKeys}
         onSearchChange={setSearch}
@@ -212,6 +236,7 @@ export function ShippingZonesPage({
         onRunQuickTool={runQuickTool}
         onClearSelection={() => setSelectedCodes([])}
         onReviewChanges={() => setReviewOpen(true)}
+        onRepairSelected={() => openRepairDialog(selectedRepairableRows)}
       />
       <ShippingZonesTable
         rows={visibleRows}
@@ -230,6 +255,7 @@ export function ShippingZonesPage({
         onUndo={(row, method) => updatePendingPrice(row, method, undefined)}
         onOpenDiagnostics={onOpenDiagnostics}
         onLaunchWizard={onLaunchWizard}
+        onRepairSetup={(row) => openRepairDialog([row])}
         onClearSearch={() => {
           setSearch("");
           setFilter("all");
@@ -255,6 +281,17 @@ export function ShippingZonesPage({
         onOpenChange={setReviewOpen}
         onPreviewReady={onPreviewReady}
         onApplied={() => setPendingPrices({})}
+        onOpenDiagnostics={onOpenDiagnostics}
+        onRefreshDiagnostics={onRefreshDiagnostics}
+      />
+      <RepairSetupDialog
+        open={repairRows.length > 0}
+        config={config}
+        rows={repairRows}
+        repairContext={repairContext}
+        onOpenChange={closeRepairDialog}
+        onPreviewReady={onPreviewReady}
+        onRepaired={handleSetupRepaired}
         onOpenDiagnostics={onOpenDiagnostics}
         onRefreshDiagnostics={onRefreshDiagnostics}
       />

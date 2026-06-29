@@ -67,6 +67,7 @@ export type ShippingZoneRowView = {
   home: ShippingZoneMethodView;
   office: ShippingZoneMethodView;
   pendingMethodCount: number;
+  canRepair: boolean;
   canSelect: boolean;
 };
 
@@ -104,6 +105,22 @@ export type ReviewChangesDialogProps = {
     request: PreviewRequest,
   ) => void;
   onApplied: () => void;
+  onOpenDiagnostics: () => void;
+  onRefreshDiagnostics: () => void;
+};
+
+export type RepairSetupDialogProps = {
+  open: boolean;
+  config: AdminBootstrapConfig;
+  rows: ShippingZoneRowView[];
+  repairContext: ReviewContext | null;
+  onOpenChange: (open: boolean) => void;
+  onPreviewReady: (
+    preview: PreviewResponse,
+    context: GeneratorPreviewContext,
+    request: PreviewRequest,
+  ) => void;
+  onRepaired: () => void;
   onOpenDiagnostics: () => void;
   onRefreshDiagnostics: () => void;
 };
