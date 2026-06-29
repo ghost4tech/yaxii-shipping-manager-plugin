@@ -31,9 +31,11 @@ Supported actions:
 
 - edit a registry-owned Home delivery price
 - edit a registry-owned Office delivery price
-- set a registry-owned price to `0` with the `Free shipping` switch
+- set selected registry-owned prices to `0` with the selected-row `Make free` quick tool
 - bulk-set selected registry-owned Home, Office, or both method prices
 - bulk-set selected registry-owned Home, Office, or both methods to free shipping
+- adjust selected prices by percent, fixed amount, or rounding as local pending changes
+- copy selected Home prices to Office or Office prices to Home as local pending changes
 - review pending changes through a focused price-update dialog
 - clear pending changes before review
 
@@ -54,6 +56,8 @@ The price-update dialog shows only:
 - safety copy that WooCommerce will be checked again and manual zones will not be touched
 
 It does not show preview hashes, contract versions, zone IDs, method instance IDs, raw preview groups, or other backend details.
+
+Free shipping is represented as price `0`. Method cells display `Free` and old price -> `Free` when pending, but they do not show a permanent per-cell free toggle. Merchants use the selected-row quick tools for bulk free-shipping changes.
 
 ## Unsupported Actions
 

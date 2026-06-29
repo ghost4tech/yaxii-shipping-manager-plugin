@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
 import { ArrowRight, Undo2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { formatDzdPrice } from "@/lib/shipping-zones/status";
 import type { ShippingZoneMethodView } from "@/types/shipping-zones";
@@ -19,31 +17,18 @@ export function ShippingPriceCell({
   const pending = method.pendingPrice !== undefined;
   const displayPrice = pending ? method.pendingPrice : method.livePrice;
   const freeSelected = displayPrice === 0;
-  const [lastPaidPrice, setLastPaidPrice] = useState<number | null>(nextPaidPrice(method));
-
-  useEffect(() => {
-    if (typeof displayPrice === "number" && displayPrice > 0) {
-      setLastPaidPrice(displayPrice);
-    }
-  }, [displayPrice]);
 
   if (!method.canEdit) {
     return (
-      <div className="flex flex-col gap-1.5 text-xs text-muted-foreground/80">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2.5">
-            {method.enabled === false ? "-" : formatDzdPrice(method.livePrice)}
-          </span>
-          <span className="text-[11px]">{method.disabledReason ?? "Not managed"}</span>
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <Switch
-            checked={method.enabled ?? false}
-            disabled
-            aria-label={`${method.label} enable status`}
-          />
-          <span>{method.enabled === false ? "Enable/disable coming later" : "Status locked"}</span>
-        </div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
+        <span className="inline-flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2.5">
+          -
+        </span>
+        <span className="text-[11px]">
+          {method.enabled === false
+            ? "Enable/disable coming later"
+            : (method.disabledReason ?? "Not managed")}
+        </span>
       </div>
     );
   }
@@ -78,14 +63,6 @@ export function ShippingPriceCell({
             </span>
           </div>
         )}
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <Switch
-            checked={freeSelected}
-            onCheckedChange={(checked) => onChange(checked ? 0 : lastPaidPrice)}
-            aria-label={`${method.label} free shipping`}
-          />
-          <span>Free shipping</span>
-        </div>
       </div>
       <PendingPriceLine method={method} pending={pending} onUndo={onUndo} />
     </div>
@@ -104,7 +81,7 @@ function PendingPriceLine({
   if (!pending) {
     return (
       <span className="text-[11px] text-muted-foreground">
-        Live - {formatDzdPrice(method.livePrice)}
+        Live - {formatShippingPrice(method.livePrice)}
       </span>
     );
   }
@@ -113,10 +90,10 @@ function PendingPriceLine({
     <div className="flex items-center gap-1.5 text-[11px]">
       <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
         <span className="text-muted-foreground line-through">
-          {formatDzdPrice(method.livePrice)}
+          {formatShippingPrice(method.livePrice)}
         </span>
         <ArrowRight className="h-2.5 w-2.5" />
-        <span>{formatDzdPrice(method.pendingPrice ?? null)}</span>
+        <span>{formatShippingPrice(method.pendingPrice ?? null)}</span>
       </span>
       <button
         type="button"
@@ -140,10 +117,6 @@ function priceFromInput(value: string): number | null | undefined {
   return Number.isFinite(price) && price >= 0 ? price : undefined;
 }
 
-function nextPaidPrice(method: ShippingZoneMethodView): number | null {
-  if (method.livePrice !== null && method.livePrice !== 0) {
-    return method.livePrice;
-  }
-
-  return method.defaultPrice ?? null;
+function formatShippingPrice(price: number | null): string {
+  return price === 0 ? "Free" : formatDzdPrice(price);
 }

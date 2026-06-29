@@ -31,6 +31,16 @@ export type ShippingZoneFilter =
 
 export type PendingPriceMap = Record<string, Partial<Record<ShippingMethodKey, number | null>>>;
 
+export type ShippingZoneQuickTool =
+  | { kind: "set"; value: number }
+  | { kind: "percent"; value: number }
+  | { kind: "amount"; value: number }
+  | { kind: "round"; nearest: 10 | 50 | 100 }
+  | { kind: "free" }
+  | { kind: "copy"; from: ShippingMethodKey; to: ShippingMethodKey }
+  | { kind: "reset" }
+  | { kind: "setEnabled"; enabled: boolean };
+
 export type LiveZoneSummary = {
   status: ShippingZoneStatus;
   message: string;

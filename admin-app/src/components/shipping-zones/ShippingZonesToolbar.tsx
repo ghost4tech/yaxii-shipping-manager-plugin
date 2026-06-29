@@ -1,15 +1,32 @@
-import { ArrowRight, Coins, Gift, Search, Sparkles, X } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Coins,
+  Copy,
+  Gift,
+  Percent,
+  Plus,
+  Power,
+  RotateCcw,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
 import type { ComponentType } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { MethodDef } from "@/components/generator/types";
 import type { ShippingMethodKey } from "@/types/generator";
-import type { ShippingZoneFilter, ShippingZoneRowView } from "@/types/shipping-zones";
+import type {
+  ShippingZoneFilter,
+  ShippingZoneQuickTool,
+  ShippingZoneRowView,
+} from "@/types/shipping-zones";
 import { filterCount, SHIPPING_ZONE_FILTERS } from "@/lib/shipping-zones/status";
 
-type BulkTarget = ShippingMethodKey | "both";
+type BulkTarget = "home" | "office" | "both";
 
 export function ShippingZonesToolbar({
   rows,
@@ -18,15 +35,10 @@ export function ShippingZonesToolbar({
   pendingCount,
   selectedCount,
   protectedSelectionCount,
-  bulkTarget,
-  methodDefs,
-  bulkPrice,
+  targetMethodKeys,
   onSearchChange,
   onFilterChange,
-  onBulkTargetChange,
-  onBulkPriceChange,
-  onBulkSetPrice,
-  onBulkMakeFree,
+  onRunQuickTool,
   onClearSelection,
   onReviewChanges,
 }: {
@@ -36,24 +48,23 @@ export function ShippingZonesToolbar({
   pendingCount: number;
   selectedCount: number;
   protectedSelectionCount: number;
-  bulkTarget: BulkTarget;
-  methodDefs: MethodDef[];
-  bulkPrice: string;
+  targetMethodKeys: ShippingMethodKey[];
   onSearchChange: (search: string) => void;
   onFilterChange: (filter: ShippingZoneFilter) => void;
-  onBulkTargetChange: (method: BulkTarget) => void;
-  onBulkPriceChange: (price: string) => void;
-  onBulkSetPrice: () => void;
-  onBulkMakeFree: () => void;
+  onRunQuickTool: (tool: ShippingZoneQuickTool, target: BulkTarget) => void;
   onClearSelection: () => void;
   onReviewChanges: () => void;
 }) {
+  const homeMethod = targetMethodKeys[0];
+  const officeMethod = targetMethodKeys[1];
+  const defaultTarget: BulkTarget = homeMethod && officeMethod ? "both" : "home";
+  const [bulkTarget, setBulkTarget] = useState<BulkTarget>(defaultTarget);
   const targetOptions = [
-    ...methodDefs
-      .slice(0, 2)
-      .map((method) => ({ value: method.key as BulkTarget, label: method.label })),
-    { value: "both" as const, label: "Both" },
+    ...(homeMethod ? [{ value: "home" as const, label: "Home" }] : []),
+    ...(officeMethod ? [{ value: "office" as const, label: "Office" }] : []),
+    ...(homeMethod && officeMethod ? [{ value: "both" as const, label: "Both" }] : []),
   ];
+  const canCopyBetweenMethods = Boolean(homeMethod && officeMethod);
 
   return (
     <div className="mt-6 space-y-4">
@@ -99,36 +110,20 @@ export function ShippingZonesToolbar({
       </div>
 
       {selectedCount > 0 && (
-        <div className="rounded-lg border border-primary/20 bg-primary/10 p-3">
+        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/10 p-3">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="inline-flex h-6 items-center rounded-full bg-primary px-2 text-[11px] font-semibold text-primary-foreground">
                 {selectedCount} selected
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary/80">
                 <Sparkles className="h-3.5 w-3.5" />
                 Quick tools
               </span>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Apply to</span>
-              <div className="inline-flex rounded-md border border-border bg-card p-0.5">
-                {targetOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => onBulkTargetChange(option.value)}
-                    className={cn(
-                      "h-6 rounded px-2.5 text-xs font-medium transition-colors",
-                      bulkTarget === option.value
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+              <Segmented value={bulkTarget} onChange={setBulkTarget} options={targetOptions} />
               <button
                 type="button"
                 onClick={onClearSelection}
@@ -140,17 +135,62 @@ export function ShippingZonesToolbar({
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <div className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-card px-2.5">
-              <Input
-                value={bulkPrice}
-                onChange={(event) => onBulkPriceChange(event.target.value)}
-                placeholder="e.g. 800"
-                className="h-6 w-24 border-0 p-0 text-xs shadow-none focus-visible:ring-0"
-              />
-              <span className="text-xs text-muted-foreground">DZD</span>
-            </div>
-            <ToolButton icon={Coins} label="Set price" onClick={onBulkSetPrice} />
-            <ToolButton icon={Gift} label="Make free" onClick={onBulkMakeFree} />
+            <SetPriceTool onApply={(value) => onRunQuickTool({ kind: "set", value }, bulkTarget)} />
+            <PercentTool
+              onApply={(value) => onRunQuickTool({ kind: "percent", value }, bulkTarget)}
+            />
+            <AmountTool
+              onApply={(value) => onRunQuickTool({ kind: "amount", value }, bulkTarget)}
+            />
+            <RoundTool
+              onApply={(nearest) => onRunQuickTool({ kind: "round", nearest }, bulkTarget)}
+            />
+            <ToolButton
+              icon={Gift}
+              label="Make free"
+              onClick={() => onRunQuickTool({ kind: "free" }, bulkTarget)}
+            />
+            <ToolButton
+              icon={Copy}
+              label="Copy Home -> Office"
+              disabled={!canCopyBetweenMethods}
+              onClick={() => {
+                if (homeMethod && officeMethod) {
+                  onRunQuickTool({ kind: "copy", from: homeMethod, to: officeMethod }, bulkTarget);
+                }
+              }}
+            />
+            <ToolButton
+              icon={ArrowLeftRight}
+              label="Copy Office -> Home"
+              disabled={!canCopyBetweenMethods}
+              onClick={() => {
+                if (homeMethod && officeMethod) {
+                  onRunQuickTool({ kind: "copy", from: officeMethod, to: homeMethod }, bulkTarget);
+                }
+              }}
+            />
+            <ToolButton
+              icon={RotateCcw}
+              label="Discard pending"
+              onClick={() => onRunQuickTool({ kind: "reset" }, bulkTarget)}
+            />
+            <div className="mx-1 h-6 w-px self-center bg-primary/15" />
+            <ToolButton
+              icon={Power}
+              label="Enable"
+              disabled
+              title="Enable/disable coming later"
+              onClick={() => undefined}
+            />
+            <ToolButton
+              icon={Power}
+              label="Disable"
+              disabled
+              destructiveSoft
+              title="Enable/disable coming later"
+              onClick={() => undefined}
+            />
             {pendingCount > 0 && (
               <ToolButton icon={ArrowRight} label="Review changes" onClick={onReviewChanges} />
             )}
@@ -171,19 +211,248 @@ function ToolButton({
   icon: Icon,
   label,
   onClick,
+  disabled = false,
+  destructiveSoft = false,
+  title,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
+  destructiveSoft?: boolean;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/10"
+      disabled={disabled}
+      title={title}
+      className={cn(
+        "inline-flex h-8 items-center gap-1.5 rounded-md border bg-card px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        destructiveSoft
+          ? "border-destructive/20 text-destructive hover:bg-destructive/10"
+          : "border-border text-foreground hover:border-primary/40 hover:bg-primary/10",
+      )}
     >
       <Icon className="h-3.5 w-3.5" />
       {label}
     </button>
+  );
+}
+
+function SetPriceTool({ onApply }: { onApply: (value: number) => void }) {
+  const [price, setPrice] = useState("");
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium hover:border-primary/40 hover:bg-primary/10"
+      >
+        <Coins className="h-3.5 w-3.5" />
+        Set price
+      </button>
+      {open && (
+        <div className="absolute left-0 top-9 z-50 w-60 rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md">
+          <p className="mb-2 text-xs font-medium">Set fixed price</p>
+          <div className="flex items-center gap-2">
+            <Input
+              value={price}
+              onChange={(event) => setPrice(event.target.value)}
+              placeholder="e.g. 800"
+              className="h-8 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">DZD</span>
+          </div>
+          <Button
+            size="sm"
+            className="mt-2 h-7 w-full"
+            onClick={() => {
+              const numericPrice = Number(price.replace(/[^\d]/g, ""));
+              if (numericPrice > 0) {
+                onApply(numericPrice);
+                setOpen(false);
+              }
+            }}
+          >
+            Apply
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PercentTool({ onApply }: { onApply: (value: number) => void }) {
+  const [percent, setPercent] = useState("10");
+  const [sign, setSign] = useState<"+" | "-">("+");
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium hover:border-primary/40 hover:bg-primary/10"
+      >
+        <Percent className="h-3.5 w-3.5" />
+        Change by %
+      </button>
+      {open && (
+        <div className="absolute left-0 top-9 z-50 w-64 rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md">
+          <p className="mb-2 text-xs font-medium">Adjust by percentage</p>
+          <div className="flex items-center gap-2">
+            <Segmented
+              value={sign}
+              onChange={setSign}
+              options={[
+                { value: "+", label: "Increase" },
+                { value: "-", label: "Decrease" },
+              ]}
+            />
+            <Input
+              value={percent}
+              onChange={(event) => setPercent(event.target.value)}
+              className="h-8 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">%</span>
+          </div>
+          <Button
+            size="sm"
+            className="mt-2 h-7 w-full"
+            onClick={() => {
+              const numericPercent = Number(percent.replace(/[^\d.]/g, ""));
+              if (!Number.isNaN(numericPercent)) {
+                onApply(sign === "+" ? numericPercent : -numericPercent);
+                setOpen(false);
+              }
+            }}
+          >
+            Apply
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AmountTool({ onApply }: { onApply: (value: number) => void }) {
+  const [amount, setAmount] = useState("50");
+  const [sign, setSign] = useState<"+" | "-">("+");
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium hover:border-primary/40 hover:bg-primary/10"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Add / subtract
+      </button>
+      {open && (
+        <div className="absolute left-0 top-9 z-50 w-64 rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md">
+          <p className="mb-2 text-xs font-medium">Add or subtract fixed amount</p>
+          <div className="flex items-center gap-2">
+            <Segmented
+              value={sign}
+              onChange={setSign}
+              options={[
+                { value: "+", label: "Add" },
+                { value: "-", label: "Subtract" },
+              ]}
+            />
+            <Input
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              className="h-8 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">DZD</span>
+          </div>
+          <Button
+            size="sm"
+            className="mt-2 h-7 w-full"
+            onClick={() => {
+              const numericAmount = Number(amount.replace(/[^\d.]/g, ""));
+              if (!Number.isNaN(numericAmount)) {
+                onApply(sign === "+" ? numericAmount : -numericAmount);
+                setOpen(false);
+              }
+            }}
+          >
+            Apply
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RoundTool({ onApply }: { onApply: (nearest: 10 | 50 | 100) => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium hover:border-primary/40 hover:bg-primary/10"
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        Round to
+      </button>
+      {open && (
+        <div className="absolute left-0 top-9 z-50 w-44 rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-md">
+          <p className="px-1 pb-1 text-xs font-medium">Round to nearest</p>
+          {([10, 50, 100] as const).map((nearest) => (
+            <button
+              key={nearest}
+              type="button"
+              onClick={() => {
+                onApply(nearest);
+                setOpen(false);
+              }}
+              className="block w-full rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
+            >
+              {nearest} DZD
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Segmented<TValue extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: TValue;
+  onChange: (value: TValue) => void;
+  options: Array<{ value: TValue; label: string }>;
+}) {
+  return (
+    <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={cn(
+            "h-6 rounded px-2.5 text-xs font-medium transition-colors",
+            value === option.value
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   );
 }

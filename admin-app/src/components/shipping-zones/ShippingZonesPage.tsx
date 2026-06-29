@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 
-import { parseOptionalPrice } from "@/lib/generator/pricing";
 import {
   pendingChangeItems,
   pendingPriceCount,
@@ -9,7 +8,6 @@ import {
 import { reviewContextFromPendingChanges } from "@/lib/shipping-zones/preview-request";
 import {
   buildShippingZoneRows,
-  isShippingMethodKey,
   livePriceForKey,
   methodKeys,
   rowMatchesFilter,
@@ -19,7 +17,9 @@ import {
 import type { ShippingMethodKey } from "@/types/generator";
 import type {
   PendingPriceMap,
+  ShippingZoneQuickTool,
   ShippingZoneFilter,
+  ShippingZoneMethodView,
   ShippingZoneRowView,
   ShippingZonesPageProps,
 } from "@/types/shipping-zones";
@@ -31,7 +31,7 @@ import { ShippingZonesStatusCard } from "./ShippingZonesStatusCard";
 import { ShippingZonesTable } from "./ShippingZonesTable";
 import { ShippingZonesToolbar } from "./ShippingZonesToolbar";
 
-type BulkTarget = ShippingMethodKey | "both";
+type BulkTarget = "home" | "office" | "both";
 
 export function ShippingZonesPage({
   config,
@@ -48,17 +48,16 @@ export function ShippingZonesPage({
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<ShippingZoneFilter>("all");
   const [search, setSearch] = useState("");
-  const [bulkPrice, setBulkPrice] = useState("");
   const [pendingPrices, setPendingPrices] = useState<PendingPriceMap>({});
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const editableMethodKeys = methodKeys(methodDefs);
-  const [bulkTarget, setBulkTarget] = useState<BulkTarget>("both");
 
   const rows = useMemo(
     () => buildShippingZoneRows(wilayas, methodDefs, diagnosticsState, pendingPrices),
     [diagnosticsState, methodDefs, pendingPrices, wilayas],
   );
+  const bulkMethodKeys = bulkTargetMethodKeys(rows, editableMethodKeys);
   const visibleRows = rows.filter(
     (row) => rowMatchesFilter(row, filter) && rowMatchesSearch(row, search),
   );
@@ -66,15 +65,11 @@ export function ShippingZonesPage({
   const allSelected =
     selectableVisibleRows.length > 0 &&
     selectableVisibleRows.every((row) => selectedCodes.includes(row.wilaya.code));
-  const selectedEditableRows = rows.filter(
-    (row) =>
-      selectedCodes.includes(row.wilaya.code) &&
-      methodsForBulkTarget(bulkTarget, editableMethodKeys).some((method) =>
-        canEditTargetMethod(row, method),
-      ),
-  );
   const selectedRows = rows.filter((row) => selectedCodes.includes(row.wilaya.code));
-  const protectedSelectionCount = selectedRows.length - selectedEditableRows.length;
+  const selectedRowsWithEditableMethods = selectedRows.filter((row) =>
+    methodViewsForBulkTarget(row, "both").some((method) => method.canEdit),
+  );
+  const protectedSelectionCount = selectedRows.length - selectedRowsWithEditableMethods.length;
   const stats = shippingZoneStats(rows);
   const pendingCount = pendingPriceCount(pendingPrices);
   const changes = pendingChangeItems(rows, pendingPrices);
@@ -101,21 +96,19 @@ export function ShippingZonesPage({
     );
   };
 
-  const setBulkPendingPrice = (price: number | null) => {
-    const targetMethods = methodsForBulkTarget(bulkTarget, editableMethodKeys);
-
+  const setBulkPendingPrice = (target: BulkTarget, price: number | null) => {
     setPendingPrices((current) =>
-      selectedEditableRows.reduce((nextPrices, row) => {
-        return targetMethods.reduce((methodPrices, method) => {
-          if (!canEditTargetMethod(row, method)) {
+      selectedRows.reduce((nextPrices, row) => {
+        return methodViewsForBulkTarget(row, target).reduce((methodPrices, method) => {
+          if (!method.canEdit) {
             return methodPrices;
           }
 
           return withPendingPrice(
             methodPrices,
             row.wilaya.code,
-            method,
-            livePriceForKey(row.liveZone, method),
+            method.key,
+            method.livePrice,
             price,
           );
         }, nextPrices);
@@ -123,13 +116,57 @@ export function ShippingZonesPage({
     );
   };
 
-  const applyBulkPrice = () => {
-    const price = parseOptionalPrice(bulkPrice);
-    if (price === undefined || price === null) {
+  const runQuickTool = (tool: ShippingZoneQuickTool, target: BulkTarget) => {
+    if (tool.kind === "set") {
+      setBulkPendingPrice(target, Math.max(0, tool.value));
       return;
     }
-    setBulkPendingPrice(price);
-    setBulkPrice("");
+
+    if (tool.kind === "free") {
+      setBulkPendingPrice(target, 0);
+      return;
+    }
+
+    if (tool.kind === "setEnabled") {
+      return;
+    }
+
+    setPendingPrices((current) => {
+      return selectedRows.reduce((nextPrices, row) => {
+        if (tool.kind === "copy") {
+          return copySelectedMethodPrice(row, tool.from, tool.to, nextPrices);
+        }
+
+        return methodViewsForBulkTarget(row, target).reduce((methodPrices, method) => {
+          if (!method.canEdit) {
+            return methodPrices;
+          }
+
+          if (tool.kind === "reset") {
+            return withPendingPrice(
+              methodPrices,
+              row.wilaya.code,
+              method.key,
+              method.livePrice,
+              undefined,
+            );
+          }
+
+          const nextPrice = transformedMethodPrice(method, tool);
+          if (nextPrice === undefined) {
+            return methodPrices;
+          }
+
+          return withPendingPrice(
+            methodPrices,
+            row.wilaya.code,
+            method.key,
+            method.livePrice,
+            nextPrice,
+          );
+        }, nextPrices);
+      }, current);
+    });
   };
 
   const toggleSelectAll = (selected: boolean) => {
@@ -169,15 +206,10 @@ export function ShippingZonesPage({
         pendingCount={pendingCount}
         selectedCount={selectedCodes.length}
         protectedSelectionCount={protectedSelectionCount}
-        bulkTarget={bulkTarget}
-        methodDefs={methodDefs.filter((method) => isShippingMethodKey(method.key)).slice(0, 2)}
-        bulkPrice={bulkPrice}
+        targetMethodKeys={bulkMethodKeys}
         onSearchChange={setSearch}
         onFilterChange={setFilter}
-        onBulkTargetChange={setBulkTarget}
-        onBulkPriceChange={setBulkPrice}
-        onBulkSetPrice={applyBulkPrice}
-        onBulkMakeFree={() => setBulkPendingPrice(0)}
+        onRunQuickTool={runQuickTool}
         onClearSelection={() => setSelectedCodes([])}
         onReviewChanges={() => setReviewOpen(true)}
       />
@@ -230,25 +262,77 @@ export function ShippingZonesPage({
   );
 }
 
-function canEditTargetMethod(row: ShippingZoneRowView, method: ShippingMethodKey): boolean {
-  if (row.home.key === method) {
-    return row.home.canEdit;
+function methodViewsForBulkTarget(
+  row: ShippingZoneRowView,
+  target: BulkTarget,
+): ShippingZoneMethodView[] {
+  if (target === "both") {
+    return [row.home, row.office];
   }
 
-  if (row.office.key === method) {
-    return row.office.canEdit;
-  }
-
-  return false;
+  return target === "home" ? [row.home] : [row.office];
 }
 
-function methodsForBulkTarget(
-  target: BulkTarget,
-  editableMethodKeys: ShippingMethodKey[],
+function bulkTargetMethodKeys(
+  rows: ShippingZoneRowView[],
+  fallbackKeys: ShippingMethodKey[],
 ): ShippingMethodKey[] {
-  if (target === "both") {
-    return editableMethodKeys.slice(0, 2);
+  const firstRow = rows[0];
+  const keys = [firstRow?.home.key, firstRow?.office.key].filter((key): key is ShippingMethodKey =>
+    Boolean(key),
+  );
+
+  return keys.length > 0 ? keys : fallbackKeys.slice(0, 2);
+}
+
+function copySelectedMethodPrice(
+  row: ShippingZoneRowView,
+  from: ShippingMethodKey,
+  to: ShippingMethodKey,
+  pendingPrices: PendingPriceMap,
+): PendingPriceMap {
+  const targetMethod = row.home.key === to ? row.home : row.office.key === to ? row.office : null;
+  if (!targetMethod?.canEdit) {
+    return pendingPrices;
   }
 
-  return [target];
+  const sourcePrice = currentMethodPrice(row, from);
+  if (sourcePrice === undefined) {
+    return pendingPrices;
+  }
+
+  return withPendingPrice(pendingPrices, row.wilaya.code, to, targetMethod.livePrice, sourcePrice);
+}
+
+function transformedMethodPrice(
+  method: ShippingZoneMethodView,
+  tool: Extract<ShippingZoneQuickTool, { kind: "percent" | "amount" | "round" }>,
+): number | undefined {
+  const currentPrice = method.pendingPrice !== undefined ? method.pendingPrice : method.livePrice;
+  if (typeof currentPrice !== "number") {
+    return undefined;
+  }
+
+  if (tool.kind === "percent") {
+    return Math.max(0, Math.round(currentPrice * (1 + tool.value / 100)));
+  }
+
+  if (tool.kind === "amount") {
+    return Math.max(0, Math.round(currentPrice + tool.value));
+  }
+
+  return Math.max(0, Math.round(currentPrice / tool.nearest) * tool.nearest);
+}
+
+function currentMethodPrice(
+  row: ShippingZoneRowView,
+  method: ShippingMethodKey,
+): number | null | undefined {
+  const methodView =
+    row.home.key === method ? row.home : row.office.key === method ? row.office : null;
+  if (!methodView) {
+    return undefined;
+  }
+
+  return methodView.pendingPrice !== undefined ? methodView.pendingPrice : methodView.livePrice;
 }

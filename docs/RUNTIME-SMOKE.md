@@ -32,7 +32,7 @@ Expected result:
 - Technical zone and ownership details are hidden until row details are opened.
 - Home and office price inputs show the live WooCommerce cost when the method is registry-owned.
 - Editing a managed price marks a pending change and shows old price -> new price.
-- The inline `Free shipping` switch and selected-row `Make free` quick tool set managed pending prices to `0`.
+- The selected-row `Make free` quick tool sets managed pending prices to `0`; method cells display `Free` without a permanent per-cell free toggle.
 - `Save changes` or `Review` opens the focused price-update dialog.
 - `Update prices` calls preview and then apply through the existing safe backend.
 - Enable/disable visual state is read-only and clearly disabled because method status updates are not implemented yet.
@@ -104,6 +104,17 @@ TASK-010D local smoke result:
 - Chlef Home delivery was changed from `700` to `701` through the review dialog and existing preview/apply flow.
 - Chlef Home delivery was restored from `701` to `700` through the same review/apply flow.
 - Runtime WooCommerce verification after restore found `Yaxii - 02 Chlef - الشلف` with Home delivery enabled at `700` and Office delivery enabled at `400`.
+
+TASK-010E local smoke result:
+
+- Browser automation authenticated into `wp-admin` with a temporary administrator user that was deleted after smoke.
+- Shipping Zones rendered without per-cell free-shipping toggles.
+- Selected-row quick tools appeared after selecting Adrar and included Home, Office, Both, Set price, Change by %, Add / subtract, Round to, Make free, Copy Home -> Office, Copy Office -> Home, Discard pending, disabled Enable, and disabled Disable.
+- Keyboard activation was required for quick-tool buttons in `agent-browser`; pointer clicks did not reliably activate toolbar buttons in this smoke session.
+- `Make free` created a pending price `0` change through the selected-row quick tools.
+- The review dialog opened from `Save changes`; `Update prices` used the existing preview/apply flow and reported `Prices updated`.
+- Adrar was restored through selected-row Set price quick tools to Home delivery `700` and Office delivery `400`.
+- Runtime WooCommerce verification after restore found Adrar and Chlef each with Home delivery `700` and Office delivery `400`, with one matched zone per wilaya in the smoke script.
 
 ### Manual-Zone Protection
 
