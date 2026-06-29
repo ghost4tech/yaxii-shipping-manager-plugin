@@ -20,21 +20,6 @@ export type PreviewGroupSummary = {
   tone: PreviewTone;
 };
 
-export type PreviewSampleMethod = {
-  label: string;
-  price: number | null;
-  status?: string;
-};
-
-export type PreviewSample = {
-  key: string;
-  wilayaCode?: string;
-  title: string;
-  subtitle?: string;
-  tone: PreviewTone;
-  methods: PreviewSampleMethod[];
-};
-
 export function acceptedPlanSummary(response: PreviewResponse) {
   return {
     selectedWilayas: response.summary.selectedWilayas,
@@ -80,26 +65,6 @@ export function finalApplyStatus(response: PreviewResponse): FinalApplyStatus {
   return "setup_already_matches";
 }
 
-export function finalStatusTitle(status: FinalApplyStatus): string {
-  if (status === "ready_to_apply") {
-    return "Ready to prepare shipping";
-  }
-
-  if (status === "ready_to_update_prices") {
-    return "Ready to save managed changes";
-  }
-
-  if (status === "unsupported_only") {
-    return "Only later-step updates found";
-  }
-
-  if (status === "blocked") {
-    return "Needs review before applying";
-  }
-
-  return "Shipping setup already matches this preview.";
-}
-
 export function finalStatusMessage(response: PreviewResponse, status: FinalApplyStatus): string {
   if (status === "ready_to_apply") {
     return applyActionDescription(response);
@@ -120,28 +85,6 @@ export function finalStatusMessage(response: PreviewResponse, status: FinalApply
   return "No supported WooCommerce change is needed for this selection.";
 }
 
-export function applyButtonLabel(response: PreviewResponse): string {
-  const methodsToAdd = methodAdditionCount(response);
-
-  if (response.summary.createZones > 0 && methodsToAdd > 0) {
-    return "Create zones and add methods";
-  }
-
-  if (response.summary.createZones > 0) {
-    return "Create zones";
-  }
-
-  if (methodsToAdd > 0) {
-    return "Add methods and prices";
-  }
-
-  if (response.summary.updateMethods > 0 && response.summary.updateMethodStatuses === 0) {
-    return "Update prices";
-  }
-
-  return "Save changes";
-}
-
 export function applyActionDescription(response: PreviewResponse): string {
   const methodsToAdd = methodAdditionCount(response);
 
@@ -157,7 +100,7 @@ export function applyActionDescription(response: PreviewResponse): string {
     return `${methodsToAdd} missing methods and prices can be added now.`;
   }
 
-  return "Managed method changes can be saved now.";
+  return "Generate the previewed shipping setup with one click.";
 }
 
 export function previewGroupSummaries(response: PreviewResponse): PreviewGroupSummary[] {
@@ -233,17 +176,6 @@ export function previewGroupSummaries(response: PreviewResponse): PreviewGroupSu
   ];
 }
 
-export function previewSamples(response: PreviewResponse, limit = 3): PreviewSample[] {
-  return [
-    ...createZoneSamples(response.plan.createZones),
-    ...methodPlanSamples(response.plan.addMethods, "Add method", "ok"),
-    ...methodPlanSamples(response.plan.updateMethods, "Update method", "ok"),
-    ...methodPlanSamples(response.plan.updateMethodStatuses, "Update status", "ok"),
-    ...warningSamples(response.plan.skipManualZones, "Manual zone skipped", "warn"),
-    ...warningSamples(response.plan.conflicts, "Conflict", "fail"),
-  ].slice(0, limit);
-}
-
 export function supportedWorkCount(response: PreviewResponse): number {
   return (
     response.summary.createZones +
@@ -271,54 +203,4 @@ function groupDescription(planItems: PreviewPlanItem[], emptyText: string): stri
   const title = previewItemTitle(firstPlanItem);
   const remainingCount = Math.max(planItems.length - 1, 0);
   return remainingCount > 0 ? `${title} (+${remainingCount} more)` : title;
-}
-
-function createZoneSamples(planItems: PreviewPlanItem[]): PreviewSample[] {
-  return planItems.map((planItem, index) => ({
-    key: `create-zone-${planItem.wilayaCode ?? index}`,
-    wilayaCode: planItem.wilayaCode,
-    title: planItem.zoneName ?? planItem.wilayaName ?? "New shipping zone",
-    subtitle: "Create zone",
-    tone: "ok",
-    methods: (planItem.methods ?? []).map((method) => ({
-      label: method.label,
-      price: method.price,
-    })),
-  }));
-}
-
-function methodPlanSamples(
-  planItems: PreviewPlanItem[],
-  status: string,
-  tone: PreviewTone,
-): PreviewSample[] {
-  return planItems.map((planItem, index) => ({
-    key: `${status}-${planItem.wilayaCode ?? index}-${planItem.methodKey ?? index}`,
-    wilayaCode: planItem.wilayaCode,
-    title: planItem.wilayaName ?? planItem.zoneName ?? "Managed method",
-    subtitle: status,
-    tone,
-    methods: [
-      {
-        label: planItem.label ?? planItem.methodKey ?? "Shipping method",
-        price: planItem.price ?? null,
-        status,
-      },
-    ],
-  }));
-}
-
-function warningSamples(
-  planItems: PreviewPlanItem[],
-  status: string,
-  tone: PreviewTone,
-): PreviewSample[] {
-  return planItems.map((planItem, index) => ({
-    key: `${status}-${planItem.wilayaCode ?? index}`,
-    wilayaCode: planItem.wilayaCode,
-    title: planItem.wilayaName ?? planItem.zoneName ?? status,
-    subtitle: planItem.reason ?? status,
-    tone,
-    methods: [],
-  }));
 }

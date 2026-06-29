@@ -30,6 +30,7 @@ import {
 import { fetchDatasetCommunes } from "@/api/dataset-api";
 import { fetchPreview } from "@/api/preview-api";
 import type { AdminBootstrapConfig } from "@/bootstrap";
+import { GeneratorGenerateStep } from "@/components/generator/GeneratorGenerateStep";
 import { PreviewPlanPanel } from "@/components/generator/PreviewPlanPanel";
 import type {
   GeneratorPreviewContext,
@@ -110,7 +111,11 @@ const WIZARD_STEPS = [
   { id: "labels", label: "Names", icon: Tag },
   { id: "safety", label: "Safety", icon: ShieldCheck },
   { id: "preview", label: "Preview", icon: Eye },
+  { id: "generate", label: "Generate", icon: Wand2 },
 ] as const;
+
+const PREVIEW_STEP_INDEX = WIZARD_STEPS.findIndex((wizardStep) => wizardStep.id === "preview");
+const GENERATE_STEP_INDEX = WIZARD_STEPS.findIndex((wizardStep) => wizardStep.id === "generate");
 
 export function GeneratorWizard({
   config,
@@ -120,7 +125,6 @@ export function GeneratorWizard({
   onComplete,
   onPreviewReady,
   onOpenDiagnostics,
-  onRefreshDiagnostics,
 }: {
   config: AdminBootstrapConfig;
   settings: PersistedSettings;
@@ -133,7 +137,6 @@ export function GeneratorWizard({
     request: PreviewRequest,
   ) => void;
   onOpenDiagnostics: () => void;
-  onRefreshDiagnostics: () => void;
 }) {
   const initialDraft = useMemo(() => generatorDraftFromSettings(settings), [settings]);
   const [step, setStep] = useState(0);
@@ -186,7 +189,6 @@ export function GeneratorWizard({
   const enabledMethods = useMemo(() => methods.filter((method) => method.enabled), [methods]);
   const activeMethodDefs = useMemo(() => enabledMethodDefs(methods), [methods]);
   const currentStep = WIZARD_STEPS[step];
-  const canContinue = canContinueFromStep(step, selectedCodes, enabledMethods);
 
   const setSetupMode = (nextMode: SetupMode) => {
     setSetupModeState(nextMode);
@@ -380,6 +382,13 @@ export function GeneratorWizard({
     () => JSON.stringify(currentPreviewRequest),
     [currentPreviewRequest],
   );
+  const canContinue = canContinueFromStep(
+    step,
+    selectedCodes,
+    enabledMethods,
+    previewState,
+    currentPreviewSignature,
+  );
   const currentPreviewContext = useMemo<GeneratorPreviewContext>(
     () => ({
       selectedWilayaCount: selectedCodes.length,
@@ -412,7 +421,7 @@ export function GeneratorWizard({
   }, [config, currentPreviewContext, currentPreviewRequest, onPreviewReady]);
 
   useEffect(() => {
-    if (step !== WIZARD_STEPS.length - 1 || !previewDraftValid) {
+    if (step !== PREVIEW_STEP_INDEX || !previewDraftValid) {
       return;
     }
 
@@ -558,18 +567,34 @@ export function GeneratorWizard({
               />
             )}
             {step === 6 && <StepSafety />}
-            {step === 7 && (
+            {step === PREVIEW_STEP_INDEX && (
               <StepPreview
                 setupMode={setupMode}
-                config={config}
                 previewState={previewState}
                 previewContext={previewContext ?? currentPreviewContext}
                 previewDraftValid={previewDraftValid}
                 loadPreview={loadPreview}
-                onOpenDiagnostics={onOpenDiagnostics}
-                onRefreshDiagnostics={onRefreshDiagnostics}
-                onDone={onClose}
               />
+            )}
+            {step === GENERATE_STEP_INDEX && previewState.status === "ready" && (
+              <GeneratorGenerateStep
+                response={previewState.response}
+                config={config}
+                previewRequest={previewState.request}
+                setupMode={setupMode}
+                onOpenDiagnostics={onOpenDiagnostics}
+                onRefreshPreview={loadPreview}
+                onReturnToEditor={useDraftAndClose}
+              />
+            )}
+            {step === GENERATE_STEP_INDEX && previewState.status !== "ready" && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Preview required before generating</AlertTitle>
+                <AlertDescription>
+                  Go back to Preview and generate a fresh plan before continuing.
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         </div>
@@ -590,7 +615,8 @@ export function GeneratorWizard({
               onClick={() => setStep((current) => Math.min(current + 1, WIZARD_STEPS.length - 1))}
               disabled={!canContinue}
             >
-              Continue <ChevronRight className="h-4 w-4" />
+              {step === PREVIEW_STEP_INDEX ? "Continue to Generate" : "Continue"}{" "}
+              <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
             <Button variant="outline" onClick={useDraftAndClose}>
@@ -1615,30 +1641,22 @@ function StepSafety() {
 
 function StepPreview({
   setupMode,
-  config,
   previewState,
   previewContext,
   previewDraftValid,
   loadPreview,
-  onOpenDiagnostics,
-  onRefreshDiagnostics,
-  onDone,
 }: {
   setupMode: SetupMode;
-  config: AdminBootstrapConfig;
   previewState: PreviewLoadState;
   previewContext: GeneratorPreviewContext;
   previewDraftValid: boolean;
   loadPreview: () => Promise<void>;
-  onOpenDiagnostics: () => void;
-  onRefreshDiagnostics: () => void;
-  onDone: () => void;
 }) {
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-2xl font-semibold tracking-tight">Review and apply</h3>
+          <h3 className="text-2xl font-semibold tracking-tight">Review plan</h3>
           <p className="mt-1 text-sm text-muted-foreground">{setupModePreviewCopy(setupMode)}</p>
         </div>
         <Badge variant="secondary" className="rounded-full">
@@ -1661,7 +1679,7 @@ function StepPreview({
         <Alert className="mt-6">
           <Activity className="h-4 w-4" />
           <AlertTitle>Checking your WooCommerce shipping setup...</AlertTitle>
-          <AlertDescription>The preview starts automatically on this final step.</AlertDescription>
+          <AlertDescription>The preview starts automatically on this step.</AlertDescription>
         </Alert>
       )}
 
@@ -1695,12 +1713,6 @@ function StepPreview({
         <PreviewPlanPanel
           response={previewState.response}
           context={previewContext}
-          config={config}
-          previewRequest={previewState.request}
-          onOpenDiagnostics={onOpenDiagnostics}
-          onRefreshDiagnostics={onRefreshDiagnostics}
-          onRefreshPreview={loadPreview}
-          onDone={onDone}
           setupMode={setupMode}
         />
       )}
@@ -1728,6 +1740,8 @@ function canContinueFromStep(
   step: number,
   selectedCodes: string[],
   enabledMethods: ShippingMethodTemplate[],
+  previewState: PreviewLoadState,
+  currentPreviewSignature: string,
 ): boolean {
   if (step === 1) {
     return selectedCodes.length > 0;
@@ -1735,6 +1749,13 @@ function canContinueFromStep(
 
   if (step === 3) {
     return enabledMethods.length > 0;
+  }
+
+  if (step === PREVIEW_STEP_INDEX) {
+    return (
+      previewState.status === "ready" &&
+      JSON.stringify(previewState.request) === currentPreviewSignature
+    );
   }
 
   return true;

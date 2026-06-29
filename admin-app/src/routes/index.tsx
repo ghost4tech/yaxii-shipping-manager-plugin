@@ -289,10 +289,7 @@ export default function AdminApp({
         )}
         {tab === "generator" && (
           <GeneratorHub
-            config={config}
             onLaunch={() => setWizardOpen(true)}
-            onOpenDiagnostics={() => setTab("diagnostics")}
-            onRefreshDiagnostics={openAndRefreshDiagnostics}
             launchDisabled={!datasetReady || !settingsReady}
             latestPreview={latestPreview}
           />
@@ -332,7 +329,6 @@ export default function AdminApp({
             setLatestPreview({ response, context, request })
           }
           onOpenDiagnostics={() => closeWizardAndOpenDiagnostics()}
-          onRefreshDiagnostics={() => closeWizardAndOpenDiagnostics(true)}
         />
       )}
     </div>
@@ -525,17 +521,11 @@ function SectionHeader({
 }
 
 function GeneratorHub({
-  config,
   onLaunch,
-  onOpenDiagnostics,
-  onRefreshDiagnostics,
   launchDisabled,
   latestPreview,
 }: {
-  config: AdminBootstrapConfig;
   onLaunch: () => void;
-  onOpenDiagnostics: () => void;
-  onRefreshDiagnostics: () => void;
   launchDisabled: boolean;
   latestPreview: GeneratorPreviewSnapshot | null;
 }) {
@@ -574,15 +564,7 @@ function GeneratorHub({
       </Card>
       {latestPreview && (
         <div className="mt-6">
-          <PreviewPlanPanel
-            response={latestPreview.response}
-            context={latestPreview.context}
-            config={config}
-            previewRequest={latestPreview.request}
-            onOpenDiagnostics={onOpenDiagnostics}
-            onRefreshDiagnostics={onRefreshDiagnostics}
-            onDone={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          />
+          <PreviewPlanPanel response={latestPreview.response} context={latestPreview.context} />
         </div>
       )}
     </>

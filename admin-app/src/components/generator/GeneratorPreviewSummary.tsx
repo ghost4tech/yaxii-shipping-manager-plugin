@@ -4,6 +4,7 @@ import {
   Ban,
   Building2,
   CheckCircle2,
+  Info,
   MapPin,
   Package,
   ShieldAlert,
@@ -14,6 +15,7 @@ import type { GeneratorPreviewContext } from "@/components/generator/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { ApplyReadinessSeverity, PreviewResponse } from "@/types/preview";
 
@@ -46,8 +48,9 @@ export function GeneratorPreviewSummary({
         />
         <StatTile
           label="Coverage"
-          value={context?.communeCoverageSummary ?? "Wilaya-level coverage"}
+          value="Wilaya level"
           icon={<Building2 className="h-4 w-4" />}
+          details={context?.communeCoverageSummary ?? "Wilaya-level coverage."}
         />
         <StatTile
           label="Methods enabled"
@@ -106,13 +109,39 @@ function ReadinessBadge({ severity }: { severity: ApplyReadinessSeverity }) {
   );
 }
 
-function StatTile({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function StatTile({
+  label,
+  value,
+  icon,
+  details,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  details?: string;
+}) {
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {icon}
           <span>{label}</span>
+          {details && (
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+                    aria-label={`${label} details`}
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-left">{details}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
         <div className="mt-1 break-words text-xl font-semibold tracking-tight">{value}</div>
       </CardContent>

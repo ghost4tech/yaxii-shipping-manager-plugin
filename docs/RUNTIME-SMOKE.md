@@ -65,6 +65,21 @@ TASK-011C local smoke result:
 - In-process REST smoke for `POST /wp-json/yaxii-shipping-manager/v1/preview` returned `status=200`, `selectedWilayas=69`, `createZones=0`, `addMethods=0`, `updateMethods=0`, `updateMethodStatuses=0`, `conflicts=0`, `readiness=ready`, a valid 64-character preview hash, and `apply-contract-v1`.
 - No apply action was triggered in browser or runtime smoke, so no WooCommerce write occurred during TASK-011C smoke.
 
+TASK-011C feedback-pass local smoke result:
+
+- Browser automation authenticated into `wp-admin` with a temporary administrator user that was deleted after smoke.
+- Generator was opened from a cache-busted admin URL so the current built asset was verified.
+- Keyboard activation was required for `Start generator` in agent-browser; after that, the wizard advanced normally.
+- The wizard showed the separate `Step 9 of 9 - Generate` step.
+- The Preview step showed `Coverage` as `Wilaya level`; the longer coverage explanation was not visible in the Preview card.
+- The Preview step no longer showed a preview sample section.
+- The Preview step no longer showed the removed ready-to-save action card.
+- The Preview step exposed `Continue to Generate` only after the real preview was ready.
+- The Generate step showed `Generate shipping setup`, one-click `Generate setup`, and the safety lines from the reference-style action card.
+- The Generate step copy used generate/save wording in the visible merchant UI.
+- The `Generate setup` button was not pressed in browser smoke because it calls the real backend write path.
+- No WooCommerce write action was performed during the feedback-pass smoke.
+
 ## Shipping Zones Table Smoke
 
 Expected result:

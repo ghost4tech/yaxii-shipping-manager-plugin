@@ -63,7 +63,7 @@ Current weaknesses:
 - It mixes final action, summary, apply result, affected wilaya details, advanced details, API apply behavior, and summary helper logic.
 - Main UI is still more backend-shaped than merchant-shaped.
 - Preview group details can surface technical labels too close to the main flow.
-- It lacks the prototype's clear preview-plan grid and sample view.
+- It originally lacked the prototype's clear preview-plan grid.
 
 ## Reference Elements to Reuse
 
@@ -73,14 +73,12 @@ Can copy with real backend data:
 - Top stat tiles.
 - Preview group card grid.
 - Manual-zone alert.
-- Preview sample card.
 - Safety line visual treatment.
 
 Can copy with frontend-only adaptation:
 
 - Card layout and tone classes.
 - Count badge pattern.
-- First-3-sample pattern.
 - Ready/attention/blocked visual mapping.
 
 Must not copy:
@@ -102,20 +100,19 @@ Create or refactor toward:
 admin-app/src/components/generator/GeneratorFinalStep.tsx
 admin-app/src/components/generator/GeneratorPreviewSummary.tsx
 admin-app/src/components/generator/GeneratorPreviewGroups.tsx
-admin-app/src/components/generator/GeneratorPreviewSample.tsx
-admin-app/src/components/generator/GeneratorApplyActionCard.tsx
-admin-app/src/components/generator/GeneratorApplyResult.tsx
+admin-app/src/components/generator/GeneratorGenerateStep.tsx
 admin-app/src/components/generator/GeneratorAdvancedDetails.tsx
 admin-app/src/lib/generator/preview-summary.ts
+admin-app/src/lib/generator/generate-result.ts
 ```
 
 Possible split of current `PreviewPlanPanel.tsx`:
 
 - Keep `PreviewPlanPanel` as a thin orchestrator temporarily, or replace it with `GeneratorFinalStep`.
 - Move final status derivation into `admin-app/src/lib/generator/preview-summary.ts`.
-- Move apply result rendering into `GeneratorApplyResult.tsx`.
+- Move generate result summary into `admin-app/src/lib/generator/generate-result.ts`.
 - Move collapsed hash/contract/raw groups into `GeneratorAdvancedDetails.tsx`.
-- Move affected wilaya rows into either `GeneratorPreviewSample.tsx` or a collapsed details component.
+- Keep long affected wilaya rows in collapsed advanced details only.
 
 Target file size:
 
@@ -152,9 +149,9 @@ Show:
 - summary stat tiles
 - preview group cards
 - one manual-zone/conflict warning when relevant
-- sample of affected wilayas/methods
-- apply action card when safe
-- success/no-change result after apply
+- compact coverage tile with tooltip details
+- separate Generate step after the preview
+- success/no-change result after generate
 
 Hide or collapse:
 
@@ -169,19 +166,15 @@ Hide or collapse:
 
 ## Apply Action
 
-Keep the current production action behavior:
+Keep production write behavior, but present it from the separate Generate step:
 
-- Visible checkbox: `I reviewed this setup`.
-- Button labels based on real supported work:
-  - create zones and add methods
-  - add methods and prices
-  - create zones
-  - update methods
-- Apply disabled until checkbox is checked.
-- Preview-only mode shows no apply button.
+- One-click `Generate setup` action after the preview has been reviewed.
+- Preview step is read-only and only continues when the preview matches the current draft.
+- Preview-only mode shows no generate button.
 - Blocked state routes to refresh preview and diagnostics.
+- The real backend confirmation phrase, preview hash, generated timestamp, accepted plan summary, safety policy snapshot, contract version, and preview request stay internal.
 
-Do not copy the reference's disabled `WStepApply` card. It is obsolete.
+Do not copy the reference's fake disabled action logic. Use the reference visual shell for the Generate step and wire it to the real backend.
 
 ## Success State
 
@@ -230,10 +223,10 @@ Implemented on branch `task/011c-generator-preview-reference-ui`.
 Production UI now uses the prototype preview-plan shape while keeping the real preview/apply contracts:
 
 - `PreviewPlanPanel.tsx` is a thin compatibility export to `GeneratorFinalStep`.
-- Final-step UI is split into summary, preview group, preview sample, apply action, apply result, and advanced-details components.
-- Real `PreviewResponse` data drives readiness, stat tiles, group cards, samples, blocked/manual-zone alerts, and advanced support details.
+- Final-step UI is split into summary, preview group, and advanced-details components.
+- Real `PreviewResponse` data drives readiness, stat tiles, group cards, blocked/manual-zone alerts, and advanced support details.
 - Preview-only mode keeps apply controls hidden in the active wizard and shows a read-only action message.
-- Apply still goes only through `fetchApply` with preview hash, generated timestamp, accepted plan summary, safety policy snapshot, contract version, confirmation phrase, and the original preview request.
+- Generate still goes only through `fetchApply` with preview hash, generated timestamp, accepted plan summary, safety policy snapshot, contract version, confirmation phrase, and the original preview request.
 - Main UI keeps hash, contract version, generated timestamp, zone IDs, method keys, ownership hints, and raw plan lists inside collapsed advanced details.
 
 Implementation files:
@@ -242,13 +235,26 @@ Implementation files:
 admin-app/src/components/generator/GeneratorFinalStep.tsx
 admin-app/src/components/generator/GeneratorPreviewSummary.tsx
 admin-app/src/components/generator/GeneratorPreviewGroups.tsx
-admin-app/src/components/generator/GeneratorPreviewSample.tsx
-admin-app/src/components/generator/GeneratorApplyActionCard.tsx
-admin-app/src/components/generator/GeneratorApplyResult.tsx
+admin-app/src/components/generator/GeneratorGenerateStep.tsx
 admin-app/src/components/generator/GeneratorAdvancedDetails.tsx
 admin-app/src/lib/generator/preview-summary.ts
-admin-app/src/lib/generator/apply-summary.ts
+admin-app/src/lib/generator/generate-result.ts
 admin-app/src/lib/generator/preview-plan-item.ts
 ```
 
 No backend write behavior was changed.
+
+## TASK-011C Feedback Pass
+
+Implemented on the same branch after UX feedback:
+
+- The Preview coverage tile now shows only `Wilaya level` in the main card.
+- Coverage detail remains available through the `Coverage details` tooltip.
+- The preview sample section was removed from the Preview step.
+- The old ready-to-save action card was removed from the Preview step.
+- A separate Step 9 `Generate` screen now uses the reference action-card shape.
+- Step 9 shows one-click `Generate setup`, loading animation classes, real `fetchApply` wiring, and real result messaging after the backend responds.
+- Success-state actions include `Return to shipping editor` and `WooCommerce zones`.
+- Preview-only mode and blocked previews do not show the generate action.
+
+No fake reference logic, mock apply result, backend write bypass, external asset, or unsupported feature was added.
