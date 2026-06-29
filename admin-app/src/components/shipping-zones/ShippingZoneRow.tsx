@@ -53,7 +53,7 @@ export function ShippingZoneRow({
       )}
     >
       <div className={cn("grid grid-cols-[36px_minmax(0,1fr)] gap-3 px-4 py-3", DESKTOP_GRID)}>
-        <div>
+        <div className="flex items-center justify-center">
           <Checkbox
             checked={selected}
             disabled={!row.canSelect}
@@ -220,7 +220,7 @@ export function ShippingZoneTableHeader({
         DESKTOP_GRID,
       )}
     >
-      <div>
+      <div className="flex items-center justify-center">
         <Checkbox checked={allSelected} onCheckedChange={(value) => onSelectAll(Boolean(value))} />
       </div>
       <div>Wilaya</div>

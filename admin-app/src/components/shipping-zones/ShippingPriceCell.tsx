@@ -27,11 +27,11 @@ export function ShippingPriceCell({
   if (!method.canEdit) {
     return (
       <div className="flex flex-col gap-1.5 text-xs text-muted-foreground/70">
-        <MethodCellHeader method={method} displayDisabled={displayDisabled} />
         <div className="flex items-center gap-2">
           <span className="inline-flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2.5">
             {method.livePrice === null ? "-" : formatShippingPrice(method.livePrice)}
           </span>
+          {displayDisabled && <DisabledBadge />}
           <span className="text-[11px]">{method.disabledReason ?? "Not managed"}</span>
         </div>
         <PendingStatusLine method={method} pending={pendingStatus} onUndo={onUndoStatus} />
@@ -41,7 +41,6 @@ export function ShippingPriceCell({
 
   return (
     <div className={cn("flex flex-col gap-1.5", displayDisabled && "text-muted-foreground")}>
-      <MethodCellHeader method={method} displayDisabled={displayDisabled} />
       <div className="flex items-center gap-2">
         {freeSelected ? (
           <span
@@ -71,6 +70,7 @@ export function ShippingPriceCell({
             </span>
           </div>
         )}
+        {displayDisabled && <DisabledBadge />}
       </div>
       <PendingPriceLine method={method} pending={pending} onUndo={onUndo} />
       <PendingStatusLine method={method} pending={pendingStatus} onUndo={onUndoStatus} />
@@ -78,22 +78,11 @@ export function ShippingPriceCell({
   );
 }
 
-function MethodCellHeader({
-  method,
-  displayDisabled,
-}: {
-  method: ShippingZoneMethodView;
-  displayDisabled: boolean;
-}) {
+function DisabledBadge() {
   return (
-    <div className="flex min-h-5 items-center gap-2">
-      <span className="text-[11px] font-medium text-muted-foreground">{method.label}</span>
-      {displayDisabled && (
-        <span className="rounded-full border border-muted-foreground/20 bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-          Disabled
-        </span>
-      )}
-    </div>
+    <span className="rounded-full border border-muted-foreground/20 bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+      Disabled
+    </span>
   );
 }
 
