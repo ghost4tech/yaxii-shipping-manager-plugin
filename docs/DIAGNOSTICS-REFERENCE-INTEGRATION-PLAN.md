@@ -165,7 +165,7 @@ This UI task must not add:
 
 - WooCommerce writes
 - new REST routes
-- telemetry
+- remote tracking
 - remote assets
 - Lovable runtime
 - provider APIs
@@ -187,3 +187,42 @@ Recommended checks for the implementation task:
 - browser smoke of Diagnostics in wp-admin if frontend code changes
 
 No PHP checks are needed unless backend files change.
+
+## TASK-011B Implementation Status
+
+Implemented on branch `task/011b-diagnostics-reference-ui`.
+
+Created:
+
+```text
+admin-app/src/components/diagnostics/DiagnosticsPage.tsx
+admin-app/src/components/diagnostics/DiagnosticsHealthSummary.tsx
+admin-app/src/components/diagnostics/DiagnosticsHealthCard.tsx
+admin-app/src/components/diagnostics/DiagnosticsRecommendationCard.tsx
+admin-app/src/components/diagnostics/DiagnosticsAdvancedDetails.tsx
+admin-app/src/lib/diagnostics/status.ts
+```
+
+`admin-app/src/routes/index.tsx` now only passes diagnostics load state, refresh, and navigation callbacks into the Diagnostics page. The previous full diagnostics renderer, wilaya table, zone panel, status badge helpers, and checkout simulator were removed from the route file.
+
+Main Diagnostics behavior now matches the prototype health-check shape:
+
+- overall health status
+- passed / warnings / failures counts
+- compact health cards derived from `DiagnosticsResponse`
+- merchant-facing recommended next action derived from real diagnostics counts
+- actions for Shipping Zones, Generator, WooCommerce zones, and Refresh
+
+Advanced details are collapsed by default and contain support-only data:
+
+- full wilaya coverage table
+- WooCommerce zone list
+- zone IDs
+- ownership hints
+- raw warnings
+- generated timestamp
+- method counts and method signals
+
+No fake prototype runtime was copied. The implementation does not include mock data, `setTimeout` checks, checkout simulator proof, Lovable runtime, TanStack shell code, external fonts, remote assets, new REST routes, or WooCommerce writes.
+
+Maintainability note: the new diagnostics components are all below 300 lines. `admin-app/src/routes/index.tsx` was reduced but remains a legacy large file and should keep shrinking as more routes are extracted.

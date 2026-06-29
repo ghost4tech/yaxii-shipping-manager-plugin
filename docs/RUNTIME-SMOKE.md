@@ -23,6 +23,34 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 14. Confirm Preview-only mode hides apply controls and shows `Check diagnostics`.
 15. Confirm `Check diagnostics` opens the Diagnostics tab.
 
+### Diagnostics Health-Check Smoke
+
+Expected result:
+
+- Diagnostics opens as a read-only health-check page.
+- The main view shows overall health, passed/warnings/failures counts, compact health cards, and a recommended next action.
+- The main view does not show the full wilaya coverage table or raw WooCommerce zone list.
+- `Refresh diagnostics` reloads diagnostics without writing to WooCommerce.
+- `Advanced details for support` is collapsed by default.
+- Opening advanced details shows full wilaya coverage, WooCommerce zone data, zone IDs, ownership hints, raw warnings, generated timestamp, and method counts.
+- `Open Shipping Zones` navigates to the Shipping Zones tab.
+- `Open Generator` navigates to the Generator tab.
+- `Open WooCommerce zones` opens WooCommerce shipping settings in a new tab.
+
+TASK-011B local smoke result:
+
+- Browser automation authenticated into `wp-admin` with temporary administrator users that were deleted after smoke.
+- Diagnostics rendered the reference-style health-check UI with real diagnostics counts: `7` passed, `1` warning, `0` failures on the local store.
+- The main Diagnostics view showed the compact health cards and did not show the full wilaya table by default.
+- The recommended next action used frontend-derived, merchant-facing text from real diagnostics state: `Review the warning, then use Generator preview before applying changes.`
+- `Refresh diagnostics` completed and remained on the health-check view.
+- `Advanced details for support` was collapsed by default and opened to show the full wilaya coverage/support table.
+- `Open Shipping Zones` navigated to the Shipping Zones tab.
+- `Open Generator` required keyboard activation in agent-browser and navigated to the Generator tab.
+- `Open WooCommerce zones` opened `admin.php?page=wc-settings&tab=shipping` in a new tab.
+- In-process REST smoke for `GET /wp-json/yaxii-shipping-manager/v1/diagnostics` returned `woocommerceActive=true`, `configuredWilayas=69`, `missingWilayas=0`, `duplicateConflictCount=0`, `zonesWithoutMethods=0`, and `checkoutFallbackRisk=low`.
+- No WooCommerce write action was performed during the smoke.
+
 ## Shipping Zones Table Smoke
 
 Expected result:

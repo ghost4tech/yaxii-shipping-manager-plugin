@@ -8,7 +8,6 @@ import {
   Download,
   Lock,
   Package,
-  PowerOff,
   RefreshCw,
   Settings as SettingsIcon,
   ShieldCheck,
@@ -32,12 +31,7 @@ import {
   officeLabelForWording,
 } from "../data/default-settings";
 import type { WilayaDatasetRecord } from "../types/dataset";
-import type {
-  CheckoutFallbackRisk,
-  DiagnosticsResponse,
-  WilayaDiagnosticStatus,
-  ZoneDiagnostic,
-} from "../types/diagnostics";
+import type { DiagnosticsResponse } from "../types/diagnostics";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
 import type {
   OfficeMethodWording,
@@ -56,6 +50,7 @@ import type {
   Wilaya,
   WilayaReference,
 } from "@/components/generator/types";
+import { DiagnosticsPage } from "@/components/diagnostics/DiagnosticsPage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,14 +74,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { enabledMethodDefs } from "@/lib/generator/methods";
 import { parseOptionalPrice } from "@/lib/generator/pricing";
 import { cn } from "@/lib/utils";
@@ -311,11 +298,11 @@ export default function AdminApp({
           />
         )}
         {tab === "diagnostics" && (
-          <DiagnosticsScreen
-            bootstrap={bootstrap}
+          <DiagnosticsPage
             diagnosticsState={diagnosticsState}
-            wilayas={wilayas}
             onRefresh={() => setDiagnosticsReloadKey((current) => current + 1)}
+            onOpenShippingZones={() => setTab("zones")}
+            onOpenGenerator={() => setTab("generator")}
           />
         )}
         {tab === "import" && <ImportExportScreen />}
@@ -608,364 +595,6 @@ function BulletItem({ children }: { children: ReactNode }) {
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
       <span>{children}</span>
     </li>
-  );
-}
-
-function DiagnosticsScreen({
-  bootstrap,
-  diagnosticsState,
-  wilayas,
-  onRefresh,
-}: {
-  bootstrap: BootstrapPayload;
-  diagnosticsState: DiagnosticsLoadState;
-  wilayas: Wilaya[];
-  onRefresh: () => void;
-}) {
-  const [sim, setSim] = useState<string | null>(null);
-  const simulatedWilaya = sim ? wilayas.find((wilaya) => wilaya.code === sim) : undefined;
-
-  return (
-    <>
-      <SectionHeader
-        title="Checkout Protection"
-        description="Read-only WooCommerce diagnostics inspect existing zones and shipping methods."
-        action={
-          <Button
-            variant="outline"
-            onClick={onRefresh}
-            disabled={diagnosticsState.status === "loading"}
-          >
-            <RefreshCw
-              className={cn("h-4 w-4", diagnosticsState.status === "loading" && "animate-spin")}
-            />
-            Refresh diagnostics
-          </Button>
-        }
-      />
-
-      <StateRegistrationCard bootstrap={bootstrap} />
-
-      {(diagnosticsState.status === "waiting" || diagnosticsState.status === "loading") && (
-        <Card>
-          <CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground">
-            <RefreshCw className="h-4 w-4 animate-spin" />
-            Loading read-only WooCommerce diagnostics...
-          </CardContent>
-        </Card>
-      )}
-
-      {diagnosticsState.status === "error" && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Diagnostics could not be loaded</AlertTitle>
-          <AlertDescription>{diagnosticsState.message}</AlertDescription>
-        </Alert>
-      )}
-
-      {diagnosticsState.status === "ready" && !diagnosticsState.response.woocommerceActive && (
-        <Alert>
-          <PowerOff className="h-4 w-4" />
-          <AlertTitle>WooCommerce is inactive</AlertTitle>
-          <AlertDescription>
-            Activate WooCommerce to inspect shipping zones. No shipping configuration was changed.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {diagnosticsState.status === "ready" && diagnosticsState.response.woocommerceActive && (
-        <>
-          {diagnosticsState.response.warnings.length > 0 && (
-            <Alert className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Read-only diagnostic warning</AlertTitle>
-              <AlertDescription>{diagnosticsState.response.warnings[0]}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="mb-4 grid gap-3 sm:grid-cols-3">
-            <SummaryStat
-              label="Configured wilayas"
-              value={diagnosticsState.response.summary.configuredWilayas}
-              tone="ok"
-            />
-            <SummaryStat
-              label="Missing wilayas"
-              value={diagnosticsState.response.summary.missingWilayas}
-              tone={diagnosticsState.response.summary.missingWilayas > 0 ? "warn" : "ok"}
-            />
-            <SummaryStat
-              label="Conflicts"
-              value={diagnosticsState.response.summary.duplicateConflictCount}
-              tone={diagnosticsState.response.summary.duplicateConflictCount > 0 ? "fail" : "ok"}
-            />
-            <SummaryStat
-              label="Zones without methods"
-              value={diagnosticsState.response.summary.zonesWithoutMethods}
-              tone={diagnosticsState.response.summary.zonesWithoutMethods > 0 ? "warn" : "ok"}
-            />
-            <SummaryStat
-              label="Fallback risk"
-              value={fallbackRiskLabel(diagnosticsState.response.summary.checkoutFallbackRisk)}
-              tone={fallbackRiskTone(diagnosticsState.response.summary.checkoutFallbackRisk)}
-            />
-            <SummaryStat
-              label="Rest-of-world methods"
-              value={diagnosticsState.response.summary.restOfWorldHasMethods ? "Yes" : "No"}
-              tone={diagnosticsState.response.summary.restOfWorldHasMethods ? "ok" : "warn"}
-            />
-          </div>
-
-          <Alert className="mb-6">
-            <ShieldCheck className="h-4 w-4" />
-            <AlertTitle>Recommended next action</AlertTitle>
-            <AlertDescription>
-              {diagnosticsState.response.summary.recommendedNextAction}
-            </AlertDescription>
-          </Alert>
-
-          <WilayaDiagnosticsTable response={diagnosticsState.response} />
-          <ZoneDiagnosticsPanel zones={diagnosticsState.response.zoneResults} />
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ShieldCheck className="h-4 w-4 text-primary" /> Local draft method simulator
-              </CardTitle>
-              <CardDescription>
-                Pick a wilaya to inspect local draft methods. This does not read or write checkout.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Select value={sim ?? ""} onValueChange={setSim}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Choose a wilaya..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {wilayas.map((wilaya) => (
-                    <SelectItem key={wilaya.code} value={wilaya.code}>
-                      {wilaya.code} - {wilaya.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {simulatedWilaya && <CheckoutSim wilaya={simulatedWilaya} />}
-            </CardContent>
-          </Card>
-        </>
-      )}
-    </>
-  );
-}
-
-function StateRegistrationCard({ bootstrap }: { bootstrap: BootstrapPayload }) {
-  const active = bootstrap.wooStatesStatus.active;
-
-  return (
-    <Card className="mb-4">
-      <CardContent className="flex items-start gap-3 p-4">
-        <div
-          className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-lg border",
-            active
-              ? "border-emerald-200 bg-emerald-50 text-emerald-600"
-              : "border-amber-200 bg-amber-50 text-amber-700",
-          )}
-        >
-          {active ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-        </div>
-        <div className="space-y-1">
-          <div className="text-sm font-medium">
-            {active
-              ? "Algeria wilayas are registered in WooCommerce."
-              : "Algeria wilayas are not registered in WooCommerce."}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {bootstrap.wooStatesStatus.wilayaCount} wilayas loaded from the current dataset.
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Legacy 58-compatible mode is not available yet.
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SummaryStat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number | string;
-  tone: "ok" | "warn" | "fail";
-}) {
-  const color =
-    tone === "ok" ? "text-emerald-600" : tone === "warn" ? "text-amber-600" : "text-red-600";
-  return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className={cn("text-2xl font-semibold", color)}>{value}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{label}</div>
-    </div>
-  );
-}
-
-function WilayaDiagnosticsTable({ response }: { response: DiagnosticsResponse }) {
-  return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="text-base">Wilaya coverage</CardTitle>
-        <CardDescription>
-          Status is based on existing WooCommerce zone locations matched to DZ state codes.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-20">Code</TableHead>
-              <TableHead>Wilaya</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Matched zones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {response.wilayaResults.map((wilaya) => (
-              <TableRow key={wilaya.code}>
-                <TableCell className="font-mono text-xs">{wilaya.code}</TableCell>
-                <TableCell>
-                  <div className="font-medium">{wilaya.nameFr}</div>
-                  <div className="text-xs text-muted-foreground">{wilaya.nameAr}</div>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={wilaya.status} />
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {wilaya.zoneNames.length > 0 ? wilaya.zoneNames.join(", ") : "None"}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ZoneDiagnosticsPanel({ zones }: { zones: ZoneDiagnostic[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Existing WooCommerce zones</CardTitle>
-        <CardDescription>
-          Manual zones are not treated as errors. Yaxii-looking names are weak hints only.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {zones.length === 0 && (
-          <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No WooCommerce shipping zones were returned.
-          </div>
-        )}
-        {zones.map((zone) => (
-          <div key={zone.zoneId} className="rounded-lg border border-border p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="text-sm font-medium">{zone.name}</div>
-                <div className="text-xs text-muted-foreground">Zone ID {zone.zoneId}</div>
-              </div>
-              <Badge
-                variant={
-                  zone.ownershipHint === "managed_registry"
-                    ? "default"
-                    : zone.ownershipHint === "yaxii_hint"
-                      ? "outline"
-                      : "secondary"
-                }
-              >
-                {zone.ownershipHint === "managed_registry"
-                  ? "Yaxii-managed"
-                  : zone.ownershipHint === "yaxii_hint"
-                    ? "Yaxii-looking"
-                    : "Manual or unknown"}
-              </Badge>
-            </div>
-            <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-              <div>Matched wilayas: {zone.matchedWilayaCodes.length}</div>
-              <div>Overlapping wilayas: {zone.overlapWilayaCodes.length}</div>
-              <div>
-                Methods: {zone.enabledMethodCount}/{zone.methodCount} enabled
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {zone.methodCount === 0 && <Badge variant="outline">No methods</Badge>}
-              {zone.disabledMethods > 0 && <Badge variant="outline">Disabled methods</Badge>}
-              {zone.hasHomeLikeMethod && <Badge variant="outline">Home-like method</Badge>}
-              {zone.hasOfficeLikeMethod && <Badge variant="outline">Office-like method</Badge>}
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-function StatusBadge({ status }: { status: WilayaDiagnosticStatus }) {
-  const label =
-    status === "configured" ? "Configured" : status === "missing" ? "Missing" : "Conflict";
-  const variant =
-    status === "configured" ? "default" : status === "missing" ? "secondary" : "destructive";
-
-  return <Badge variant={variant}>{label}</Badge>;
-}
-
-function fallbackRiskLabel(risk: CheckoutFallbackRisk): string {
-  return risk === "low" ? "Low" : risk === "medium" ? "Medium" : "High";
-}
-
-function fallbackRiskTone(risk: CheckoutFallbackRisk): "ok" | "warn" | "fail" {
-  if (risk === "low") {
-    return "ok";
-  }
-
-  return risk === "medium" ? "warn" : "fail";
-}
-
-function CheckoutSim({ wilaya }: { wilaya: Wilaya }) {
-  const offered = Object.values(wilaya.methods).filter(
-    (method) => method.enabled && method.price !== undefined,
-  );
-  const ok = wilaya.enabled && offered.length > 0;
-  return (
-    <div className="mt-5 rounded-lg border border-border bg-muted/30 p-5">
-      {ok ? (
-        <>
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Local draft shipping methods
-          </div>
-          <div className="mt-3 space-y-2">
-            {offered.map((method) => (
-              <div
-                key={method.id}
-                className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm"
-              >
-                <span>{method.label}</span>
-                <span className="font-medium">
-                  {method.price === null || method.price === 0 ? "Free" : `${method.price} DZD`}
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>No local draft shipping method available</AlertTitle>
-          <AlertDescription>{wilaya.name} has no enabled local draft method.</AlertDescription>
-        </Alert>
-      )}
-    </div>
   );
 }
 
