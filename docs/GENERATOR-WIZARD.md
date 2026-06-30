@@ -8,13 +8,15 @@ Shipping Zones remains the daily management center for live price and method-sta
 
 ## Current MVP Flow
 
-The wizard uses five steps:
+The wizard uses seven steps:
 
-1. `Coverage`
-2. `Methods and prices`
-3. `Names`
-4. `Preview`
-5. `Generate`
+1. `Start`
+2. `Coverage`
+3. `Methods`
+4. `Prices`
+5. `Names`
+6. `Preview`
+7. `Generate`
 
 Removed standalone steps:
 
@@ -23,9 +25,9 @@ Removed standalone steps:
 
 Safety copy is shown inline in Preview and Generate.
 
-## Guided Start
+## Start
 
-Coverage includes the start guidance.
+Start is a dedicated first step.
 
 Recommended path is derived from diagnostics when available:
 
@@ -40,9 +42,21 @@ Available user choices:
 - `Repair existing setup`
 - `Preview only`
 
-`Preview only` is for support or agency review and does not show a generate/apply action.
+Choice copy:
 
-CSV import is not a primary path. The wizard only shows small disabled copy: `CSV import coming later.`
+- `Create new setup`: `Create a new shipping setup for selected wilayas.`
+- `Repair existing setup`: `Fix missing Yaxii-managed zones or methods. Manual zones are not touched.`
+- `Preview only`: `Review the plan without applying changes.`
+
+When setup is already active, Start shows:
+
+```text
+Your setup is already active. Use Shipping Zones for daily price changes.
+```
+
+`Preview only` is for support or agency review. It stops at Preview with a `Done reviewing` action and does not show Generate/apply controls.
+
+CSV import is not part of the Generator flow.
 
 ## Coverage
 
@@ -71,16 +85,26 @@ Yaxii uses wilaya-level WooCommerce zones in this release. Communes are shown fo
 
 Opening commune reference lazy-loads commune records for selected wilayas through the dataset REST endpoint using the active dataset mode. Commune-specific pricing is not implemented.
 
-## Methods And Prices
+## Methods
 
-This step combines method selection and pricing:
+Methods controls which flat-rate methods are included in the setup preview and what labels are sent to preview:
 
 - Home delivery
 - Office / stopdesk delivery
 - Custom method 1
 - Custom method 2
 
-Home delivery and office delivery remain required. Custom method slots are optional. Prices are local draft values until Preview and Generate.
+Home delivery and office delivery remain enabled by default. Custom method slots are optional.
+
+## Prices
+
+Prices controls draft prices separately from method selection:
+
+- Default prices for enabled methods
+- Custom method prices when custom methods are enabled
+- Per-wilaya overrides for selected wilayas
+
+Price validation allows empty values and `0` or `free` for free shipping. Invalid or negative prices block forward movement until corrected. Prices are local draft values until Preview and Generate.
 
 ## Names
 

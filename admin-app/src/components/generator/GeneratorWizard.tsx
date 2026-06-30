@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  FileEdit,
   Home,
   Info,
   MapPin,
@@ -28,6 +27,7 @@ import { fetchDatasetCommunes, fetchDatasetWilayas } from "@/api/dataset-api";
 import { fetchPreview } from "@/api/preview-api";
 import type { AdminBootstrapConfig } from "@/bootstrap";
 import { GeneratorGenerateStep } from "@/components/generator/GeneratorGenerateStep";
+import { GeneratorStartStep } from "@/components/generator/GeneratorStartStep";
 import { PreviewPlanPanel } from "@/components/generator/PreviewPlanPanel";
 import type {
   GeneratorPreviewContext,
@@ -71,9 +71,10 @@ import {
 } from "@/data/default-settings";
 import { formatRegionLabel } from "@/domain/format-region-label";
 import { zoneNamePreview } from "@/domain/zone-name-preview";
-import { generatorRecommendation, repairWilayaCodes } from "@/lib/generator/diagnostics-guidance";
+import { repairWilayaCodes } from "@/lib/generator/diagnostics-guidance";
 import { enabledMethodDefs } from "@/lib/generator/methods";
 import { formatDraftPrice, parseOptionalPrice } from "@/lib/generator/pricing";
+import type { SetupMode } from "@/lib/generator/preview-summary";
 import { cn } from "@/lib/utils";
 import type { CommuneDatasetRecord, DatasetMode } from "@/types/dataset";
 import type { DiagnosticsResponse } from "@/types/diagnostics";
@@ -86,7 +87,6 @@ import type {
   ZoneNameFormat,
 } from "@/types/settings";
 
-type SetupMode = "fresh" | "continue" | "preview";
 type CommuneMode = "show" | "skip";
 type PriceOverrides = Partial<Record<string, Partial<Record<ShippingMethodKey, number | null>>>>;
 type PreviewLoadState =
@@ -105,8 +105,10 @@ type DatasetListState =
   | { status: "error"; wilayas: WilayaReference[]; mode: DatasetMode; message: string };
 
 const WIZARD_STEPS = [
+  { id: "start", label: "Start", icon: Sparkles },
   { id: "coverage", label: "Coverage", icon: MapPin },
-  { id: "methods", label: "Methods and prices", icon: Package },
+  { id: "methods", label: "Methods", icon: Package },
+  { id: "prices", label: "Prices", icon: Home },
   { id: "labels", label: "Names", icon: Tag },
   { id: "preview", label: "Preview", icon: Eye },
   { id: "generate", label: "Generate", icon: Wand2 },
@@ -443,6 +445,7 @@ export function GeneratorWizard({
     step,
     selectedCodes,
     enabledMethods,
+    priceError,
     previewState,
     currentPreviewSignature,
   );
@@ -561,51 +564,55 @@ export function GeneratorWizard({
             className="animate-in fade-in slide-in-from-bottom-2 duration-300"
           >
             {step === 0 && (
-              <div className="space-y-8">
-                <StepStart mode={setupMode} setMode={setSetupMode} diagnostics={diagnostics} />
-                <StepCoverage
-                  dataset={dataset}
-                  setDataset={setDataset}
-                  datasetListState={datasetListState}
-                  setupMode={setupMode}
-                  baseList={activeBaseList}
-                  filteredWilayas={filteredWilayas}
-                  selectedCodes={selectedCodes}
-                  setSelectedCodes={setSelectedCodes}
-                  selectedCodeSet={selectedCodeSet}
-                  search={wilayaSearch}
-                  setSearch={setWilayaSearch}
-                  mode={communeMode}
-                  setMode={setCommuneMode}
-                  selectedWilayas={selectedWilayas}
-                  communeSearch={communeSearch}
-                  setCommuneSearch={setCommuneSearch}
-                  communesByWilaya={communesByWilaya}
-                  openWilaya={openCommuneWilaya}
-                  toggleWilaya={toggleCommuneWilaya}
-                  loadCommunes={loadCommunes}
-                />
-              </div>
+              <GeneratorStartStep
+                mode={setupMode}
+                setMode={setSetupMode}
+                diagnostics={diagnostics}
+              />
             )}
             {step === 1 && (
-              <div className="space-y-8">
-                <StepMethods
-                  methods={methods}
-                  updateMethod={updateMethod}
-                  enableNextCustomMethod={enableNextCustomMethod}
-                />
-                <StepPrices
-                  selectedWilayas={selectedWilayas}
-                  enabledMethods={enabledMethods}
-                  overrides={priceOverrides}
-                  priceError={priceError}
-                  updateDefaultPrice={updateDefaultPrice}
-                  updateOverridePrice={updateOverridePrice}
-                  applyBulkPrice={applyBulkPrice}
-                />
-              </div>
+              <StepCoverage
+                dataset={dataset}
+                setDataset={setDataset}
+                datasetListState={datasetListState}
+                setupMode={setupMode}
+                baseList={activeBaseList}
+                filteredWilayas={filteredWilayas}
+                selectedCodes={selectedCodes}
+                setSelectedCodes={setSelectedCodes}
+                selectedCodeSet={selectedCodeSet}
+                search={wilayaSearch}
+                setSearch={setWilayaSearch}
+                mode={communeMode}
+                setMode={setCommuneMode}
+                selectedWilayas={selectedWilayas}
+                communeSearch={communeSearch}
+                setCommuneSearch={setCommuneSearch}
+                communesByWilaya={communesByWilaya}
+                openWilaya={openCommuneWilaya}
+                toggleWilaya={toggleCommuneWilaya}
+                loadCommunes={loadCommunes}
+              />
             )}
             {step === 2 && (
+              <StepMethods
+                methods={methods}
+                updateMethod={updateMethod}
+                enableNextCustomMethod={enableNextCustomMethod}
+              />
+            )}
+            {step === 3 && (
+              <StepPrices
+                selectedWilayas={selectedWilayas}
+                enabledMethods={enabledMethods}
+                overrides={priceOverrides}
+                priceError={priceError}
+                updateDefaultPrice={updateDefaultPrice}
+                updateOverridePrice={updateOverridePrice}
+                applyBulkPrice={applyBulkPrice}
+              />
+            )}
+            {step === 4 && (
               <StepLabels
                 baseList={activeBaseList}
                 labelFormat={labelFormat}
@@ -665,12 +672,16 @@ export function GeneratorWizard({
             <ChevronLeft className="h-4 w-4" /> Back
           </Button>
           <div />
-          {step < WIZARD_STEPS.length - 1 ? (
+          {setupMode === "preview" && step === PREVIEW_STEP_INDEX ? (
+            <Button variant="outline" onClick={useDraftAndClose}>
+              Done reviewing
+            </Button>
+          ) : step < WIZARD_STEPS.length - 1 ? (
             <Button
               onClick={() => setStep((current) => Math.min(current + 1, WIZARD_STEPS.length - 1))}
               disabled={!canContinue}
             >
-              {step === PREVIEW_STEP_INDEX ? "Continue to Generate" : "Continue"}{" "}
+              Continue to {WIZARD_STEPS[step + 1]?.label ?? "next step"}{" "}
               <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
@@ -681,105 +692,6 @@ export function GeneratorWizard({
         </div>
       </div>
     </div>
-  );
-}
-
-function StepStart({
-  mode,
-  setMode,
-  diagnostics,
-}: {
-  mode: SetupMode;
-  setMode: (mode: SetupMode) => void;
-  diagnostics?: DiagnosticsResponse;
-}) {
-  const recommendation = generatorRecommendation(diagnostics);
-
-  return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[11px] font-medium text-primary">
-        <ShieldCheck className="h-3 w-3" /> Preview before apply
-      </div>
-      <h3 className="text-2xl font-semibold tracking-tight">How would you like to start?</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Generator is for setup and repair. Use Shipping Zones for daily price changes.
-      </p>
-      <Card className="mt-5 border-primary/30 bg-primary/5">
-        <CardContent className="p-4">
-          <div className="text-[11px] font-medium uppercase text-primary">Recommended path</div>
-          <div className="mt-1 text-base font-semibold">{recommendation.title}</div>
-          <p className="mt-1 text-sm text-muted-foreground">{recommendation.description}</p>
-        </CardContent>
-      </Card>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <StartCard
-          active={mode === "fresh"}
-          onClick={() => setMode("fresh")}
-          icon={<Sparkles className="h-5 w-5" />}
-          title="Create new setup"
-          desc="Select all wilayas for the chosen dataset and preview new managed setup."
-        />
-        <StartCard
-          active={mode === "continue"}
-          onClick={() => setMode("continue")}
-          icon={<FileEdit className="h-5 w-5" />}
-          title="Repair existing setup"
-          desc="Preselect missing or incomplete managed setup. Manual zones are not touched."
-        />
-        <StartCard
-          active={mode === "preview"}
-          onClick={() => setMode("preview")}
-          icon={<Eye className="h-5 w-5" />}
-          title="Preview only"
-          desc="Advanced support review. Preview runs, but generate/apply stays hidden."
-        />
-      </div>
-
-      <div className="mt-4 text-xs text-muted-foreground">CSV import coming later.</div>
-    </div>
-  );
-}
-
-function StartCard({
-  active,
-  onClick,
-  icon,
-  title,
-  desc,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: ReactNode;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "group relative overflow-hidden rounded-xl border bg-card p-5 text-left transition-all hover:shadow-md",
-        active ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40",
-      )}
-    >
-      <div
-        className={cn(
-          "mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
-          active
-            ? "bg-primary text-primary-foreground"
-            : "bg-accent text-accent-foreground group-hover:bg-primary/10 group-hover:text-primary",
-        )}
-      >
-        {icon}
-      </div>
-      <div className="text-sm font-semibold">{title}</div>
-      <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
-      {active && (
-        <div className="absolute right-3 top-3 text-primary">
-          <CheckCircle2 className="h-4 w-4" />
-        </div>
-      )}
-    </button>
   );
 }
 
@@ -1729,15 +1641,24 @@ function canContinueFromStep(
   step: number,
   selectedCodes: string[],
   enabledMethods: ShippingMethodTemplate[],
+  priceError: string,
   previewState: PreviewLoadState,
   currentPreviewSignature: string,
 ): boolean {
   if (step === 0) {
-    return selectedCodes.length > 0;
+    return true;
   }
 
   if (step === 1) {
+    return selectedCodes.length > 0;
+  }
+
+  if (step === 2) {
     return enabledMethods.length > 0;
+  }
+
+  if (step === 3) {
+    return priceError === "";
   }
 
   if (step === PREVIEW_STEP_INDEX) {
