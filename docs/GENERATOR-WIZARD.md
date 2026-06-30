@@ -39,6 +39,7 @@ The Start screen is state-aware and is derived from diagnostics when available:
 State actions:
 
 - Fresh setup shows `Start setup` and defaults to all wilayas in the selected dataset.
+- After Yaxii-managed setup removal, an empty managed registry plus mostly missing wilayas shows `Create a new Yaxii setup`, even if protected manual WooCommerce zones remain.
 - Repair setup shows `Repair setup` and preselects only missing or method-incomplete managed wilayas.
 - Fully active setup shows `Open Shipping Zones` as the primary action and `Modify setup anyway` as the secondary action.
 - Manual conflicts show `Review Diagnostics` and `Open WooCommerce zones`.
@@ -60,6 +61,15 @@ Yaxii-managed zones and methods already exist. Use Shipping Zones to change pric
 `Preview only` is for support or agency review. It stops at Preview with a `Done reviewing` action and does not show Generate/apply controls.
 
 CSV import is not part of the Generator flow.
+
+When no Yaxii-managed setup is recorded but manual WooCommerce zones exist, Start keeps the setup path available:
+
+```text
+Create a new Yaxii setup
+Manual WooCommerce zones exist and will be protected.
+```
+
+The primary action remains `Start setup`. `Review manual zones` opens Diagnostics. Manual conflicts can still be skipped or blocked by Preview/Apply for selected wilayas, but a protected manual zone does not make the whole generator start screen unusable.
 
 ## Coverage
 

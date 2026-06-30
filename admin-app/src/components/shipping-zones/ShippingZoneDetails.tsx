@@ -1,10 +1,18 @@
-import { Check, X } from "lucide-react";
+import { Activity, Check, ExternalLink, X } from "lucide-react";
 
 import { ownershipLabel, formatDzdPrice, liveMethodForKey } from "@/lib/shipping-zones/status";
 import { cn } from "@/lib/utils";
 import type { ShippingZoneRowView } from "@/types/shipping-zones";
 
-export function ShippingZoneDetails({ row }: { row: ShippingZoneRowView }) {
+export function ShippingZoneDetails({
+  row,
+  onOpenDiagnostics,
+  onOpenWooCommerceZones,
+}: {
+  row: ShippingZoneRowView;
+  onOpenDiagnostics: () => void;
+  onOpenWooCommerceZones: () => void;
+}) {
   if (row.liveZone.zones.length === 0) {
     return (
       <div className="mx-4 mb-3 rounded-md border border-dashed border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
@@ -24,12 +32,12 @@ export function ShippingZoneDetails({ row }: { row: ShippingZoneRowView }) {
       )}
       {row.status === "protected" && (
         <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800">
-          Yaxii will not edit this WooCommerce zone.
+          This zone is not managed by Yaxii. Yaxii will not edit it.
         </div>
       )}
       {row.status === "not_managed" && (
         <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800">
-          This zone is not recorded in Yaxii's managed registry.
+          This zone is not managed by Yaxii. Yaxii will not edit it.
         </div>
       )}
       {row.status === "updating" && (
@@ -41,22 +49,76 @@ export function ShippingZoneDetails({ row }: { row: ShippingZoneRowView }) {
         {row.liveZone.zones.map((zone) => (
           <div key={zone.zoneId} className="space-y-2">
             <div className="font-medium text-foreground/80">{zone.name}</div>
+            <DetailLine label={`Matched wilaya: ${matchedWilayaLabel(row, zone)}`} ok />
             <DetailLine label={ownershipLabel(zone.ownershipHint)} ok />
             <DetailLine label="WooCommerce zone exists" ok />
-            {row.methods.map((method) => (
-              <DetailLine
-                key={method.key}
-                label={`${method.label}: ${formatDzdPrice(
-                  liveMethodForKey(zone, method.key) ? method.livePrice : null,
-                )}`}
-                ok={Boolean(liveMethodForKey(zone, method.key))}
-              />
-            ))}
+            {zone.ownershipHint === "manual_unknown"
+              ? zone.methods.map((method) => (
+                  <DetailLine
+                    key={method.instanceId}
+                    label={`${method.title || method.methodTitle}: ${formatMethodCost(
+                      method.cost,
+                    )} - ${method.enabled ? "Enabled" : "Disabled"}`}
+                    ok={method.enabled}
+                  />
+                ))
+              : row.methods.map((method) => (
+                  <DetailLine
+                    key={method.key}
+                    label={`${method.label}: ${formatDzdPrice(
+                      liveMethodForKey(zone, method.key) ? method.livePrice : null,
+                    )}`}
+                    ok={Boolean(liveMethodForKey(zone, method.key))}
+                  />
+                ))}
+            {zone.ownershipHint === "manual_unknown" && zone.methods.length === 0 && (
+              <DetailLine label="No shipping methods found in this zone" ok={false} />
+            )}
           </div>
         ))}
       </div>
+      {(row.status === "protected" ||
+        row.status === "not_managed" ||
+        row.status === "conflict") && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onOpenWooCommerceZones}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open WooCommerce zones
+          </button>
+          <button
+            type="button"
+            onClick={onOpenDiagnostics}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+          >
+            <Activity className="h-3.5 w-3.5" />
+            Review in Diagnostics
+          </button>
+        </div>
+      )}
     </div>
   );
+}
+
+function matchedWilayaLabel(
+  row: ShippingZoneRowView,
+  zone: ShippingZoneRowView["liveZone"]["zones"][number],
+): string {
+  const matchedCodes =
+    zone.matchedWilayaCodes.length > 0 ? zone.matchedWilayaCodes : [row.wilaya.code];
+  return matchedCodes.join(", ");
+}
+
+function formatMethodCost(cost: string | null): string {
+  if (cost === null || cost.trim() === "") {
+    return "Not set";
+  }
+
+  const numericCost = Number(cost);
+  return Number.isFinite(numericCost) ? formatDzdPrice(numericCost) : cost;
 }
 
 function DetailLine({ label, ok }: { label: string; ok: boolean }) {

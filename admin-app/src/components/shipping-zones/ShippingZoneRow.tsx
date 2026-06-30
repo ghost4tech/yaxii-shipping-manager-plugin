@@ -124,7 +124,13 @@ export function ShippingZoneRow({
           </button>
         </div>
       </div>
-      {expanded && <ShippingZoneDetails row={row} />}
+      {expanded && (
+        <ShippingZoneDetails
+          row={row}
+          onOpenDiagnostics={onOpenDiagnostics}
+          onOpenWooCommerceZones={onOpenWooCommerceZones}
+        />
+      )}
     </div>
   );
 }

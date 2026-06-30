@@ -75,14 +75,15 @@ final class ShippingDiagnosticsService {
 		return array(
 			'woocommerceActive' => false,
 			'summary'           => array(
-				'totalWilayas'            => $wilaya_count,
-				'configuredWilayas'       => 0,
-				'missingWilayas'          => $wilaya_count,
-				'duplicateConflictCount'  => 0,
-				'zonesWithoutMethods'     => 0,
-				'checkoutFallbackRisk'    => 'high',
-				'recommendedNextAction'   => __( 'Activate WooCommerce before running shipping diagnostics.', 'yaxii-shipping-manager' ),
-				'restOfWorldHasMethods'   => false,
+				'totalWilayas'             => $wilaya_count,
+				'configuredWilayas'        => 0,
+				'missingWilayas'           => $wilaya_count,
+				'managedRegistryZoneCount' => 0,
+				'duplicateConflictCount'   => 0,
+				'zonesWithoutMethods'      => 0,
+				'checkoutFallbackRisk'     => 'high',
+				'recommendedNextAction'    => __( 'Activate WooCommerce before running shipping diagnostics.', 'yaxii-shipping-manager' ),
+				'restOfWorldHasMethods'    => false,
 			),
 			'wilayaResults'     => array(),
 			'zoneResults'       => array(),
@@ -189,14 +190,15 @@ final class ShippingDiagnosticsService {
 		$risk             = $this->fallback_risk( $total, $missing, $conflicts, $without_methods, $rest_has_methods );
 
 		return array(
-			'totalWilayas'           => $total,
-			'configuredWilayas'      => $this->count_status( $wilaya_results, 'configured' ),
-			'missingWilayas'         => $missing,
-			'duplicateConflictCount' => $conflicts,
-			'zonesWithoutMethods'    => $without_methods,
-			'checkoutFallbackRisk'   => $risk,
-			'recommendedNextAction'  => $this->recommended_next_action( $risk ),
-			'restOfWorldHasMethods'  => $rest_has_methods,
+			'totalWilayas'             => $total,
+			'configuredWilayas'        => $this->count_status( $wilaya_results, 'configured' ),
+			'missingWilayas'           => $missing,
+			'managedRegistryZoneCount' => $this->managed_registry->managed_zone_count(),
+			'duplicateConflictCount'   => $conflicts,
+			'zonesWithoutMethods'      => $without_methods,
+			'checkoutFallbackRisk'     => $risk,
+			'recommendedNextAction'    => $this->recommended_next_action( $risk ),
+			'restOfWorldHasMethods'    => $rest_has_methods,
 		);
 	}
 

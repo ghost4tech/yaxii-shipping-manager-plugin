@@ -54,13 +54,18 @@ export function GeneratorStartStep({
           <div className="mt-1 text-base font-semibold">{guidance.title}</div>
           <p className="mt-1 text-sm text-muted-foreground">{guidance.message}</p>
           <StartActions
-            state={guidance.state}
+            guidance={guidance}
             setMode={setMode}
             onAdvance={onAdvance}
             onOpenShippingZones={onOpenShippingZones}
             onOpenDiagnostics={onOpenDiagnostics}
             onOpenWooCommerceZones={onOpenWooCommerceZones}
           />
+          {guidance.manualProtectedZoneCount > 0 && guidance.state === "fresh_setup" && (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Manual WooCommerce zones exist and will be protected.
+            </div>
+          )}
         </CardContent>
       </Card>
       {(guidance.state === "diagnostics_unavailable" || guidance.state === "fresh_setup") && (
@@ -102,20 +107,21 @@ export function GeneratorStartStep({
 }
 
 function StartActions({
-  state,
+  guidance,
   setMode,
   onAdvance,
   onOpenShippingZones,
   onOpenDiagnostics,
   onOpenWooCommerceZones,
 }: {
-  state: ReturnType<typeof generatorStartGuidance>["state"];
+  guidance: ReturnType<typeof generatorStartGuidance>;
   setMode: (mode: SetupMode) => void;
   onAdvance: () => void;
   onOpenShippingZones: () => void;
   onOpenDiagnostics: () => void;
   onOpenWooCommerceZones: () => void;
 }) {
+  const state = guidance.state;
   const startMode = (mode: SetupMode) => {
     setMode(mode);
     onAdvance();
@@ -163,6 +169,11 @@ function StartActions({
       <Button type="button" onClick={() => startMode("fresh")}>
         Start setup
       </Button>
+      {guidance.manualProtectedZoneCount > 0 && (
+        <Button type="button" variant="outline" onClick={onOpenDiagnostics}>
+          Review manual zones
+        </Button>
+      )}
     </div>
   );
 }

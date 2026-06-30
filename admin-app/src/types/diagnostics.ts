@@ -51,6 +51,7 @@ export type DiagnosticsSummary = {
   totalWilayas: number;
   configuredWilayas: number;
   missingWilayas: number;
+  managedRegistryZoneCount: number;
   duplicateConflictCount: number;
   zonesWithoutMethods: number;
   checkoutFallbackRisk: CheckoutFallbackRisk;

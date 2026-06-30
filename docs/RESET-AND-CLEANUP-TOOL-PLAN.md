@@ -129,6 +129,15 @@ The removal engine:
 - never clears the full settings option, dataset files, plugin files, or unrelated WooCommerce data
 - reports deleted zones, estimated deleted methods, registry records removed, orphan records cleaned, protected manual zones, blocked zones, warnings, and a merchant-facing message
 
+## After Removal
+
+After confirmed removal, the plugin does not automatically recreate setup. Shipping Zones and Generator guide the merchant back into the existing preview/apply flow:
+
+- Shipping Zones shows `No Yaxii shipping setup found` when the managed registry is empty and most wilayas are missing.
+- `Create setup` opens Generator.
+- protected manual WooCommerce zones remain visible for inspection and are not edited.
+- repair/create actions still go through Preview and Safe Apply.
+
 ## WordPress.org Notes
 
 The tool stays transparent and local-first:

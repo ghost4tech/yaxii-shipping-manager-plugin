@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Eye, ShieldCheck, Wand2 } from "lucide-react";
 
 import {
   pendingChangeCount,
@@ -119,6 +120,7 @@ export function ShippingZonesPage({
   ]);
   const protectedSelectionCount = selectedRows.length - actionableSelectionCodes.size;
   const stats = shippingZoneStats(rows);
+  const recoveryState = postRemovalRecoveryState(rows, diagnosticsState);
   const pendingCount = pendingChangeCount(pendingPrices, pendingStatuses);
   const changes = pendingReviewItems(rows, pendingPrices, pendingStatuses);
   const reviewContext = reviewContextFromPendingChanges(
@@ -360,6 +362,13 @@ export function ShippingZonesPage({
         woocommerceSettingsUrl={woocommerceSettingsUrl}
         onOpenDiagnostics={onOpenDiagnostics}
       />
+      {recoveryState.show && (
+        <PostRemovalRecoveryPanel
+          manualZoneCount={recoveryState.manualZoneCount}
+          onCreateSetup={onLaunchWizard}
+          onViewManualZones={() => setFilter("protected")}
+        />
+      )}
       <ShippingZonesToolbar
         rows={rows}
         search={search}
@@ -454,6 +463,85 @@ export function ShippingZonesPage({
       />
     </div>
   );
+}
+
+function PostRemovalRecoveryPanel({
+  manualZoneCount,
+  onCreateSetup,
+  onViewManualZones,
+}: {
+  manualZoneCount: number;
+  onCreateSetup: () => void;
+  onViewManualZones: () => void;
+}) {
+  return (
+    <div className="mt-5 rounded-md border border-primary/25 bg-primary/5 px-5 py-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            No Yaxii shipping setup found
+          </div>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Yaxii-managed zones were removed or are not created yet. Start the Generator to create a
+            new setup.
+          </p>
+          {manualZoneCount > 0 && (
+            <p className="mt-2 text-xs font-medium text-amber-900">
+              Manual WooCommerce zones found and protected. Yaxii will not edit them.
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onCreateSetup}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Create setup
+          </button>
+          <button
+            type="button"
+            onClick={onViewManualZones}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground hover:bg-muted"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            View manual zones
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function postRemovalRecoveryState(
+  rows: ShippingZoneRowView[],
+  diagnosticsState: DiagnosticsLoadState,
+): { show: boolean; manualZoneCount: number } {
+  if (diagnosticsState.status !== "ready") {
+    return { show: false, manualZoneCount: 0 };
+  }
+
+  const manualZoneCount = diagnosticsState.response.zoneResults.filter(
+    (zone) => zone.ownershipHint === "manual_unknown",
+  ).length;
+  const summary = diagnosticsState.response.summary;
+  const missingThreshold = Math.max(
+    summary.totalWilayas - manualZoneCount,
+    Math.ceil(summary.totalWilayas * 0.8),
+  );
+  const activeManagedRows = rows.filter(
+    (row) => row.status === "active" || row.status === "needs_update",
+  ).length;
+
+  return {
+    show:
+      summary.managedRegistryZoneCount === 0 &&
+      summary.missingWilayas >= missingThreshold &&
+      activeManagedRows === 0,
+    manualZoneCount,
+  };
 }
 
 function postApplyVerificationFromChanges(

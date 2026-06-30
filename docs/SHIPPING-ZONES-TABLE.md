@@ -12,6 +12,7 @@ The page shows:
 
 - a reference-based management page with the table as the primary workspace
 - a compact live status card with active wilayas, managed methods, pending changes, and manual zones
+- a global rebuild state when the managed registry is empty and most wilayas are missing
 - secondary actions for diagnostics and WooCommerce's native shipping settings
 - search by wilaya name, Arabic name, or code
 - filters for all, active, pending changes, needs update, missing setup, and manual/not-managed rows
@@ -23,6 +24,25 @@ The page shows:
 - a `Repair setup` action when a row is missing its Yaxii-managed WooCommerce setup
 
 Diagnostics remain read-only. They do not create, update, or delete zones or methods.
+
+## Post-Removal Recovery State
+
+When diagnostics report an empty Yaxii managed registry and most or all dataset wilayas are missing, the page shows a global rebuild state above the table:
+
+```text
+No Yaxii shipping setup found
+Yaxii-managed zones were removed or are not created yet. Start the Generator to create a new setup.
+```
+
+The primary action is `Create setup`. The secondary action is `View manual zones`.
+
+If manual WooCommerce zones exist, the state also says:
+
+```text
+Manual WooCommerce zones found and protected. Yaxii will not edit them.
+```
+
+The table remains available below for inspection, but merchants are not expected to repair many missing wilayas one row at a time after a full Yaxii-managed setup removal.
 
 ## Supported Pending Changes
 
@@ -96,6 +116,7 @@ Repair uses the existing preview/apply path:
 
 - the selected missing wilayas are previewed again
 - current Home/Office default prices from settings are used for missing methods
+- pricing rows send `methodStatuses` as an object, using an empty object when no status changes are needed
 - WooCommerce is re-read before apply
 - safe previews can create missing managed zones or add missing managed methods through `SafeApplyEngine`
 - diagnostics refresh after a successful repair
@@ -117,8 +138,10 @@ Unsupported actions must be hidden, disabled, or labeled as later work:
 For manual or unknown rows:
 
 ```text
-Yaxii will not edit this WooCommerce zone.
+This zone is not managed by Yaxii. Yaxii will not edit it.
 ```
+
+Manual/protected row details are read-only. They show the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when WooCommerce returns that data. The only actions are `Open WooCommerce zones` and `Review in Diagnostics`.
 
 ## Supported Actions
 

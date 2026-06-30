@@ -38,6 +38,10 @@ final class PreviewRequestSanitizer {
 			return array();
 		}
 
+		if ( array() === $payload ) {
+			return array();
+		}
+
 		if ( ! is_array( $payload ) || $this->is_list( $payload ) ) {
 			return $this->validation_error( __( 'Preview payload must be a JSON object.', 'yaxii-shipping-manager' ) );
 		}
@@ -311,6 +315,10 @@ final class PreviewRequestSanitizer {
 	 * @return array<string,bool>|WP_Error
 	 */
 	private function pricing_method_statuses( $raw_statuses ) {
+		if ( array() === $raw_statuses ) {
+			return array();
+		}
+
 		if ( ! is_array( $raw_statuses ) || $this->is_list( $raw_statuses ) ) {
 			return $this->validation_error( __( 'Pricing row methodStatuses must be an object.', 'yaxii-shipping-manager' ) );
 		}

@@ -12,6 +12,7 @@ export type GeneratorStartGuidance = {
   state: GeneratorStartState;
   title: string;
   message: string;
+  manualProtectedZoneCount: number;
 };
 
 export function generatorStartGuidance(diagnostics?: DiagnosticsResponse): GeneratorStartGuidance {
@@ -20,16 +21,31 @@ export function generatorStartGuidance(diagnostics?: DiagnosticsResponse): Gener
       state: "diagnostics_unavailable",
       title: "Create a new shipping setup",
       message: "WooCommerce diagnostics are unavailable, so preview will verify the store again.",
+      manualProtectedZoneCount: 0,
     };
   }
 
   const summary = diagnostics.summary;
-  if (summary.duplicateConflictCount > 0 || protectedManualZoneCount(diagnostics) > 0) {
+  const manualProtectedZoneCount = protectedManualZoneCount(diagnostics);
+  if (hasNoManagedSetup(summary, manualProtectedZoneCount)) {
+    return {
+      state: "fresh_setup",
+      title: "Create a new Yaxii setup",
+      message:
+        manualProtectedZoneCount > 0
+          ? "Manual WooCommerce zones exist and will be protected."
+          : "No Yaxii-managed zones are recorded. Start setup to create managed WooCommerce zones.",
+      manualProtectedZoneCount,
+    };
+  }
+
+  if (summary.duplicateConflictCount > 0 || manualProtectedZoneCount > 0) {
     return {
       state: "manual_review",
       title: "Manual zones need review",
       message:
         "Yaxii found WooCommerce zones it does not manage. These zones are protected and will not be changed.",
+      manualProtectedZoneCount,
     };
   }
 
@@ -43,6 +59,7 @@ export function generatorStartGuidance(diagnostics?: DiagnosticsResponse): Gener
       title: "Your shipping setup is already active",
       message:
         "Yaxii-managed zones and methods already exist. Use Shipping Zones to change prices or enable/disable methods.",
+      manualProtectedZoneCount,
     };
   }
 
@@ -51,6 +68,7 @@ export function generatorStartGuidance(diagnostics?: DiagnosticsResponse): Gener
       state: "fresh_setup",
       title: "Create new setup",
       message: "Yaxii will create managed WooCommerce zones and methods for selected wilayas.",
+      manualProtectedZoneCount,
     };
   }
 
@@ -59,6 +77,7 @@ export function generatorStartGuidance(diagnostics?: DiagnosticsResponse): Gener
     title: "Repair missing setup",
     message:
       "Some Yaxii-managed zones or methods are missing. Yaxii can repair them safely without touching manual zones.",
+    manualProtectedZoneCount,
   };
 }
 
@@ -99,6 +118,18 @@ function protectedManualZoneCount(diagnostics: DiagnosticsResponse): number {
       zone.ownershipHint === "manual_unknown" &&
       (zone.matchedWilayaCodes.length > 0 || zone.overlapWilayaCodes.length > 0),
   ).length;
+}
+
+function hasNoManagedSetup(
+  summary: DiagnosticsResponse["summary"],
+  manualProtectedZoneCount: number,
+): boolean {
+  const missingThreshold = Math.max(
+    summary.totalWilayas - manualProtectedZoneCount,
+    Math.ceil(summary.totalWilayas * 0.8),
+  );
+
+  return summary.managedRegistryZoneCount === 0 && summary.missingWilayas >= missingThreshold;
 }
 
 function managedZoneHasMethodGap(zone: DiagnosticsResponse["zoneResults"][number]): boolean {

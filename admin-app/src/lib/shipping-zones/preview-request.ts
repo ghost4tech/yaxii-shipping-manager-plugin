@@ -75,6 +75,7 @@ export function repairContextFromRows(
         wilayaCode: row.wilaya.code,
         enabled: true,
         methods: repairDefaultPrices(row),
+        methodStatuses: {},
       })),
     },
     previewContext: {
