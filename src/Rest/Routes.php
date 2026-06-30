@@ -157,5 +157,15 @@ final class Routes {
 				'permission_callback' => array( $this->managed_setup, 'can_access' ),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/managed-setup/remove',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this->managed_setup, 'create_removal' ),
+				'permission_callback' => array( $this->managed_setup, 'can_remove' ),
+			)
+		);
 	}
 }

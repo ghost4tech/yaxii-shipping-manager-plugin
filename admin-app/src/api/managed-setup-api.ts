@@ -1,7 +1,12 @@
 import type { AdminBootstrapConfig } from "../bootstrap";
 import type {
   ManagedSetupRemovalPreview,
+  ManagedSetupRemovalRequest,
+  ManagedSetupRemovalResult,
+  OrphanMethodRecord,
+  OrphanRegistryRecord,
   ProtectedManualZone,
+  RemovalAcceptedSummary,
   RemovalMethodCandidate,
   RemovalZoneCandidate,
 } from "../types/managed-setup";
@@ -40,19 +45,56 @@ export async function fetchManagedSetupRemovalPreview(
   return parseRemovalPreview(payload);
 }
 
+export async function removeManagedSetup(
+  config: AdminBootstrapConfig,
+  request: ManagedSetupRemovalRequest,
+): Promise<ManagedSetupRemovalResult> {
+  const response = await fetch(
+    new URL("managed-setup/remove", ensureTrailingSlash(config.restUrl)),
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-WP-Nonce": config.nonce,
+      },
+      body: JSON.stringify(request),
+    },
+  );
+
+  const payload: unknown = await response.json();
+  if (!response.ok) {
+    throw new Error(
+      errorMessageFromPayload(
+        payload,
+        `Managed setup removal failed with HTTP ${response.status}.`,
+      ),
+    );
+  }
+
+  return parseRemovalResult(payload);
+}
+
 function parseRemovalPreview(payload: unknown): ManagedSetupRemovalPreview {
   if (
     !isObject(payload) ||
     typeof payload.woocommerceActive !== "boolean" ||
-    payload.removalAvailable !== false ||
+    typeof payload.removalAvailable !== "boolean" ||
     payload.dryRunOnly !== true ||
     !hasNumberCounts(payload) ||
     !Array.isArray(payload.zonesToRemoveLater) ||
     !Array.isArray(payload.methodsToRemoveLater) ||
     !Array.isArray(payload.manualZonesProtected) ||
+    !Array.isArray(payload.orphanRegistryRecords) ||
+    !Array.isArray(payload.orphanMethodRecords) ||
+    !Array.isArray(payload.blockedZones) ||
     typeof payload.requiredConfirmationText !== "string" ||
     typeof payload.message !== "string" ||
-    typeof payload.generatedAt !== "string"
+    typeof payload.generatedAt !== "string" ||
+    typeof payload.dryRunGeneratedAt !== "string" ||
+    typeof payload.dryRunHash !== "string" ||
+    !isRemovalAcceptedSummary(payload.acceptedSummary)
   ) {
     throw new Error("Removal preview response did not match the expected contract.");
   }
@@ -60,14 +102,17 @@ function parseRemovalPreview(payload: unknown): ManagedSetupRemovalPreview {
   if (
     !payload.zonesToRemoveLater.every(isRemovalZoneCandidate) ||
     !payload.methodsToRemoveLater.every(isRemovalMethodCandidate) ||
-    !payload.manualZonesProtected.every(isProtectedManualZone)
+    !payload.manualZonesProtected.every(isProtectedManualZone) ||
+    !payload.orphanRegistryRecords.every(isOrphanRegistryRecord) ||
+    !payload.orphanMethodRecords.every(isOrphanMethodRecord) ||
+    !payload.blockedZones.every(isRemovalZoneCandidate)
   ) {
     throw new Error("Removal preview response contained invalid records.");
   }
 
   return {
     woocommerceActive: payload.woocommerceActive,
-    removalAvailable: false,
+    removalAvailable: payload.removalAvailable,
     dryRunOnly: true,
     managedZoneCount: payload.managedZoneCount,
     managedMethodCount: payload.managedMethodCount,
@@ -78,11 +123,55 @@ function parseRemovalPreview(payload: unknown): ManagedSetupRemovalPreview {
     zonesToRemoveLater: payload.zonesToRemoveLater,
     methodsToRemoveLater: payload.methodsToRemoveLater,
     manualZonesProtected: payload.manualZonesProtected,
+    orphanRegistryRecords: payload.orphanRegistryRecords,
+    orphanMethodRecords: payload.orphanMethodRecords,
+    blockedZones: payload.blockedZones,
     registryWarnings: stringArray(payload.registryWarnings),
     blockingReasons: stringArray(payload.blockingReasons),
     requiredConfirmationText: payload.requiredConfirmationText,
     message: payload.message,
     generatedAt: payload.generatedAt,
+    dryRunGeneratedAt: payload.dryRunGeneratedAt,
+    dryRunHash: payload.dryRunHash,
+    acceptedSummary: payload.acceptedSummary,
+  };
+}
+
+function parseRemovalResult(payload: unknown): ManagedSetupRemovalResult {
+  if (
+    !isObject(payload) ||
+    typeof payload.removed !== "boolean" ||
+    typeof payload.wooCommerceChanged !== "boolean" ||
+    !Array.isArray(payload.deletedZones) ||
+    typeof payload.deletedMethodsEstimated !== "number" ||
+    typeof payload.registryRecordsRemoved !== "number" ||
+    typeof payload.orphanRegistryRecordsCleaned !== "number" ||
+    !Array.isArray(payload.manualZonesProtected) ||
+    !Array.isArray(payload.blockedZones) ||
+    typeof payload.message !== "string"
+  ) {
+    throw new Error("Removal result response did not match the expected contract.");
+  }
+
+  if (
+    !payload.deletedZones.every(isRemovalZoneCandidate) ||
+    !payload.manualZonesProtected.every(isProtectedManualZone) ||
+    !payload.blockedZones.every(isRemovalZoneCandidate)
+  ) {
+    throw new Error("Removal result response contained invalid records.");
+  }
+
+  return {
+    removed: payload.removed,
+    wooCommerceChanged: payload.wooCommerceChanged,
+    deletedZones: payload.deletedZones,
+    deletedMethodsEstimated: payload.deletedMethodsEstimated,
+    registryRecordsRemoved: payload.registryRecordsRemoved,
+    orphanRegistryRecordsCleaned: payload.orphanRegistryRecordsCleaned,
+    manualZonesProtected: payload.manualZonesProtected,
+    blockedZones: payload.blockedZones,
+    warnings: stringArray(payload.warnings),
+    message: payload.message,
   };
 }
 
@@ -104,6 +193,12 @@ function isRemovalZoneCandidate(value: unknown): value is RemovalZoneCandidate {
     typeof value.zoneName === "string" &&
     typeof value.registryZoneName === "string" &&
     typeof value.wilayaCode === "string" &&
+    typeof value.registryRecordStatus === "string" &&
+    typeof value.methodCount === "number" &&
+    typeof value.registryOwnedMethodCount === "number" &&
+    typeof value.unmanagedMethodCount === "number" &&
+    typeof value.canRemove === "boolean" &&
+    Array.isArray(value.blockingReasons) &&
     typeof value.recordedMethodCount === "number" &&
     typeof value.liveMethodCount === "number"
   );
@@ -132,6 +227,37 @@ function isProtectedManualZone(value: unknown): value is ProtectedManualZone {
     typeof value.zoneName === "string" &&
     typeof value.methodCount === "number" &&
     Array.isArray(value.locations)
+  );
+}
+
+function isOrphanRegistryRecord(value: unknown): value is OrphanRegistryRecord {
+  return (
+    isObject(value) &&
+    typeof value.zoneId === "number" &&
+    typeof value.wilayaCode === "string" &&
+    typeof value.zoneName === "string" &&
+    typeof value.reason === "string"
+  );
+}
+
+function isOrphanMethodRecord(value: unknown): value is OrphanMethodRecord {
+  return (
+    isObject(value) &&
+    typeof value.zoneId === "number" &&
+    typeof value.wilayaCode === "string" &&
+    typeof value.instanceId === "number" &&
+    typeof value.methodKey === "string" &&
+    typeof value.reason === "string"
+  );
+}
+
+function isRemovalAcceptedSummary(value: unknown): value is RemovalAcceptedSummary {
+  return (
+    isObject(value) &&
+    typeof value.managedZoneCount === "number" &&
+    typeof value.managedMethodCount === "number" &&
+    typeof value.registryMismatchCount === "number" &&
+    typeof value.manualProtectedZoneCount === "number"
   );
 }
 

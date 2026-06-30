@@ -65,6 +65,21 @@ Expected:
 - Clicking `Preview removal` shows the dry-run result and the copy `This is a dry run. Nothing was deleted.`
 - No working remove/delete/reset button is shown.
 
+### TASK-012G Remove Managed Setup Execution Smoke
+
+Expected:
+
+- `GET /wp-json/yaxii-shipping-manager/v1/managed-setup/removal-preview` returns per-zone `canRemove`, method ownership counts, blockers, `dryRunHash`, `dryRunGeneratedAt`, and accepted summary counts.
+- Manual WooCommerce zones appear only under `manualZonesProtected`.
+- Manual zones are not included in `zonesToRemoveLater` unless they are also recorded in the Yaxii managed registry.
+- If a managed zone contains unmanaged methods or an unexpected location, `canRemove` is false and no remove button is shown.
+- `POST /wp-json/yaxii-shipping-manager/v1/managed-setup/remove` requires a REST nonce, typed confirmation `REMOVE YAXII SETUP`, the dry-run hash, generated timestamp, and accepted summary counts.
+- The remove endpoint re-runs the dry-run before deleting and rejects stale or changed previews.
+- Verified removable zones are deleted through WooCommerce shipping zone APIs only after registry ownership is proven.
+- Missing WooCommerce zone or method registry entries are cleaned only after confirmed removal.
+- Manual zones and methods remain unchanged.
+- Settings refreshes the preview after removal and shows the result counts.
+
 ### TASK-012D Generator Step Layout Smoke
 
 Expected:
@@ -324,7 +339,7 @@ TASK-009B local smoke result:
 ## Current Limitations
 
 - Zone-name updates are previewed but not applied.
-- Reset or wipe tooling is not implemented.
+- Full-store reset or wipe tooling is not implemented; only confirmed Yaxii-managed setup removal is available.
 - CSV import/export backend is not implemented.
 - Commune-specific pricing is not implemented.
 - Provider import and YSF sync are not implemented.

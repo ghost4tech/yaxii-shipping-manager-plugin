@@ -2,127 +2,138 @@
 
 ## Purpose
 
-Future tool name:
+Tool name:
 
 ```text
 Remove Yaxii-managed setup
 ```
 
-The tool is for repeat testing, agency setup cleanup, and controlled removal of setup created by Yaxii Shipping Manager. TASK-012F implements the read-only dry-run preview only; actual removal is still not implemented.
+The tool is for repeat testing, agency setup cleanup, and controlled removal of setup created by Yaxii Shipping Manager. It removes only Yaxii-managed WooCommerce shipping setup proven by the managed registry.
 
 ## Location
 
-Recommended location:
+Implemented location:
 
 - `Settings -> Advanced tools`
-
-Alternative acceptable location:
-
-- `Diagnostics -> Advanced tools`
 
 Do not place this as a top-level navigation item for the free MVP.
 
 ## Scope
 
-The future tool may remove only Yaxii-managed WooCommerce shipping data recorded in:
+The tool may remove only Yaxii-managed WooCommerce shipping data recorded in:
 
 ```text
 yaxii_shipping_manager_managed_zones
 ```
 
-It must never remove manual WooCommerce zones.
+It must never remove manual WooCommerce zones, manual methods, unknown zones, unknown methods, settings, datasets, plugin files, or unrelated WooCommerce shipping configuration.
 
-## Implemented Dry-run
+## Dry-run Endpoint
 
-TASK-012F adds this read-only endpoint:
+The dry-run endpoint is:
 
 ```text
 GET /wp-json/yaxii-shipping-manager/v1/managed-setup/removal-preview
 ```
 
-The endpoint reads the managed registry and WooCommerce shipping zone snapshots, then shows exact counts:
+The endpoint reads the managed registry and WooCommerce shipping zone snapshots, then returns:
 
-- managed zones to remove
-- managed methods to remove
-- manual zones protected
-- registry records to clear or reconcile
-- conflicts or registry mismatches
-
-The dry-run must list the specific managed zone IDs and method instance IDs it plans to remove. Manual zone IDs may be shown as protected for review, but they must not be removable from this tool.
-
-The response always includes:
-
-- `removalAvailable: false`
+- `removalAvailable`
 - `dryRunOnly: true`
-- `requiredConfirmationText: REMOVE YAXII SETUP`
-- `message`
-- candidate `zonesToRemoveLater`
-- candidate `methodsToRemoveLater`
-- protected `manualZonesProtected`
+- `managedZoneCount`
+- `managedMethodCount`
+- `missingManagedZoneCount`
+- `missingManagedMethodCount`
+- `manualProtectedZoneCount`
+- `registryMismatchCount`
+- `zonesToRemoveLater`
+- `methodsToRemoveLater`
+- `manualZonesProtected`
+- `orphanRegistryRecords`
+- `orphanMethodRecords`
+- `blockedZones`
 - `registryWarnings`
 - `blockingReasons`
+- `requiredConfirmationText: REMOVE YAXII SETUP`
+- `acceptedSummary`
+- `dryRunHash`
+- `dryRunGeneratedAt`
 
-No delete, clear, reconcile, or write action exists in TASK-012F.
+Each zone candidate includes the WooCommerce zone ID, zone name, wilaya code, registry status, live method count, registry-owned method count, unmanaged method count, `canRemove`, and blocking reasons.
+
+Manual zone IDs may be shown as protected for review, but they must not be removable from this tool.
+
+## Execution Endpoint
+
+The confirmed removal endpoint is:
+
+```text
+POST /wp-json/yaxii-shipping-manager/v1/managed-setup/remove
+```
+
+The request must include:
+
+- `confirmed: true`
+- `confirmationText: REMOVE YAXII SETUP`
+- `dryRunHash`
+- `dryRunGeneratedAt`
+- `acceptedSummary`
+
+The endpoint requires the same protected admin capability policy as other admin endpoints and a valid WordPress REST nonce. WooCommerce inactive blocks removal.
+
+Before deleting anything, the endpoint re-runs the dry-run and compares the submitted hash and summary with the fresh preview. If WooCommerce changed after the preview, removal is rejected and no delete runs.
 
 ## Confirmation
 
-Removal must require typed confirmation:
+Removal requires typed confirmation:
 
 ```text
 REMOVE YAXII SETUP
 ```
 
-The confirmation screen must repeat that manual zones are protected and that only registry-owned Yaxii-managed zones and methods are in scope.
+The UI repeats:
 
-## Safety Blocks
+- `This removes only Yaxii-managed WooCommerce zones and methods.`
+- `Manual WooCommerce zones will not be touched.`
+- `This cannot be undone from Yaxii.`
+- `Use this only for testing, cleanup, or starting over.`
 
-The tool must block removal when:
+## Safety Rules
 
-- the managed registry references zones that WooCommerce no longer returns
-- WooCommerce returns matching zones that are not in the managed registry
-- duplicate direct-zone conflicts exist for managed wilayas
-- a registry record has a method instance mismatch
-- the dry-run cannot prove ownership from `yaxii_shipping_manager_managed_zones`
-- the current user lacks the required capability
-- the REST nonce is invalid
-- WooCommerce is inactive
+A Yaxii-managed zone can be removed only if:
 
-If registry mismatch is detected, a separate repair/reconcile flow must exist before removal can continue.
+- it exists in WooCommerce
+- it is recorded in the managed registry
+- its registry wilaya code matches the expected `state:DZ:NN` WooCommerce zone location
+- all live methods in that zone are registry-owned Yaxii-managed methods
+- there are no unmanaged/manual methods inside that managed zone
+
+If a managed zone contains unmanaged methods, the zone is blocked and the UI reports:
+
+```text
+This Yaxii-managed zone contains methods not recorded by Yaxii. Remove or review them in WooCommerce first.
+```
+
+Manual zones are listed only under `manualZonesProtected`.
 
 ## Removal Rules
 
-If implemented later, the removal engine must:
+The removal engine:
 
-- re-read WooCommerce zones immediately before writing
-- remove only managed zones and methods recorded in the registry
-- never remove manual or unknown zones
-- never adopt manual zones
-- report every removed, skipped, blocked, and failed item
-- keep the operation idempotent where possible
-- refresh diagnostics after removal
-- clear or reconcile registry records only after verified WooCommerce changes
-- log partial failures without hiding them
-
-## REST Boundary
-
-The TASK-012F dry-run endpoint exists and is read-only. It uses the same protected admin policy as diagnostics and settings:
-
-- WooCommerce active: `manage_woocommerce`
-- WooCommerce inactive: `manage_options`
-
-It does not require a typed confirmation because it cannot write. The future removal endpoint must be separate from the existing apply endpoint and must require:
-
-- a permission callback
-- a valid WordPress REST nonce
-- `manage_woocommerce` when WooCommerce is active
-- typed confirmation
-- a dry-run hash or equivalent stale-preview protection
+- deletes verified removable managed zones through WooCommerce shipping zone APIs
+- relies on WooCommerce zone deletion to remove methods inside verified managed zones
+- does not separately delete manual methods
+- does not delete any zone with unmanaged methods
+- removes registry records for deleted zones
+- cleans orphan registry records for WooCommerce zones or methods that are already missing, but only after confirmed removal
+- never clears the full settings option, dataset files, plugin files, or unrelated WooCommerce data
+- reports deleted zones, estimated deleted methods, registry records removed, orphan records cleaned, protected manual zones, blocked zones, warnings, and a merchant-facing message
 
 ## WordPress.org Notes
 
-The tool must stay transparent and local-first:
+The tool stays transparent and local-first:
 
-- no telemetry
+- no usage tracking
 - no remote calls
 - no provider API calls
 - no licensing gate
@@ -130,9 +141,9 @@ The tool must stay transparent and local-first:
 - no hidden tracking
 - no external assets
 
-## Open Questions
+## Still Not Implemented
 
-- Should removal delete full managed zones, or remove only managed methods when a zone contains non-Yaxii methods?
-- Should registry reconciliation be a separate diagnostic action before removal?
-- Should the tool create an exportable cleanup report for agency handoff?
-- Should cleanup be available only when `WP_DEBUG` is enabled during early testing, or should it be visible under Advanced tools for all administrators?
+- exportable cleanup reports
+- a separate registry reconciliation screen
+- restoring removed setup automatically after cleanup
+- deletion of partially managed zones that contain unmanaged methods

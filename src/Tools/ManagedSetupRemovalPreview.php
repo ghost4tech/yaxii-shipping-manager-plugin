@@ -43,10 +43,12 @@ final class ManagedSetupRemovalPreview {
 		$managed_preview  = $this->managed_preview( $registry_records, $zones_by_id );
 		$manual_zones     = $this->manual_zones( $zones_by_id, $managed_zone_ids );
 		$mismatch_count   = (int) $managed_preview['missingManagedZoneCount'] + (int) $managed_preview['missingManagedMethodCount'];
-
-		return array(
+		$blocked_zones    = $this->blocked_zones( $managed_preview['zonesToRemoveLater'] );
+		$removable_zones  = $this->removable_zones( $managed_preview['zonesToRemoveLater'] );
+		$generated_at     = gmdate( 'c' );
+		$payload          = array(
 			'woocommerceActive'          => true,
-			'removalAvailable'          => false,
+			'removalAvailable'          => count( $removable_zones ) > 0 || $mismatch_count > 0,
 			'dryRunOnly'                => true,
 			'managedZoneCount'          => count( $managed_preview['zonesToRemoveLater'] ),
 			'managedMethodCount'        => count( $managed_preview['methodsToRemoveLater'] ),
@@ -57,19 +59,29 @@ final class ManagedSetupRemovalPreview {
 			'zonesToRemoveLater'        => $managed_preview['zonesToRemoveLater'],
 			'methodsToRemoveLater'      => $managed_preview['methodsToRemoveLater'],
 			'manualZonesProtected'      => $manual_zones,
+			'orphanRegistryRecords'     => $managed_preview['orphanRegistryRecords'],
+			'orphanMethodRecords'       => $managed_preview['orphanMethodRecords'],
+			'blockedZones'              => $blocked_zones,
 			'registryWarnings'          => $managed_preview['registryWarnings'],
-			'blockingReasons'           => $this->blocking_reasons( $mismatch_count ),
+			'blockingReasons'           => $this->blocking_reasons( $blocked_zones ),
 			'requiredConfirmationText'  => self::CONFIRMATION_TEXT,
 			'message'                   => __( 'This is a dry run. Nothing was deleted.', 'yaxii-shipping-manager' ),
-			'generatedAt'               => gmdate( 'c' ),
+			'generatedAt'               => $generated_at,
+			'dryRunGeneratedAt'         => $generated_at,
 		);
+
+		$payload['acceptedSummary'] = $this->accepted_summary( $payload );
+		$payload['dryRunHash']      = $this->dry_run_hash( $payload );
+
+		return $payload;
 	}
 
 	/**
 	 * @return array<string,mixed>
 	 */
 	private function inactive_payload(): array {
-		return array(
+		$generated_at = gmdate( 'c' );
+		$payload      = array(
 			'woocommerceActive'          => false,
 			'removalAvailable'          => false,
 			'dryRunOnly'                => true,
@@ -82,14 +94,23 @@ final class ManagedSetupRemovalPreview {
 			'zonesToRemoveLater'        => array(),
 			'methodsToRemoveLater'      => array(),
 			'manualZonesProtected'      => array(),
+			'orphanRegistryRecords'     => array(),
+			'orphanMethodRecords'       => array(),
+			'blockedZones'              => array(),
 			'registryWarnings'          => array(),
 			'blockingReasons'           => array(
 				__( 'WooCommerce is inactive, so shipping zones cannot be inspected.', 'yaxii-shipping-manager' ),
 			),
 			'requiredConfirmationText'  => self::CONFIRMATION_TEXT,
 			'message'                   => __( 'WooCommerce is inactive. This dry run did not inspect shipping zones.', 'yaxii-shipping-manager' ),
-			'generatedAt'               => gmdate( 'c' ),
+			'generatedAt'               => $generated_at,
+			'dryRunGeneratedAt'         => $generated_at,
 		);
+
+		$payload['acceptedSummary'] = $this->accepted_summary( $payload );
+		$payload['dryRunHash']      = $this->dry_run_hash( $payload );
+
+		return $payload;
 	}
 
 	/**
@@ -115,6 +136,8 @@ final class ManagedSetupRemovalPreview {
 		return array(
 			'zonesToRemoveLater'        => array(),
 			'methodsToRemoveLater'      => array(),
+			'orphanRegistryRecords'     => array(),
+			'orphanMethodRecords'       => array(),
 			'registryWarnings'          => array(),
 			'missingManagedZoneCount'   => 0,
 			'missingManagedMethodCount' => 0,
@@ -133,6 +156,12 @@ final class ManagedSetupRemovalPreview {
 		if ( null === $zone ) {
 			++$preview['missingManagedZoneCount'];
 			$this->append_missing_zone_warnings( $record, $preview );
+			$preview['orphanRegistryRecords'][] = array(
+				'zoneId'     => $zone_id,
+				'wilayaCode' => (string) $record['wilayaCode'],
+				'zoneName'   => (string) $record['zoneName'],
+				'reason'     => __( 'WooCommerce no longer returns this managed zone.', 'yaxii-shipping-manager' ),
+			);
 			return;
 		}
 
@@ -154,6 +183,16 @@ final class ManagedSetupRemovalPreview {
 
 		$method_count = count( $record['methodInstances'] );
 		$preview['missingManagedMethodCount'] += $method_count;
+
+		foreach ( $record['methodInstances'] as $method_instance ) {
+			$preview['orphanMethodRecords'][] = array(
+				'zoneId'     => (int) $record['zoneId'],
+				'wilayaCode' => (string) $record['wilayaCode'],
+				'instanceId' => (int) $method_instance['instanceId'],
+				'methodKey'  => (string) $method_instance['methodKey'],
+				'reason'     => __( 'WooCommerce no longer returns this managed method because the zone is missing.', 'yaxii-shipping-manager' ),
+			);
+		}
 	}
 
 	/**
@@ -163,13 +202,23 @@ final class ManagedSetupRemovalPreview {
 	 * @return array<string,mixed>
 	 */
 	private function zone_candidate( array $record, array $zone ): array {
+		$method_counts     = $this->method_ownership_counts( $record, $zone );
+		$blocking_reasons  = $this->zone_blocking_reasons( $record, $zone, $method_counts['unmanagedMethodCount'] );
+		$can_remove        = array() === $blocking_reasons;
+
 		return array(
-			'zoneId'              => (int) $record['zoneId'],
-			'zoneName'            => (string) $zone['name'],
-			'registryZoneName'    => (string) $record['zoneName'],
-			'wilayaCode'          => (string) $record['wilayaCode'],
-			'recordedMethodCount' => count( $record['methodInstances'] ),
-			'liveMethodCount'     => is_array( $zone['methods'] ?? null ) ? count( $zone['methods'] ) : 0,
+			'zoneId'                   => (int) $record['zoneId'],
+			'zoneName'                 => (string) $zone['name'],
+			'registryZoneName'         => (string) $record['zoneName'],
+			'wilayaCode'               => (string) $record['wilayaCode'],
+			'registryRecordStatus'     => 'matched',
+			'methodCount'              => $method_counts['methodCount'],
+			'registryOwnedMethodCount' => $method_counts['registryOwnedMethodCount'],
+			'unmanagedMethodCount'     => $method_counts['unmanagedMethodCount'],
+			'recordedMethodCount'      => count( $record['methodInstances'] ),
+			'liveMethodCount'          => $method_counts['methodCount'],
+			'canRemove'                => $can_remove,
+			'blockingReasons'          => $blocking_reasons,
 		);
 	}
 
@@ -185,6 +234,13 @@ final class ManagedSetupRemovalPreview {
 			if ( null === $live_method || (string) $live_method['methodId'] !== (string) $method_instance['methodId'] ) {
 				++$preview['missingManagedMethodCount'];
 				$preview['registryWarnings'][] = $this->missing_method_warning( $record, $method_instance );
+				$preview['orphanMethodRecords'][] = array(
+					'zoneId'     => (int) $record['zoneId'],
+					'wilayaCode' => (string) $record['wilayaCode'],
+					'instanceId' => (int) $method_instance['instanceId'],
+					'methodKey'  => (string) $method_instance['methodKey'],
+					'reason'     => __( 'WooCommerce no longer returns this managed method.', 'yaxii-shipping-manager' ),
+				);
 				continue;
 			}
 
@@ -301,17 +357,172 @@ final class ManagedSetupRemovalPreview {
 	}
 
 	/**
+	 * @param array<int,array<string,mixed>> $blocked_zones Blocked zone candidates.
+	 *
 	 * @return array<int,string>
 	 */
-	private function blocking_reasons( int $mismatch_count ): array {
-		$reasons = array(
-			__( 'Actual removal is not implemented yet.', 'yaxii-shipping-manager' ),
-		);
+	private function blocking_reasons( array $blocked_zones ): array {
+		if ( array() === $blocked_zones ) {
+			return array();
+		}
 
-		if ( $mismatch_count > 0 ) {
-			$reasons[] = __( 'Registry mismatch detected. A future removal step must reconcile this before deleting anything.', 'yaxii-shipping-manager' );
+		return array(
+			__( 'Removal is blocked because at least one Yaxii-managed zone contains unsupported or unsafe state.', 'yaxii-shipping-manager' ),
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $record Managed registry record.
+	 * @param array<string,mixed> $zone WooCommerce zone.
+	 *
+	 * @return array<string,int>
+	 */
+	private function method_ownership_counts( array $record, array $zone ): array {
+		$methods             = is_array( $zone['methods'] ?? null ) ? $zone['methods'] : array();
+		$registry_method_ids = array();
+
+		foreach ( $record['methodInstances'] as $method_instance ) {
+			$registry_method_ids[ (int) $method_instance['instanceId'] ] = (string) $method_instance['methodId'];
+		}
+
+		$registry_owned_count = 0;
+		$unmanaged_count      = 0;
+
+		foreach ( $methods as $method ) {
+			if ( ! is_array( $method ) ) {
+				continue;
+			}
+
+			$instance_id = (int) ( $method['instanceId'] ?? 0 );
+			$method_id   = (string) ( $method['methodId'] ?? '' );
+
+			if ( isset( $registry_method_ids[ $instance_id ] ) && $registry_method_ids[ $instance_id ] === $method_id ) {
+				++$registry_owned_count;
+				continue;
+			}
+
+			++$unmanaged_count;
+		}
+
+		return array(
+			'methodCount'              => count( $methods ),
+			'registryOwnedMethodCount' => $registry_owned_count,
+			'unmanagedMethodCount'     => $unmanaged_count,
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $record Managed registry record.
+	 * @param array<string,mixed> $zone WooCommerce zone.
+	 *
+	 * @return array<int,string>
+	 */
+	private function zone_blocking_reasons( array $record, array $zone, int $unmanaged_method_count ): array {
+		$reasons = array();
+
+		if ( ! $this->has_expected_location( $zone, (string) $record['wilayaCode'] ) ) {
+			$reasons[] = __( 'This Yaxii-managed zone does not have the expected Algeria state location. Review it in WooCommerce first.', 'yaxii-shipping-manager' );
+		}
+
+		if ( $unmanaged_method_count > 0 ) {
+			$reasons[] = __( 'This Yaxii-managed zone contains methods not recorded by Yaxii. Remove or review them in WooCommerce first.', 'yaxii-shipping-manager' );
 		}
 
 		return $reasons;
+	}
+
+	/**
+	 * @param array<string,mixed> $zone WooCommerce zone.
+	 */
+	private function has_expected_location( array $zone, string $wilaya_code ): bool {
+		$expected_code = 'DZ:' . $wilaya_code;
+		$locations     = is_array( $zone['locations'] ?? null ) ? $zone['locations'] : array();
+
+		foreach ( $locations as $location ) {
+			if (
+				is_array( $location )
+				&& 'state' === (string) ( $location['type'] ?? '' )
+				&& $expected_code === (string) ( $location['code'] ?? '' )
+			) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param array<int,array<string,mixed>> $zones Zone candidates.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function blocked_zones( array $zones ): array {
+		return array_values(
+			array_filter(
+				$zones,
+				static fn( array $zone ): bool => false === (bool) ( $zone['canRemove'] ?? false )
+			)
+		);
+	}
+
+	/**
+	 * @param array<int,array<string,mixed>> $zones Zone candidates.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function removable_zones( array $zones ): array {
+		return array_values(
+			array_filter(
+				$zones,
+				static fn( array $zone ): bool => true === (bool) ( $zone['canRemove'] ?? false )
+			)
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $payload Preview payload.
+	 *
+	 * @return array<string,int>
+	 */
+	private function accepted_summary( array $payload ): array {
+		return array(
+			'managedZoneCount'         => (int) $payload['managedZoneCount'],
+			'managedMethodCount'       => (int) $payload['managedMethodCount'],
+			'registryMismatchCount'    => (int) $payload['registryMismatchCount'],
+			'manualProtectedZoneCount' => (int) $payload['manualProtectedZoneCount'],
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $payload Preview payload.
+	 */
+	private function dry_run_hash( array $payload ): string {
+		$hashable = $payload;
+		unset( $hashable['dryRunHash'], $hashable['dryRunGeneratedAt'], $hashable['generatedAt'], $hashable['message'] );
+
+		return hash( 'sha256', (string) wp_json_encode( $this->normalize_for_hash( $hashable ) ) );
+	}
+
+	/**
+	 * @param mixed $value Value to normalize.
+	 *
+	 * @return mixed
+	 */
+	private function normalize_for_hash( $value ) {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		if ( array_values( $value ) === $value ) {
+			return array_map( array( $this, 'normalize_for_hash' ), $value );
+		}
+
+		ksort( $value );
+
+		foreach ( $value as $key => $nested_value ) {
+			$value[ $key ] = $this->normalize_for_hash( $nested_value );
+		}
+
+		return $value;
 	}
 }

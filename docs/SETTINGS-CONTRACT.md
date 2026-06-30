@@ -86,7 +86,7 @@ Method labels and default prices are future setup defaults. The UI directs merch
 
 ## Advanced Tools
 
-TASK-012F adds an `Advanced tools` section to Settings.
+Settings includes an `Advanced tools` section.
 
 The first tool is:
 
@@ -106,13 +106,14 @@ This action calls:
 GET /wp-json/yaxii-shipping-manager/v1/managed-setup/removal-preview
 ```
 
-The result is dry-run only. It shows:
+The preview shows:
 
 - Yaxii-managed zones found
 - Yaxii-managed methods found
 - manual zones protected
 - registry warnings when the registry references missing WooCommerce zones or methods
-- the required future confirmation text, `REMOVE YAXII SETUP`
+- blocked zones when a managed zone has unsafe state
+- the required confirmation text, `REMOVE YAXII SETUP`
 
 The UI must show:
 
@@ -120,7 +121,28 @@ The UI must show:
 This is a dry run. Nothing was deleted.
 ```
 
-No remove, reset, wipe, delete, registry-clear, or cleanup execution button exists in TASK-012F.
+When the preview has removable Yaxii-managed candidates and no blockers, the UI shows a dangerous confirmation area. The user must type:
+
+```text
+REMOVE YAXII SETUP
+```
+
+The confirmed action calls:
+
+```text
+POST /wp-json/yaxii-shipping-manager/v1/managed-setup/remove
+```
+
+The request includes the dry-run hash, generated timestamp, and accepted summary counts. The backend re-runs the dry-run before deleting anything and rejects stale or mismatched previews.
+
+The UI copy must say:
+
+- `This removes only Yaxii-managed WooCommerce zones and methods.`
+- `Manual WooCommerce zones will not be touched.`
+- `This cannot be undone from Yaxii.`
+- `Use this only for testing, cleanup, or starting over.`
+
+If blockers exist, no remove button is shown. Manual zones remain protected and are never candidates.
 
 ## Dataset Modes
 
@@ -205,7 +227,7 @@ Saving settings alone does not write WooCommerce shipping zones or methods.
 - Per-wilaya method prices.
 - CSV import/export flow.
 - Future preview/apply state.
-- Removal execution for `Remove Yaxii-managed setup`.
+- Exportable cleanup reports for `Remove Yaxii-managed setup`.
 
 ## Not Implemented Yet
 
@@ -215,6 +237,7 @@ TASK-003B does not implement:
 - WooCommerce diagnostics backend.
 - Preview planner.
 - Safe apply updates beyond creating missing managed zones and adding methods to managed zones.
+- Partial removal of managed zones that contain unmanaged/manual methods.
 - CSV backend.
 - YSF sync.
 - Provider imports.

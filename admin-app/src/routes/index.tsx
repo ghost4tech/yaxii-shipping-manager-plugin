@@ -15,7 +15,7 @@ import {
 import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
 import { fetchDatasetWilayas } from "../api/dataset-api";
 import { fetchDiagnostics } from "../api/diagnostics-api";
-import { fetchManagedSetupRemovalPreview } from "../api/managed-setup-api";
+import { fetchManagedSetupRemovalPreview, removeManagedSetup } from "../api/managed-setup-api";
 import { fetchSettings, saveSettings } from "../api/settings-api";
 import {
   DATASET_MODE_OPTIONS,
@@ -30,7 +30,7 @@ import {
 import type { WilayaDatasetRecord } from "../types/dataset";
 import type { DiagnosticsResponse } from "../types/diagnostics";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
-import type { ManagedSetupRemovalPreview } from "../types/managed-setup";
+import type { ManagedSetupRemovalPreview, ManagedSetupRemovalResult } from "../types/managed-setup";
 import type {
   OfficeMethodWording,
   PersistedSettings,
@@ -103,6 +103,11 @@ type RemovalPreviewState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "ready"; response: ManagedSetupRemovalPreview }
+  | { status: "error"; message: string };
+type RemovalResultState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; response: ManagedSetupRemovalResult }
   | { status: "error"; message: string };
 
 export default function AdminApp({
@@ -317,6 +322,7 @@ export default function AdminApp({
             settingsState={settingsState}
             config={config}
             onSave={savePersistedSettings}
+            onOpenDiagnostics={() => setTab("diagnostics")}
           />
         )}
       </main>
@@ -606,10 +612,12 @@ function SettingsScreen({
   settingsState,
   config,
   onSave,
+  onOpenDiagnostics,
 }: {
   settingsState: SettingsLoadState;
   config: AdminBootstrapConfig;
   onSave: (settings: PersistedSettings) => Promise<SettingsResponse>;
+  onOpenDiagnostics: () => void;
 }) {
   if (settingsState.status === "loading") {
     return (
@@ -644,17 +652,26 @@ function SettingsScreen({
     );
   }
 
-  return <SettingsForm response={settingsState.response} config={config} onSave={onSave} />;
+  return (
+    <SettingsForm
+      response={settingsState.response}
+      config={config}
+      onSave={onSave}
+      onOpenDiagnostics={onOpenDiagnostics}
+    />
+  );
 }
 
 function SettingsForm({
   response,
   config,
   onSave,
+  onOpenDiagnostics,
 }: {
   response: SettingsResponse;
   config: AdminBootstrapConfig;
   onSave: (settings: PersistedSettings) => Promise<SettingsResponse>;
+  onOpenDiagnostics: () => void;
 }) {
   const [draft, setDraft] = useState<PersistedSettings>(response.settings);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -918,24 +935,60 @@ function SettingsForm({
           ))}
         </CardContent>
       </Card>
-      <AdvancedToolsCard config={config} />
+      <AdvancedToolsCard config={config} onOpenDiagnostics={onOpenDiagnostics} />
     </>
   );
 }
 
-function AdvancedToolsCard({ config }: { config: AdminBootstrapConfig }) {
+function AdvancedToolsCard({
+  config,
+  onOpenDiagnostics,
+}: {
+  config: AdminBootstrapConfig;
+  onOpenDiagnostics: () => void;
+}) {
   const [previewState, setPreviewState] = useState<RemovalPreviewState>({ status: "idle" });
+  const [removeState, setRemoveState] = useState<RemovalResultState>({ status: "idle" });
+  const [confirmationText, setConfirmationText] = useState("");
 
-  const previewRemoval = async () => {
+  const previewRemoval = async (preserveResult = false) => {
     setPreviewState({ status: "loading" });
+    if (!preserveResult) {
+      setRemoveState({ status: "idle" });
+    }
+    setConfirmationText("");
 
     try {
       const response = await fetchManagedSetupRemovalPreview(config);
       setPreviewState({ status: "ready", response });
+      return response;
     } catch (error) {
       setPreviewState({
         status: "error",
         message: error instanceof Error ? error.message : "Removal preview could not be loaded.",
+      });
+      return null;
+    }
+  };
+
+  const executeRemoval = async (preview: ManagedSetupRemovalPreview) => {
+    setRemoveState({ status: "loading" });
+
+    try {
+      const response = await removeManagedSetup(config, {
+        confirmed: true,
+        confirmationText,
+        dryRunHash: preview.dryRunHash,
+        dryRunGeneratedAt: preview.dryRunGeneratedAt,
+        acceptedSummary: preview.acceptedSummary,
+      });
+      setRemoveState({ status: "ready", response });
+      setConfirmationText("");
+      await previewRemoval(true);
+    } catch (error) {
+      setRemoveState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Managed setup removal failed.",
       });
     }
   };
@@ -953,10 +1006,11 @@ function AdvancedToolsCard({ config }: { config: AdminBootstrapConfig }) {
           <div>
             <div className="text-sm font-medium">Remove Yaxii-managed setup</div>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Preview what Yaxii would remove later. Manual WooCommerce zones are always protected.
+              Preview and remove only Yaxii-managed WooCommerce zones and methods. Manual
+              WooCommerce zones are always protected.
             </p>
           </div>
-          <Button onClick={previewRemoval} disabled={previewState.status === "loading"}>
+          <Button onClick={() => previewRemoval()} disabled={previewState.status === "loading"}>
             {previewState.status === "loading" ? "Previewing..." : "Preview removal"}
           </Button>
         </div>
@@ -968,22 +1022,51 @@ function AdvancedToolsCard({ config }: { config: AdminBootstrapConfig }) {
           </Alert>
         )}
         {previewState.status === "ready" && (
-          <RemovalPreviewResult response={previewState.response} />
+          <RemovalPreviewResult
+            response={previewState.response}
+            confirmationText={confirmationText}
+            removeState={removeState}
+            onConfirmationTextChange={setConfirmationText}
+            onExecuteRemoval={() => executeRemoval(previewState.response)}
+            onOpenDiagnostics={onOpenDiagnostics}
+          />
         )}
       </CardContent>
     </Card>
   );
 }
 
-function RemovalPreviewResult({ response }: { response: ManagedSetupRemovalPreview }) {
+function RemovalPreviewResult({
+  response,
+  confirmationText,
+  removeState,
+  onConfirmationTextChange,
+  onExecuteRemoval,
+  onOpenDiagnostics,
+}: {
+  response: ManagedSetupRemovalPreview;
+  confirmationText: string;
+  removeState: RemovalResultState;
+  onConfirmationTextChange: (value: string) => void;
+  onExecuteRemoval: () => void;
+  onOpenDiagnostics: () => void;
+}) {
+  const removableZoneCount = response.zonesToRemoveLater.filter((zone) => zone.canRemove).length;
+  const hasRegistryCleanup =
+    response.orphanRegistryRecords.length > 0 || response.orphanMethodRecords.length > 0;
+  const hasBlockers = response.blockedZones.length > 0 || response.blockingReasons.length > 0;
+  const canShowRemoval =
+    response.removalAvailable && (removableZoneCount > 0 || hasRegistryCleanup) && !hasBlockers;
+  const confirmationMatches = confirmationText === response.requiredConfirmationText;
+
   return (
     <div className="space-y-4 rounded-md border border-primary/20 bg-primary/5 p-4">
       <Alert className="border-emerald-200 bg-emerald-50 text-emerald-950">
         <ShieldCheck className="h-4 w-4" />
         <AlertTitle>This is a dry run. Nothing was deleted.</AlertTitle>
         <AlertDescription>
-          Actual removal is not available yet. Future removal must require{" "}
-          <code>{response.requiredConfirmationText}</code> and re-read WooCommerce first.
+          This removes only Yaxii-managed WooCommerce zones and methods. Manual WooCommerce zones
+          will not be touched.
         </AlertDescription>
       </Alert>
       <div className="grid gap-3 md:grid-cols-3">
@@ -1010,15 +1093,38 @@ function RemovalPreviewResult({ response }: { response: ManagedSetupRemovalPrevi
           </AlertDescription>
         </Alert>
       )}
+      {hasBlockers && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Removal is blocked</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc space-y-1 pl-5">
+              {response.blockingReasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+              {response.blockedZones.flatMap((zone) =>
+                zone.blockingReasons.map((reason) => (
+                  <li key={`${zone.zoneId}-${reason}`}>
+                    #{zone.zoneId} - {zone.zoneName}: {reason}
+                  </li>
+                )),
+              )}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
       <RemovalPreviewList
-        title="Zones that would be candidates later"
+        title="Yaxii-managed zones eligible for removal"
         empty="No Yaxii-managed zones were found."
         rows={response.zonesToRemoveLater.map(
-          (zone) => `#${zone.zoneId} - ${zone.zoneName} (${zone.wilayaCode})`,
+          (zone) =>
+            `#${zone.zoneId} - ${zone.zoneName} (${zone.wilayaCode}) - ${
+              zone.canRemove ? "can remove" : "blocked"
+            }`,
         )}
       />
       <RemovalPreviewList
-        title="Methods that would be candidates later"
+        title="Yaxii-managed methods included with eligible zones"
         empty="No Yaxii-managed methods were found."
         rows={response.methodsToRemoveLater.map(
           (method) => `#${method.instanceId} - ${method.title} in zone #${method.zoneId}`,
@@ -1031,11 +1137,82 @@ function RemovalPreviewResult({ response }: { response: ManagedSetupRemovalPrevi
           (zone) => `#${zone.zoneId} - ${zone.zoneName} (${zone.methodCount} methods)`,
         )}
       />
-      <p className="text-xs text-muted-foreground">
-        Removal remains disabled in this release. Registry mismatches must be reconciled before any
-        future destructive action.
-      </p>
+      {canShowRemoval && (
+        <div className="space-y-3 rounded-md border border-red-200 bg-red-50 p-4 text-red-950">
+          <div className="text-sm font-semibold">Remove Yaxii-managed setup</div>
+          <p className="text-sm">
+            This cannot be undone from Yaxii. Use this only for testing, cleanup, or starting over.
+          </p>
+          <label className="block text-sm font-medium" htmlFor="yaxii-removal-confirmation">
+            Type {response.requiredConfirmationText} to confirm
+          </label>
+          <div className="flex flex-col gap-3 md:flex-row">
+            <Input
+              id="yaxii-removal-confirmation"
+              value={confirmationText}
+              onChange={(event) => onConfirmationTextChange(event.target.value)}
+              placeholder={response.requiredConfirmationText}
+              className="bg-background"
+            />
+            <Button
+              variant="destructive"
+              onClick={onExecuteRemoval}
+              disabled={!confirmationMatches || removeState.status === "loading"}
+            >
+              {removeState.status === "loading" ? "Removing..." : "Remove Yaxii-managed setup"}
+            </Button>
+          </div>
+        </div>
+      )}
+      {!canShowRemoval && !hasBlockers && (
+        <p className="text-sm text-muted-foreground">
+          No removable Yaxii-managed setup is available. WooCommerce zones were not changed.
+        </p>
+      )}
+      {removeState.status === "error" && (
+        <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Removal failed</AlertTitle>
+          <AlertDescription>{removeState.message}</AlertDescription>
+        </Alert>
+      )}
+      {removeState.status === "ready" && (
+        <RemovalResultCard response={removeState.response} onOpenDiagnostics={onOpenDiagnostics} />
+      )}
     </div>
+  );
+}
+
+function RemovalResultCard({
+  response,
+  onOpenDiagnostics,
+}: {
+  response: ManagedSetupRemovalResult;
+  onOpenDiagnostics: () => void;
+}) {
+  return (
+    <Alert className="border-emerald-200 bg-emerald-50 text-emerald-950">
+      <ShieldCheck className="h-4 w-4" />
+      <AlertTitle>{response.message}</AlertTitle>
+      <AlertDescription>
+        <div className="mt-2 grid gap-2 text-sm md:grid-cols-3">
+          <span>Deleted zones: {response.deletedZones.length}</span>
+          <span>Deleted methods estimated: {response.deletedMethodsEstimated}</span>
+          <span>Registry records removed: {response.registryRecordsRemoved}</span>
+          <span>Orphan registry records cleaned: {response.orphanRegistryRecordsCleaned}</span>
+          <span>Manual zones protected: {response.manualZonesProtected.length}</span>
+          <span>WooCommerce changed: {response.wooCommerceChanged ? "yes" : "no"}</span>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3 bg-background"
+          onClick={onOpenDiagnostics}
+        >
+          Open Diagnostics
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }
 

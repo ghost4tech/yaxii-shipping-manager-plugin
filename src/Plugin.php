@@ -26,6 +26,7 @@ use Yaxii\ShippingManager\Rest\PreviewController;
 use Yaxii\ShippingManager\Rest\Routes;
 use Yaxii\ShippingManager\Rest\SettingsController;
 use Yaxii\ShippingManager\Settings\SettingsRepository;
+use Yaxii\ShippingManager\Tools\ManagedSetupRemovalExecutor;
 use Yaxii\ShippingManager\Tools\ManagedSetupRemovalPreview;
 use Yaxii\ShippingManager\WooCommerce\AlgeriaStatesRegistrar;
 use Yaxii\ShippingManager\WooCommerce\ShippingDiagnosticsService;
@@ -49,6 +50,7 @@ final class Plugin {
 		$safe_apply_engine      = new SafeApplyEngine( $woocommerce_active, $preview_planner, $managed_registry );
 		$apply_contract         = new ApplyContract( $settings, $managed_registry );
 		$removal_preview        = new ManagedSetupRemovalPreview( $woocommerce_active, $managed_registry, $zone_reader );
+		$removal_executor       = new ManagedSetupRemovalExecutor( $woocommerce_active, $managed_registry, $removal_preview );
 		$bootstrap              = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
 		$dataset_controller     = new DatasetController( $woocommerce_active, $datasets );
 		$settings_controller    = new SettingsController( $woocommerce_active, $settings );
@@ -56,7 +58,7 @@ final class Plugin {
 		$preview_controller     = new PreviewController( $woocommerce_active, $preview_planner, new PreviewRequestSanitizer() );
 		$apply_controller       = new ApplyContractController( $woocommerce_active, $apply_contract );
 		$apply                  = new ApplyController( $woocommerce_active, new ApplyRequestSanitizer(), $safe_apply_engine );
-		$managed_setup          = new ManagedSetupController( $woocommerce_active, $removal_preview );
+		$managed_setup          = new ManagedSetupController( $woocommerce_active, $removal_preview, $removal_executor );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 

@@ -52,6 +52,24 @@ final class ManagedZoneRegistry {
 	}
 
 	/**
+	 * Replace the managed registry with a reconciled, sanitized record list.
+	 *
+	 * @param array<int,array<string,mixed>> $records Registry records.
+	 */
+	public function replace_records( array $records ): bool {
+		$sanitized_records = array();
+
+		foreach ( $records as $record ) {
+			$sanitized = $this->sanitize_record( $record );
+			if ( null !== $sanitized ) {
+				$sanitized_records[] = $sanitized;
+			}
+		}
+
+		return $this->save_records( $sanitized_records );
+	}
+
+	/**
 	 * @param array<string,mixed> $record Registry record.
 	 */
 	public function record_created_zone( array $record ): bool {
