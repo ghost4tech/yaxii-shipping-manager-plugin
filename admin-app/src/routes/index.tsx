@@ -15,6 +15,7 @@ import {
 import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
 import { fetchDatasetWilayas } from "../api/dataset-api";
 import { fetchDiagnostics } from "../api/diagnostics-api";
+import { fetchManagedSetupRemovalPreview } from "../api/managed-setup-api";
 import { fetchSettings, saveSettings } from "../api/settings-api";
 import {
   DATASET_MODE_OPTIONS,
@@ -29,6 +30,7 @@ import {
 import type { WilayaDatasetRecord } from "../types/dataset";
 import type { DiagnosticsResponse } from "../types/diagnostics";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
+import type { ManagedSetupRemovalPreview } from "../types/managed-setup";
 import type {
   OfficeMethodWording,
   PersistedSettings,
@@ -96,6 +98,11 @@ type DiagnosticsLoadState =
   | { status: "waiting" }
   | { status: "loading" }
   | { status: "ready"; response: DiagnosticsResponse }
+  | { status: "error"; message: string };
+type RemovalPreviewState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; response: ManagedSetupRemovalPreview }
   | { status: "error"; message: string };
 
 export default function AdminApp({
@@ -306,7 +313,11 @@ export default function AdminApp({
           />
         )}
         {tab === "settings" && (
-          <SettingsScreen settingsState={settingsState} onSave={savePersistedSettings} />
+          <SettingsScreen
+            settingsState={settingsState}
+            config={config}
+            onSave={savePersistedSettings}
+          />
         )}
       </main>
       <footer className="mx-auto max-w-5xl px-6 pb-10 text-center text-xs text-muted-foreground">
@@ -593,9 +604,11 @@ function BulletItem({ children }: { children: ReactNode }) {
 
 function SettingsScreen({
   settingsState,
+  config,
   onSave,
 }: {
   settingsState: SettingsLoadState;
+  config: AdminBootstrapConfig;
   onSave: (settings: PersistedSettings) => Promise<SettingsResponse>;
 }) {
   if (settingsState.status === "loading") {
@@ -631,14 +644,16 @@ function SettingsScreen({
     );
   }
 
-  return <SettingsForm response={settingsState.response} onSave={onSave} />;
+  return <SettingsForm response={settingsState.response} config={config} onSave={onSave} />;
 }
 
 function SettingsForm({
   response,
+  config,
   onSave,
 }: {
   response: SettingsResponse;
+  config: AdminBootstrapConfig;
   onSave: (settings: PersistedSettings) => Promise<SettingsResponse>;
 }) {
   const [draft, setDraft] = useState<PersistedSettings>(response.settings);
@@ -903,7 +918,158 @@ function SettingsForm({
           ))}
         </CardContent>
       </Card>
+      <AdvancedToolsCard config={config} />
     </>
+  );
+}
+
+function AdvancedToolsCard({ config }: { config: AdminBootstrapConfig }) {
+  const [previewState, setPreviewState] = useState<RemovalPreviewState>({ status: "idle" });
+
+  const previewRemoval = async () => {
+    setPreviewState({ status: "loading" });
+
+    try {
+      const response = await fetchManagedSetupRemovalPreview(config);
+      setPreviewState({ status: "ready", response });
+    } catch (error) {
+      setPreviewState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Removal preview could not be loaded.",
+      });
+    }
+  };
+
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Advanced tools</CardTitle>
+        <CardDescription>
+          Support tools for inspecting Yaxii-managed WooCommerce setup safely.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col gap-4 rounded-md border border-dashed border-border p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-sm font-medium">Remove Yaxii-managed setup</div>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Preview what Yaxii would remove later. Manual WooCommerce zones are always protected.
+            </p>
+          </div>
+          <Button onClick={previewRemoval} disabled={previewState.status === "loading"}>
+            {previewState.status === "loading" ? "Previewing..." : "Preview removal"}
+          </Button>
+        </div>
+        {previewState.status === "error" && (
+          <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Removal preview unavailable</AlertTitle>
+            <AlertDescription>{previewState.message}</AlertDescription>
+          </Alert>
+        )}
+        {previewState.status === "ready" && (
+          <RemovalPreviewResult response={previewState.response} />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RemovalPreviewResult({ response }: { response: ManagedSetupRemovalPreview }) {
+  return (
+    <div className="space-y-4 rounded-md border border-primary/20 bg-primary/5 p-4">
+      <Alert className="border-emerald-200 bg-emerald-50 text-emerald-950">
+        <ShieldCheck className="h-4 w-4" />
+        <AlertTitle>This is a dry run. Nothing was deleted.</AlertTitle>
+        <AlertDescription>
+          Actual removal is not available yet. Future removal must require{" "}
+          <code>{response.requiredConfirmationText}</code> and re-read WooCommerce first.
+        </AlertDescription>
+      </Alert>
+      <div className="grid gap-3 md:grid-cols-3">
+        <RemovalPreviewMetric label="Yaxii-managed zones found" value={response.managedZoneCount} />
+        <RemovalPreviewMetric
+          label="Yaxii-managed methods found"
+          value={response.managedMethodCount}
+        />
+        <RemovalPreviewMetric
+          label="Manual zones protected"
+          value={response.manualProtectedZoneCount}
+        />
+      </div>
+      {response.registryWarnings.length > 0 && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Registry warnings</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc space-y-1 pl-5">
+              {response.registryWarnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      <RemovalPreviewList
+        title="Zones that would be candidates later"
+        empty="No Yaxii-managed zones were found."
+        rows={response.zonesToRemoveLater.map(
+          (zone) => `#${zone.zoneId} - ${zone.zoneName} (${zone.wilayaCode})`,
+        )}
+      />
+      <RemovalPreviewList
+        title="Methods that would be candidates later"
+        empty="No Yaxii-managed methods were found."
+        rows={response.methodsToRemoveLater.map(
+          (method) => `#${method.instanceId} - ${method.title} in zone #${method.zoneId}`,
+        )}
+      />
+      <RemovalPreviewList
+        title="Manual zones protected"
+        empty="No manual WooCommerce zones were found."
+        rows={response.manualZonesProtected.map(
+          (zone) => `#${zone.zoneId} - ${zone.zoneName} (${zone.methodCount} methods)`,
+        )}
+      />
+      <p className="text-xs text-muted-foreground">
+        Removal remains disabled in this release. Registry mismatches must be reconciled before any
+        future destructive action.
+      </p>
+    </div>
+  );
+}
+
+function RemovalPreviewMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <div className="text-2xl font-semibold">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function RemovalPreviewList({
+  title,
+  empty,
+  rows,
+}: {
+  title: string;
+  empty: string;
+  rows: string[];
+}) {
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <div className="text-sm font-medium">{title}</div>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">{empty}</p>
+      ) : (
+        <ul className="mt-2 max-h-44 space-y-1 overflow-auto text-sm text-muted-foreground">
+          {rows.map((row) => (
+            <li key={row}>{row}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

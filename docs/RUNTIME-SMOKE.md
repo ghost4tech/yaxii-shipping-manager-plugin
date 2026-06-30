@@ -49,6 +49,22 @@ Expected:
 - Unsupported-only Generate says `No supported changes in this release` and does not show a Generate button.
 - No WooCommerce write occurs during these navigation and no-op checks.
 
+### TASK-012F Remove Managed Setup Dry-run Smoke
+
+Expected:
+
+- `GET /wp-json/yaxii-shipping-manager/v1/managed-setup/removal-preview` is accessible only to a permitted administrator.
+- The response includes `removalAvailable: false` and `dryRunOnly: true`.
+- The response includes managed zone and method counts from `yaxii_shipping_manager_managed_zones`.
+- Registry mismatches are returned as warnings and are not repaired or cleared.
+- Manual WooCommerce zones appear only under `manualZonesProtected`.
+- Manual zones are not included in `zonesToRemoveLater`.
+- WooCommerce zone count does not change after the endpoint call.
+- WooCommerce method count does not change after the endpoint call.
+- Settings shows `Advanced tools` and `Remove Yaxii-managed setup`.
+- Clicking `Preview removal` shows the dry-run result and the copy `This is a dry run. Nothing was deleted.`
+- No working remove/delete/reset button is shown.
+
 ### TASK-012D Generator Step Layout Smoke
 
 Expected:

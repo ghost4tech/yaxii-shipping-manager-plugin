@@ -21,10 +21,12 @@ use Yaxii\ShippingManager\Rest\ApplyContractController;
 use Yaxii\ShippingManager\Rest\BootstrapController;
 use Yaxii\ShippingManager\Rest\DatasetController;
 use Yaxii\ShippingManager\Rest\DiagnosticsController;
+use Yaxii\ShippingManager\Rest\ManagedSetupController;
 use Yaxii\ShippingManager\Rest\PreviewController;
 use Yaxii\ShippingManager\Rest\Routes;
 use Yaxii\ShippingManager\Rest\SettingsController;
 use Yaxii\ShippingManager\Settings\SettingsRepository;
+use Yaxii\ShippingManager\Tools\ManagedSetupRemovalPreview;
 use Yaxii\ShippingManager\WooCommerce\AlgeriaStatesRegistrar;
 use Yaxii\ShippingManager\WooCommerce\ShippingDiagnosticsService;
 use Yaxii\ShippingManager\WooCommerce\ShippingZoneReader;
@@ -46,6 +48,7 @@ final class Plugin {
 		$preview_planner        = new PreviewPlanner( $datasets, $settings, $diagnostics, $managed_registry );
 		$safe_apply_engine      = new SafeApplyEngine( $woocommerce_active, $preview_planner, $managed_registry );
 		$apply_contract         = new ApplyContract( $settings, $managed_registry );
+		$removal_preview        = new ManagedSetupRemovalPreview( $woocommerce_active, $managed_registry, $zone_reader );
 		$bootstrap              = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
 		$dataset_controller     = new DatasetController( $woocommerce_active, $datasets );
 		$settings_controller    = new SettingsController( $woocommerce_active, $settings );
@@ -53,6 +56,7 @@ final class Plugin {
 		$preview_controller     = new PreviewController( $woocommerce_active, $preview_planner, new PreviewRequestSanitizer() );
 		$apply_controller       = new ApplyContractController( $woocommerce_active, $apply_contract );
 		$apply                  = new ApplyController( $woocommerce_active, new ApplyRequestSanitizer(), $safe_apply_engine );
+		$managed_setup          = new ManagedSetupController( $woocommerce_active, $removal_preview );
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
@@ -66,7 +70,7 @@ final class Plugin {
 
 		$algeria_states->register();
 
-		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller, $apply_controller, $apply );
+		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller, $apply_controller, $apply, $managed_setup );
 		$routes->register();
 	}
 

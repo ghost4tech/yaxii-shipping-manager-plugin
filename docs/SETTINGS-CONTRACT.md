@@ -84,6 +84,44 @@ Defaults saved. Existing WooCommerce shipping zones were not changed.
 
 Method labels and default prices are future setup defaults. The UI directs merchants to Shipping Zones for live WooCommerce price updates. Naming controls also state that existing WooCommerce zone names are not changed by saving settings.
 
+## Advanced Tools
+
+TASK-012F adds an `Advanced tools` section to Settings.
+
+The first tool is:
+
+```text
+Remove Yaxii-managed setup
+```
+
+The visible action is:
+
+```text
+Preview removal
+```
+
+This action calls:
+
+```text
+GET /wp-json/yaxii-shipping-manager/v1/managed-setup/removal-preview
+```
+
+The result is dry-run only. It shows:
+
+- Yaxii-managed zones found
+- Yaxii-managed methods found
+- manual zones protected
+- registry warnings when the registry references missing WooCommerce zones or methods
+- the required future confirmation text, `REMOVE YAXII SETUP`
+
+The UI must show:
+
+```text
+This is a dry run. Nothing was deleted.
+```
+
+No remove, reset, wipe, delete, registry-clear, or cleanup execution button exists in TASK-012F.
+
 ## Dataset Modes
 
 Available modes:
@@ -167,6 +205,7 @@ Saving settings alone does not write WooCommerce shipping zones or methods.
 - Per-wilaya method prices.
 - CSV import/export flow.
 - Future preview/apply state.
+- Removal execution for `Remove Yaxii-managed setup`.
 
 ## Not Implemented Yet
 

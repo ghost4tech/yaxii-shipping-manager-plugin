@@ -21,6 +21,7 @@ final class Routes {
 	private PreviewController $preview;
 	private ApplyContractController $apply_contract;
 	private ApplyController $apply;
+	private ManagedSetupController $managed_setup;
 
 	public function __construct(
 		BootstrapController $bootstrap,
@@ -29,7 +30,8 @@ final class Routes {
 		DiagnosticsController $diagnostics,
 		PreviewController $preview,
 		ApplyContractController $apply_contract,
-		ApplyController $apply
+		ApplyController $apply,
+		ManagedSetupController $managed_setup
 	) {
 		$this->bootstrap      = $bootstrap;
 		$this->dataset        = $dataset;
@@ -38,6 +40,7 @@ final class Routes {
 		$this->preview        = $preview;
 		$this->apply_contract = $apply_contract;
 		$this->apply          = $apply;
+		$this->managed_setup  = $managed_setup;
 	}
 
 	/**
@@ -142,6 +145,16 @@ final class Routes {
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this->apply, 'create_apply_contract' ),
 				'permission_callback' => array( $this->apply, 'can_apply' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/managed-setup/removal-preview',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this->managed_setup, 'get_removal_preview' ),
+				'permission_callback' => array( $this->managed_setup, 'can_access' ),
 			)
 		);
 	}

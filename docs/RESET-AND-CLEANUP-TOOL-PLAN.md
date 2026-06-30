@@ -8,7 +8,7 @@ Future tool name:
 Remove Yaxii-managed setup
 ```
 
-The tool is for repeat testing, agency setup cleanup, and controlled removal of setup created by Yaxii Shipping Manager. It is not implemented in TASK-012E.
+The tool is for repeat testing, agency setup cleanup, and controlled removal of setup created by Yaxii Shipping Manager. TASK-012F implements the read-only dry-run preview only; actual removal is still not implemented.
 
 ## Location
 
@@ -32,9 +32,15 @@ yaxii_shipping_manager_managed_zones
 
 It must never remove manual WooCommerce zones.
 
-## Required Dry-run
+## Implemented Dry-run
 
-The tool must run a dry-run preview first and show exact counts:
+TASK-012F adds this read-only endpoint:
+
+```text
+GET /wp-json/yaxii-shipping-manager/v1/managed-setup/removal-preview
+```
+
+The endpoint reads the managed registry and WooCommerce shipping zone snapshots, then shows exact counts:
 
 - managed zones to remove
 - managed methods to remove
@@ -43,6 +49,20 @@ The tool must run a dry-run preview first and show exact counts:
 - conflicts or registry mismatches
 
 The dry-run must list the specific managed zone IDs and method instance IDs it plans to remove. Manual zone IDs may be shown as protected for review, but they must not be removable from this tool.
+
+The response always includes:
+
+- `removalAvailable: false`
+- `dryRunOnly: true`
+- `requiredConfirmationText: REMOVE YAXII SETUP`
+- `message`
+- candidate `zonesToRemoveLater`
+- candidate `methodsToRemoveLater`
+- protected `manualZonesProtected`
+- `registryWarnings`
+- `blockingReasons`
+
+No delete, clear, reconcile, or write action exists in TASK-012F.
 
 ## Confirmation
 
@@ -85,15 +105,18 @@ If implemented later, the removal engine must:
 
 ## REST Boundary
 
-The future endpoint should be separate from the existing apply endpoint and should use its own confirmation contract. It must require:
+The TASK-012F dry-run endpoint exists and is read-only. It uses the same protected admin policy as diagnostics and settings:
+
+- WooCommerce active: `manage_woocommerce`
+- WooCommerce inactive: `manage_options`
+
+It does not require a typed confirmation because it cannot write. The future removal endpoint must be separate from the existing apply endpoint and must require:
 
 - a permission callback
 - a valid WordPress REST nonce
 - `manage_woocommerce` when WooCommerce is active
 - typed confirmation
 - a dry-run hash or equivalent stale-preview protection
-
-No reset or cleanup endpoint exists in TASK-012E.
 
 ## WordPress.org Notes
 
