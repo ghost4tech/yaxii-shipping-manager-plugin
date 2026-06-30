@@ -17,7 +17,7 @@ const STATUS_STYLES: Record<ShippingZoneStatus, { label: string; className: stri
     className: "border-amber-200 bg-amber-50 text-amber-700",
   },
   protected: {
-    label: "Protected manual zone",
+    label: "Protected",
     className: "border-slate-200 bg-slate-50 text-slate-700",
   },
   conflict: {

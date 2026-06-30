@@ -1,4 +1,4 @@
-import { ArrowRight, Undo2 } from "lucide-react";
+import { ArrowRight, Lock, Undo2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -27,13 +27,22 @@ export function ShippingPriceCell({
   if (!method.canEdit) {
     return (
       <div className="flex flex-col gap-1.5 text-xs text-muted-foreground/70">
-        <MethodLabel method={method} />
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-8 items-center rounded-md border border-dashed border-border bg-muted/40 px-2.5">
-            {method.livePrice === null ? "-" : formatShippingPrice(method.livePrice)}
-          </span>
-          {displayDisabled && <DisabledBadge />}
-          <span className="text-[11px]">{method.disabledReason ?? "Not managed"}</span>
+          <div className="relative">
+            <Input
+              value={method.livePrice ?? ""}
+              readOnly
+              disabled
+              className="h-8 w-24 rounded-md border-dashed bg-muted/40 pr-9 text-sm tabular-nums shadow-none disabled:cursor-not-allowed disabled:opacity-100"
+              aria-label={`${method.label} price unavailable`}
+            />
+            {method.livePrice !== null && (
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-muted-foreground">
+                DZD
+              </span>
+            )}
+          </div>
+          <DisabledStatus reason={method.disabledReason ?? "Not managed"} />
         </div>
         <PendingStatusLine method={method} pending={pendingStatus} onUndo={onUndoStatus} />
       </div>
@@ -42,7 +51,6 @@ export function ShippingPriceCell({
 
   return (
     <div className={cn("flex flex-col gap-1.5", displayDisabled && "text-muted-foreground")}>
-      <MethodLabel method={method} />
       <div className="flex items-center gap-2">
         {freeSelected ? (
           <span
@@ -72,7 +80,7 @@ export function ShippingPriceCell({
             </span>
           </div>
         )}
-        {displayDisabled && <DisabledBadge />}
+        {displayDisabled && <DisabledStatus reason="Disabled" />}
       </div>
       <PendingPriceLine method={method} pending={pending} onUndo={onUndo} />
       <PendingStatusLine method={method} pending={pendingStatus} onUndo={onUndoStatus} />
@@ -80,18 +88,14 @@ export function ShippingPriceCell({
   );
 }
 
-function MethodLabel({ method }: { method: ShippingZoneMethodView }) {
+function DisabledStatus({ reason }: { reason: string }) {
   return (
-    <span className="max-w-32 truncate text-[11px] font-semibold text-foreground/70">
-      {method.label}
-    </span>
-  );
-}
-
-function DisabledBadge() {
-  return (
-    <span className="rounded-full border border-muted-foreground/20 bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-      Disabled
+    <span
+      className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-muted-foreground/20 bg-muted text-muted-foreground"
+      title={reason}
+      aria-label={reason}
+    >
+      <Lock className="h-3 w-3" />
     </span>
   );
 }
@@ -106,11 +110,7 @@ function PendingPriceLine({
   onUndo: () => void;
 }) {
   if (!pending) {
-    return (
-      <span className="text-[11px] text-muted-foreground">
-        Live - {formatShippingPrice(method.livePrice)}
-      </span>
-    );
+    return null;
   }
 
   return (

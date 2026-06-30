@@ -19,14 +19,14 @@ export const SHIPPING_ZONE_FILTERS: Array<{ key: ShippingZoneFilter; label: stri
   { key: "pending", label: "Pending changes" },
   { key: "needs_update", label: "Needs update" },
   { key: "missing", label: "Missing setup" },
-  { key: "protected", label: "Protected/manual" },
+  { key: "protected", label: "Protected" },
 ];
 
 const STATUS_LABELS: Record<ShippingZoneStatus, string> = {
   active: "Active",
   needs_update: "Needs update",
   missing: "Missing setup",
-  protected: "Protected manual zone",
+  protected: "Protected",
   conflict: "Conflict detected",
   checking: "Checking",
   unavailable: "Unavailable",
@@ -233,7 +233,7 @@ export function ownershipLabel(ownershipHint: ZoneDiagnostic["ownershipHint"]): 
   }
 
   if (ownershipHint === "manual_unknown") {
-    return "Manual zone protected";
+    return "Protected";
   }
 
   return "Name match only";
@@ -272,7 +272,7 @@ function methodViewForRow(
 
 function disabledReasonForStatus(status: ShippingZoneStatus): string {
   if (status === "protected" || status === "conflict" || status === "not_managed") {
-    return "Protected manual zone";
+    return "Protected";
   }
 
   if (status === "missing") {
@@ -355,7 +355,7 @@ function liveStatusForWilaya(
   }
 
   if (zone.ownershipHint === "manual_unknown") {
-    return { status: "protected", message: "Protected manual zone", zones };
+    return { status: "protected", message: "Protected", zones };
   }
 
   if (zone.ownershipHint !== "managed_registry") {
