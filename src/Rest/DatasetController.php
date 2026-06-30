@@ -49,14 +49,6 @@ final class DatasetController {
 				return JsonResponse::read( $payload );
 			}
 
-			if ( DatasetMode::LEGACY_58 === $mode ) {
-				return new WP_Error(
-					'yaxii_shipping_manager_dataset_unavailable',
-					__( 'The legacy 58-compatible dataset is not available yet.', 'yaxii-shipping-manager' ),
-					array( 'status' => 409 )
-				);
-			}
-
 			if ( 'wilayas' === $include ) {
 				$payload['wilayas'] = $this->datasets->wilayas( $mode );
 				return JsonResponse::read( $payload );

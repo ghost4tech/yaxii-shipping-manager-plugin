@@ -41,7 +41,7 @@ final class DatasetRepository {
 	 * @throws DatasetReadException When the dataset is unavailable or invalid.
 	 */
 	public function wilayas( string $mode ): array {
-		$this->assert_current_mode_available( $mode );
+		$this->assert_mode_available( $mode );
 
 		return $this->read_json_list( $this->dataset_file( $mode, 'wilayas.json' ), 'wilayas' );
 	}
@@ -52,7 +52,7 @@ final class DatasetRepository {
 	 * @throws DatasetReadException When the dataset is unavailable or invalid.
 	 */
 	public function communes( string $mode, string $wilaya_code = '' ): array {
-		$this->assert_current_mode_available( $mode );
+		$this->assert_mode_available( $mode );
 
 		$communes = $this->read_json_list( $this->dataset_file( $mode, 'communes.json' ), 'communes' );
 
@@ -104,27 +104,35 @@ final class DatasetRepository {
 			$metadata = $this->metadata( DatasetMode::LEGACY_58 );
 
 			return array(
-				'available' => (bool) ( $metadata['available'] ?? false ),
-				'complete'  => (bool) ( $metadata['complete'] ?? false ),
-				'verified'  => (bool) ( $metadata['verified'] ?? false ),
-				'reason'    => (string) ( $metadata['reason'] ?? 'Legacy mapping deferred.' ),
+				'available'    => (bool) ( $metadata['available'] ?? false ),
+				'complete'     => (bool) ( $metadata['complete'] ?? false ),
+				'verified'     => (bool) ( $metadata['verified'] ?? false ),
+				'wilayaCount'  => (int) ( $metadata['wilaya_count'] ?? 0 ),
+				'communeCount' => (int) ( $metadata['commune_count'] ?? 0 ),
+				'version'      => (string) ( $metadata['version'] ?? '' ),
+				'reason'       => (string) ( $metadata['reason'] ?? '' ),
 			);
 		} catch ( DatasetReadException $exception ) {
 			return array(
-				'available' => false,
-				'complete'  => false,
-				'verified'  => false,
-				'reason'    => $exception->getMessage(),
+				'available'    => false,
+				'complete'     => false,
+				'verified'     => false,
+				'wilayaCount'  => 0,
+				'communeCount' => 0,
+				'version'      => '',
+				'reason'       => $exception->getMessage(),
 			);
 		}
 	}
 
-	private function assert_current_mode_available( string $mode ): void {
-		if ( DatasetMode::CURRENT === $mode ) {
+	private function assert_mode_available( string $mode ): void {
+		$metadata = $this->metadata( $mode );
+
+		if ( DatasetMode::CURRENT === $mode || (bool) ( $metadata['available'] ?? false ) ) {
 			return;
 		}
 
-		throw new DatasetReadException( 'Legacy 58-compatible data is not available yet.' );
+		throw new DatasetReadException( 'Dataset mode is not available.' );
 	}
 
 	private function dataset_file( string $mode, string $file_name ): string {

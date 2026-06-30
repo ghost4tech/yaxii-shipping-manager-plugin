@@ -6,6 +6,7 @@ const legacyDir = path.resolve('data/algeria/legacy-58');
 const uiScanRoots = ['admin-app/src', 'src', 'assets/admin'];
 const expectedWilayaCount = 69;
 const expectedCommuneCount = 1541;
+const legacyWilayaCount = 58;
 const mojibakePattern = /[ÃƒÃ˜Ã™]/u;
 const repeatedWhitespacePattern = /\s{2,}/u;
 const validationErrors = [];
@@ -112,11 +113,11 @@ function validateMetadata(metadata) {
   }
 }
 
-function validateWilayas(wilayas) {
+function validateWilayas(wilayas, expectedCount = expectedWilayaCount, expectedMode = 'current') {
   if (!requireArray(wilayas, 'wilayas')) {
     return new Set();
   }
-  assertCount(wilayas, expectedWilayaCount, 'wilaya');
+  assertCount(wilayas, expectedCount, `${expectedMode} wilaya`);
   assertNoDuplicates(wilayas, 'code', 'wilaya');
 
   const wilayaCodes = new Set();
@@ -130,8 +131,8 @@ function validateWilayas(wilayas) {
     requireString(wilaya.name_fr, `${label}.name_fr`);
     requireString(wilaya.name_ar, `${label}.name_ar`);
     requireString(wilaya.label, `${label}.label`);
-    if (wilaya.mode !== 'current') {
-      validationErrors.push(`${label}.mode must be current.`);
+    if (wilaya.mode !== expectedMode && !(expectedMode === 'legacy_58' && wilaya.mode === 'current')) {
+      validationErrors.push(`${label}.mode must be current-derived for ${expectedMode}.`);
     }
     requireBoolean(wilaya.supported, `${label}.supported`);
     if (!Array.isArray(wilaya.notes)) {
@@ -143,11 +144,11 @@ function validateWilayas(wilayas) {
   return wilayaCodes;
 }
 
-function validateCommunes(communes, wilayaCodes) {
+function validateCommunes(communes, wilayaCodes, expectedCount = expectedCommuneCount, expectedMode = 'current') {
   if (!requireArray(communes, 'communes')) {
     return;
   }
-  assertCount(communes, expectedCommuneCount, 'commune');
+  assertCount(communes, expectedCount, `${expectedMode} commune`);
   assertNoDuplicates(communes, 'code', 'commune');
 
   communes.forEach((commune, index) => {
@@ -163,8 +164,8 @@ function validateCommunes(communes, wilayaCodes) {
     }
     requireString(commune.name_fr, `${label}.name_fr`);
     requireString(commune.name_ar, `${label}.name_ar`);
-    if (commune.mode !== 'current') {
-      validationErrors.push(`${label}.mode must be current.`);
+    if (commune.mode !== expectedMode && !(expectedMode === 'legacy_58' && commune.mode === 'current')) {
+      validationErrors.push(`${label}.mode must be current-derived for ${expectedMode}.`);
     }
     requireBoolean(commune.supported, `${label}.supported`);
     if (!Array.isArray(commune.notes)) {
@@ -173,23 +174,55 @@ function validateCommunes(communes, wilayaCodes) {
   });
 }
 
-function validateLegacyMetadata(legacyMetadata) {
+function validateLegacyMetadata(legacyMetadata, legacyWilayas, legacyCommunes) {
   if (!requireObject(legacyMetadata, 'legacy metadata')) {
     return;
   }
   if (legacyMetadata.mode !== 'legacy_58') {
     validationErrors.push('legacy metadata mode must be legacy_58.');
   }
-  if (legacyMetadata.complete !== false) {
-    validationErrors.push('legacy metadata complete must be false.');
+  if (legacyMetadata.complete !== true) {
+    validationErrors.push('legacy metadata complete must be true.');
   }
   if (legacyMetadata.verified !== false) {
     validationErrors.push('legacy metadata verified must be false.');
   }
-  if (legacyMetadata.available !== false) {
-    validationErrors.push('legacy metadata available must be false.');
+  if (legacyMetadata.available !== true) {
+    validationErrors.push('legacy metadata available must be true.');
   }
-  requireString(legacyMetadata.reason, 'legacy metadata reason');
+  requireString(legacyMetadata.version, 'legacy metadata version');
+  requireString(legacyMetadata.compatibility_note, 'legacy metadata compatibility_note');
+  if (legacyMetadata.wilaya_count !== legacyWilayas.length) {
+    validationErrors.push('legacy metadata wilaya_count must match legacy wilayas.');
+  }
+  if (legacyMetadata.commune_count !== legacyCommunes.length) {
+    validationErrors.push('legacy metadata commune_count must match legacy communes.');
+  }
+}
+
+function validateLegacyRange(legacyWilayas, legacyCommunes) {
+  const expectedCodes = new Set(
+    Array.from({ length: legacyWilayaCount }, (_, index) => String(index + 1).padStart(2, '0')),
+  );
+  const legacyCodes = new Set(legacyWilayas.map((wilaya) => wilaya.code));
+
+  expectedCodes.forEach((code) => {
+    if (!legacyCodes.has(code)) {
+      validationErrors.push(`legacy wilayas missing expected code ${code}.`);
+    }
+  });
+
+  legacyCodes.forEach((code) => {
+    if (!expectedCodes.has(code)) {
+      validationErrors.push(`legacy wilayas include unsupported code ${code}.`);
+    }
+  });
+
+  legacyCommunes.forEach((commune) => {
+    if (!expectedCodes.has(commune.wilaya_code)) {
+      validationErrors.push(`legacy commune ${commune.code} references unsupported wilaya ${commune.wilaya_code}.`);
+    }
+  });
 }
 
 function walkFiles(rootDir) {
@@ -228,11 +261,16 @@ const metadata = readJson(path.join(currentDir, 'metadata.json'));
 const wilayas = readJson(path.join(currentDir, 'wilayas.json'));
 const communes = readJson(path.join(currentDir, 'communes.json'));
 const legacyMetadata = readJson(path.join(legacyDir, 'metadata.json'));
+const legacyWilayas = readJson(path.join(legacyDir, 'wilayas.json'));
+const legacyCommunes = readJson(path.join(legacyDir, 'communes.json'));
 
 validateMetadata(metadata);
 const wilayaCodes = validateWilayas(wilayas);
 validateCommunes(communes, wilayaCodes);
-validateLegacyMetadata(legacyMetadata);
+const legacyWilayaCodes = validateWilayas(legacyWilayas, legacyWilayaCount, 'legacy_58');
+validateCommunes(legacyCommunes, legacyWilayaCodes, legacyCommunes?.length ?? 0, 'legacy_58');
+validateLegacyRange(legacyWilayas ?? [], legacyCommunes ?? []);
+validateLegacyMetadata(legacyMetadata, legacyWilayas ?? [], legacyCommunes ?? []);
 scanUiFacingFiles();
 
 if (validationErrors.length > 0) {
@@ -244,4 +282,5 @@ if (validationErrors.length > 0) {
 console.log('Normalized dataset validation passed');
 console.log(`Current wilayas: ${wilayas.length}`);
 console.log(`Current communes: ${communes.length}`);
-console.log('Legacy 58-compatible metadata: unavailable/incomplete as expected');
+console.log(`Legacy 58-compatible wilayas: ${legacyWilayas.length}`);
+console.log(`Legacy 58-compatible communes: ${legacyCommunes.length}`);

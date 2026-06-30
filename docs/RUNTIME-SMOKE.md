@@ -12,21 +12,33 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 6. Confirm Shipping Zones no longer shows bare `Protected`; manual/unknown rows use `Manual zone` or `Not managed by Yaxii`.
 7. Confirm a successful price or status apply shows `Updating...` for affected rows while diagnostics refreshes, not stale `Needs update`.
 8. Open the generator.
-9. Confirm setup modes are distinct:
-   - Fresh setup: create a new shipping setup for selected wilayas.
-   - Continue existing: add only missing managed zones or methods; manual zones are protected.
-   - Preview changes: review only, without apply pressure.
-10. Confirm wilaya selection works and Fresh setup defaults to all current wilayas.
-11. Confirm commune coverage can be skipped.
-12. Confirm commune coverage can be shown, and opening one wilaya lazy-loads read-only commune rows.
-13. Confirm delivery methods can be reviewed.
-14. Confirm prices can be edited as draft values.
-15. Confirm names and safety steps are reachable.
-16. Confirm final preview auto-runs.
-17. Confirm final details are collapsed by default.
-18. Confirm Preview-only mode hides apply controls and shows `Check diagnostics`.
-19. Confirm `Check diagnostics` opens the Diagnostics tab.
+9. Confirm the wizard uses five steps: Coverage, Methods and prices, Names, Preview, Generate.
+10. Confirm Coverage shows a diagnostics-guided recommended path.
+11. Confirm setup modes are distinct:
+   - Create new setup: selects all wilayas for the chosen dataset.
+   - Repair existing setup: preselects missing managed zones or method gaps when diagnostics are available.
+   - Preview only: runs preview but hides generate/apply.
+12. Confirm the dataset selector offers `Current Algeria dataset` and `Legacy 58-compatible dataset`.
+13. Select legacy mode and confirm the selection count is based on the loaded legacy dataset.
+14. Confirm commune coverage is not a main step and is available only as collapsed reference information.
+15. Confirm delivery methods and prices share one step.
+16. Confirm Names says existing WooCommerce zone names are not changed in this release.
+17. Confirm final preview auto-runs and shows safety copy inline.
+18. Confirm Preview-only mode hides generate/apply controls.
+19. Confirm no-op previews show `Setup already matches this selection` and offer `Open Shipping Zones`.
 20. Confirm Settings is titled `Defaults for future setup`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
+
+### TASK-012C Generator Smoke Scenarios
+
+Expected:
+
+- Current dataset / active setup recommends setup already active or repair if issues exist.
+- Legacy 58-compatible mode previews only 58 selected wilayas and excludes codes outside `01` through `58`.
+- Legacy mode diagnostics do not report additional current-dataset wilayas as missing.
+- Repair mode preselects missing or incomplete managed setup when diagnostics exposes it.
+- Repair mode says `No repair needed` when no missing or incomplete setup exists.
+- Preview-only mode still runs preview and hides generate/apply.
+- Communes remain collapsed reference information and do not imply commune-level pricing.
 
 ### Diagnostics Health-Check Smoke
 

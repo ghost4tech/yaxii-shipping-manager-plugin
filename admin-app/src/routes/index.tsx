@@ -5,15 +5,11 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
-  Download,
-  Lock,
   Package,
   RefreshCw,
   Settings as SettingsIcon,
   ShieldCheck,
-  Upload,
   Wand2,
-  Zap,
 } from "lucide-react";
 
 import type { AdminBootstrapConfig, BootstrapPayload } from "../bootstrap";
@@ -84,11 +80,8 @@ const TABS = [
   { id: "zones", label: "Shipping Zones", icon: Package },
   { id: "generator", label: "Generator", icon: Wand2 },
   { id: "diagnostics", label: "Diagnostics", icon: Activity },
-  { id: "import", label: "Import / Export", icon: Upload },
   { id: "settings", label: "Settings", icon: SettingsIcon },
-  { id: "sync", label: "Smart Form Sync", icon: Zap },
 ] as const;
-const PRIMARY_TABS: Array<(typeof TABS)[number]> = [TABS[0], TABS[1], TABS[2], TABS[4]];
 
 type TabId = (typeof TABS)[number]["id"];
 type DatasetLoadState =
@@ -127,37 +120,6 @@ export default function AdminApp({
   useEffect(() => {
     let cancelled = false;
 
-    async function loadDataset() {
-      try {
-        const response = await fetchDatasetWilayas(config, "current");
-        if (!cancelled) {
-          setDatasetState({
-            status: "ready",
-            metadataVersion: response.metadata.version ?? "current-candidate-2025",
-            records: response.wilayas,
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setDatasetState({
-            status: "error",
-            message:
-              error instanceof Error ? error.message : "Unable to load the normalized dataset.",
-          });
-        }
-      }
-    }
-
-    loadDataset();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [config]);
-
-  useEffect(() => {
-    let cancelled = false;
-
     async function loadSettings() {
       try {
         const response = await fetchSettings(config);
@@ -180,6 +142,43 @@ export default function AdminApp({
       cancelled = true;
     };
   }, [config]);
+
+  useEffect(() => {
+    if (settingsState.status !== "ready") {
+      return;
+    }
+
+    let cancelled = false;
+    const datasetMode = settingsState.response.settings.datasetMode;
+    setDatasetState({ status: "loading" });
+
+    async function loadDataset() {
+      try {
+        const response = await fetchDatasetWilayas(config, datasetMode);
+        if (!cancelled) {
+          setDatasetState({
+            status: "ready",
+            metadataVersion: response.metadata.version ?? `${datasetMode}-dataset`,
+            records: response.wilayas,
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDatasetState({
+            status: "error",
+            message:
+              error instanceof Error ? error.message : "Unable to load the normalized dataset.",
+          });
+        }
+      }
+    }
+
+    loadDataset();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config, settingsState]);
 
   useEffect(() => {
     if (datasetState.status !== "ready" || settingsState.status !== "ready") {
@@ -306,11 +305,9 @@ export default function AdminApp({
             }
           />
         )}
-        {tab === "import" && <ImportExportScreen />}
         {tab === "settings" && (
           <SettingsScreen settingsState={settingsState} onSave={savePersistedSettings} />
         )}
-        {tab === "sync" && <SmartFormSyncScreen />}
       </main>
       <footer className="mx-auto max-w-5xl px-6 pb-10 text-center text-xs text-muted-foreground">
         Yaxii Shipping Manager - Preview first - Manual zones are protected
@@ -322,12 +319,13 @@ export default function AdminApp({
           config={config}
           settings={activeSettings}
           baseList={wilayasToReference(wilayas)}
+          diagnostics={diagnosticsState.status === "ready" ? diagnosticsState.response : undefined}
           onClose={() => setWizardOpen(false)}
           onComplete={(next, defs) => {
             setWilayas(next);
             setMethodDefs(defs);
             setWizardOpen(false);
-            setTab("generator");
+            setTab("zones");
           }}
           onPreviewReady={(response, context, request) =>
             setLatestPreview({ response, context, request })
@@ -407,7 +405,9 @@ function RuntimeNotices({
         <Alert className="border-primary/20 bg-primary/5">
           <RefreshCw className="h-4 w-4" />
           <AlertTitle>Loading normalized dataset</AlertTitle>
-          <AlertDescription>Fetching current wilayas from the local REST dataset.</AlertDescription>
+          <AlertDescription>
+            Fetching wilayas from the selected local REST dataset.
+          </AlertDescription>
         </Alert>
       )}
       {datasetState.status === "error" && (
@@ -478,7 +478,7 @@ function TopNav({ tab, setTab }: { tab: TabId; setTab: (tab: TabId) => void }) {
   return (
     <nav className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">
-        {PRIMARY_TABS.map((item) => {
+        {TABS.map((item) => {
           const Icon = item.icon;
           const active = tab === item.id;
           return (
@@ -548,13 +548,13 @@ function GeneratorHub({
             <div className="flex-1">
               <h3 className="text-lg font-semibold">Guided shipping setup</h3>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Pick the dataset mode, choose how prices will be entered, define the methods you
-                ship with, then preview supported WooCommerce changes before applying them.
+                Choose current or legacy coverage, define shipping methods and prices, then preview
+                supported WooCommerce changes before generating setup.
               </p>
               <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                 <BulletItem>Current Algeria dataset</BulletItem>
-                <BulletItem>Legacy 58-compatible mode is not available yet</BulletItem>
-                <BulletItem>CSV import path prepared, backend not connected yet</BulletItem>
+                <BulletItem>Legacy 58-compatible dataset</BulletItem>
+                <BulletItem>Preview-only mode for support review</BulletItem>
                 <BulletItem>
                   Apply can create zones, add methods, and update Yaxii-managed prices
                 </BulletItem>
@@ -581,67 +581,6 @@ function BulletItem({ children }: { children: ReactNode }) {
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
       <span>{children}</span>
     </li>
-  );
-}
-
-function ImportExportScreen() {
-  return (
-    <>
-      <SectionHeader
-        title="Import / Export"
-        description="Prepare CSV movement for shipping configurations. Backend import and export are not connected yet."
-      />
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Import CSV</CardTitle>
-            <CardDescription>Upload validation is coming in a later task.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-muted/40 px-6 py-8 text-center">
-              <Upload className="h-6 w-6 text-muted-foreground" />
-              <div className="text-sm">CSV backend not connected yet</div>
-              <Button variant="outline" size="sm" disabled>
-                Select file
-              </Button>
-            </div>
-            <Button className="w-full" disabled>
-              Validate and preview import
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Export</CardTitle>
-            <CardDescription>Download endpoints are coming in a later task.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ExportRow
-              title="Local draft configuration"
-              desc="Wilayas, prices, and labels currently visible in this admin draft."
-            />
-            <ExportRow
-              title="WooCommerce snapshot"
-              desc="Read-only WooCommerce zone snapshot backend not connected yet."
-            />
-          </CardContent>
-        </Card>
-      </div>
-    </>
-  );
-}
-
-function ExportRow({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-border p-4">
-      <div>
-        <div className="text-sm font-medium">{title}</div>
-        <div className="text-xs text-muted-foreground">{desc}</div>
-      </div>
-      <Button variant="outline" size="sm" disabled>
-        <Download className="h-4 w-4" /> Export
-      </Button>
-    </div>
   );
 }
 
@@ -795,7 +734,10 @@ function SettingsForm({
       )}
       <Card>
         <CardContent className="space-y-6 p-6">
-          <SettingRow label="Dataset mode" desc="Legacy mapping is not available yet.">
+          <SettingRow
+            label="Dataset mode"
+            desc="Controls future Generator previews and read-only diagnostics coverage."
+          >
             <Select
               value={draft.datasetMode}
               onValueChange={(value) => {
@@ -810,7 +752,7 @@ function SettingsForm({
               </SelectTrigger>
               <SelectContent>
                 {DATASET_MODE_OPTIONS.map((option) => (
-                  <SelectItem key={option.mode} value={option.mode} disabled={!option.available}>
+                  <SelectItem key={option.mode} value={option.mode}>
                     {option.label}
                   </SelectItem>
                 ))}
@@ -993,28 +935,6 @@ function ToggleRow({
     <SettingRow label={label} desc={desc}>
       <Switch checked={checked} disabled={disabled} />
     </SettingRow>
-  );
-}
-
-function SmartFormSyncScreen() {
-  return (
-    <>
-      <SectionHeader title="Smart Form Sync" description="Coming later. No sync is active yet." />
-      <Card>
-        <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-            <Lock className="h-5 w-5" />
-          </div>
-          <div className="max-w-md">
-            <div className="text-base font-semibold">Coming later</div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Yaxii Smart Form can later become the source of truth. No sync is active yet, and this
-              screen performs no reads or writes.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </>
   );
 }
 

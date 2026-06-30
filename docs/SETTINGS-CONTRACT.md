@@ -45,7 +45,7 @@ The response includes:
 - `options`: settings metadata.
 - `warnings`: repair or forced-safety warnings.
 
-Unknown keys are rejected on save. Invalid enum values, duplicate method keys, negative prices, unsupported method types, and unavailable legacy mode are returned as REST errors.
+Unknown keys are rejected on save. Invalid enum values, duplicate method keys, negative prices, and unsupported method types are returned as REST errors.
 
 ## Persisted MVP Settings
 
@@ -86,17 +86,12 @@ Method labels and default prices are future setup defaults. The UI directs merch
 
 ## Dataset Modes
 
-Current mode is available as `Current Algeria dataset`.
+Available modes:
 
-Legacy mode remains visible in the UI but unavailable as `Legacy 58-compatible dataset` with the reason:
+- `current`: `Current Algeria dataset`
+- `legacy_58`: `Legacy 58-compatible dataset`
 
-```text
-Legacy mapping is not available yet.
-```
-
-Saving `datasetMode: legacy_58` is rejected until an auditable mapping exists. If an older stored option contains `legacy_58`, the repository normalizes it back to `current` and returns a warning.
-
-Do not guess a legacy 58 mapping.
+Saving `datasetMode: legacy_58` is allowed. The mode is generated from the current normalized dataset by filtering wilaya codes `01` through `58`; it is derived from user-verified first 58 records and is not independently verified as official/legal administrative truth.
 
 ## Label Formats
 
@@ -155,21 +150,15 @@ The REST sanitizer forces all safety rules back to `true`. The UI copy says thes
 
 Wizard steps:
 
-1. Setup path
-2. Dataset mode
-3. Label/naming
-4. Shipping methods
-5. Default prices
-6. Wilaya selection
-7. Review draft
+1. Coverage
+2. Methods and prices
+3. Names
+4. Preview
+5. Generate
 
-The wizard initializes from persisted settings. Wilaya selection and per-wilaya draft prices remain local draft UI state.
+The wizard initializes from persisted settings. Dataset mode, wilaya selection, method choices, and per-wilaya prices remain local draft UI state until Preview/Generate.
 
-The review screen must say:
-
-```text
-This is a local draft. WooCommerce preview/apply will be added after diagnostics and preview planner.
-```
+Saving settings alone does not write WooCommerce shipping zones or methods.
 
 ## Still Draft Or Local
 

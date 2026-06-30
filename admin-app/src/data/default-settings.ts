@@ -24,8 +24,8 @@ export const DATASET_MODE_OPTIONS: DatasetModeOption[] = [
   {
     mode: "legacy_58",
     label: "Legacy 58-compatible dataset",
-    available: false,
-    reason: "Legacy mapping is not available yet.",
+    available: true,
+    reason: "Derived from the user-verified first 58 records of the current normalized dataset.",
   },
 ];
 

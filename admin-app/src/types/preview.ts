@@ -1,9 +1,11 @@
+import type { DatasetMode } from "./dataset";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "./generator";
 import type { RegionLabelFormat, ZoneNameFormat } from "./settings";
 
 export type PreviewOwnershipSource = "managed_registry" | "yaxii_name_hint" | "manual_unknown";
 
 export type PreviewRequest = {
+  datasetMode?: DatasetMode;
   selectedWilayaCodes?: string[];
   pricingRows?: Array<{
     wilayaCode: string;

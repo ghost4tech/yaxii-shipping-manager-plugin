@@ -93,6 +93,7 @@ export function GeneratorGenerateStep({
             state={generateState}
             setupMode={setupMode}
             canGenerate={canGenerate}
+            finalStatus={finalStatus}
             onGenerate={generateSetup}
             onOpenDiagnostics={onOpenDiagnostics}
             onRefreshPreview={onRefreshPreview}
@@ -141,6 +142,7 @@ function GenerateActions({
   state,
   setupMode,
   canGenerate,
+  finalStatus,
   onGenerate,
   onOpenDiagnostics,
   onRefreshPreview,
@@ -149,6 +151,7 @@ function GenerateActions({
   state: GenerateState;
   setupMode: SetupMode;
   canGenerate: boolean;
+  finalStatus: ReturnType<typeof finalApplyStatus>;
   onGenerate: () => Promise<void>;
   onOpenDiagnostics: () => void;
   onRefreshPreview: () => Promise<void>;
@@ -164,7 +167,12 @@ function GenerateActions({
 
   if (!canGenerate) {
     return (
-      <BlockedActions onOpenDiagnostics={onOpenDiagnostics} onRefreshPreview={onRefreshPreview} />
+      <BlockedActions
+        noGeneratorWork={finalStatus === "setup_already_matches"}
+        onOpenDiagnostics={onOpenDiagnostics}
+        onRefreshPreview={onRefreshPreview}
+        onReturnToEditor={onReturnToEditor}
+      />
     );
   }
 
@@ -199,12 +207,29 @@ function PreviewOnlyActions({ onOpenDiagnostics }: { onOpenDiagnostics: () => vo
 }
 
 function BlockedActions({
+  noGeneratorWork,
   onOpenDiagnostics,
   onRefreshPreview,
+  onReturnToEditor,
 }: {
+  noGeneratorWork: boolean;
   onOpenDiagnostics: () => void;
   onRefreshPreview: () => Promise<void>;
+  onReturnToEditor: () => void;
 }) {
+  if (noGeneratorWork) {
+    return (
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <Button type="button" size="lg" onClick={onReturnToEditor}>
+          Open Shipping Zones
+        </Button>
+        <span className="text-[11px] text-muted-foreground">
+          Setup already matches this selection.
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
       <Button type="button" variant="outline" size="lg" onClick={() => void onRefreshPreview()}>

@@ -1,358 +1,155 @@
-# Generator Wizard Product Plan
+# Generator Wizard Contract
 
 ## Purpose
 
-The Generator Wizard should help an Algerian WooCommerce merchant prepare a safe shipping setup before Yaxii writes anything to WooCommerce.
+The Generator is a setup and repair assistant for WooCommerce shipping zones. It prepares a draft, runs the real preview planner, and calls the safe apply endpoint only from the Generate step when the preview supports work.
 
-The wizard is not the apply engine. It prepares a draft, shows diagnostics and preview results, and enables safe apply only for supported Yaxii-managed writes after confirmation.
+Shipping Zones remains the daily management center for live price and method-status changes.
 
-## Current Wizard Audit
+## Current MVP Flow
 
-Current steps in `admin-app/src/components/generator/GeneratorWizard.tsx`:
+The wizard uses five steps:
 
-1. Setup mode
-2. Wilaya coverage
-3. Commune coverage
-4. Delivery methods
-5. Shipping prices
-6. Names and labels
-7. Safety check
-8. Preview and apply
+1. `Coverage`
+2. `Methods and prices`
+3. `Names`
+4. `Preview`
+5. `Generate`
 
-Already connected to real backend contracts:
+Removed standalone steps:
 
-- Settings initialize from persisted settings.
-- Current wilayas load through `GET /dataset?mode=current&include=wilayas`.
-- Preview calls `POST /preview` automatically on the final step when the draft is valid.
-- Preview output shows one merchant action card, one setup summary, grouped method additions, collapsed advanced details, and a safe apply action only when supported work exists.
-- Diagnostics uses `GET /diagnostics`.
-- Apply can create missing Yaxii-managed zones, add missing methods/prices, and update labels or prices for existing Yaxii-managed method instances after checkbox confirmation.
+- Commune coverage
+- Safety check
 
-Still limited:
+Safety copy is shown inline in Preview and Generate.
 
-- CSV appears as a disabled coming-later path because the backend is not connected.
-- Commune lists are read-only and informational; shipping zones remain wilaya-level.
-- Zone-name updates are previewed but not applied yet.
-- The wizard lives in one large component, so future structural cleanup should stay narrow and behavior-preserving.
+## Guided Start
 
-## Proposed Wizard Flow
+Coverage includes the start guidance.
 
-Recommended steps:
+Recommended path is derived from diagnostics when available:
 
-1. Setup mode and defaults
-2. Coverage
-3. Cities and communes
-4. Delivery methods
-5. Shipping prices
-6. Names and labels
-7. Safety check
-8. Preview
-9. Apply managed zones and methods when safe
+- No configured Yaxii-managed setup or many missing wilayas: `Create new setup`
+- Missing managed zones or method gaps: `Repair existing setup`
+- Fully managed setup: `Setup already active`
+- Duplicate/manual conflicts: `Manual zones need review`
 
-### 1. Setup Mode And Defaults
+Available user choices:
 
-Purpose: choose how the merchant wants to start.
+- `Create new setup`
+- `Repair existing setup`
+- `Preview only`
 
-Options:
+`Preview only` is for support or agency review and does not show a generate/apply action.
 
-- Fresh setup
-- Continue existing setup
-- Preview changes only
+CSV import is not a primary path. The wizard only shows small disabled copy: `CSV import coming later.`
 
-Recommended copy:
+## Coverage
 
-> Choose how you want to prepare your Algeria shipping setup. Preview runs before any apply.
+Coverage lets the merchant choose the dataset mode and selected wilayas.
 
-Mapping:
+Supported dataset modes:
 
-- Fresh setup: default to all current wilayas selected.
-- Continue existing setup: emphasize that Yaxii adds only missing managed zones or methods and protects existing manual zones.
-- Preview changes only: let the merchant review a plan without showing the apply action.
+- `Current Algeria dataset`
+- `Legacy 58-compatible dataset`
 
-CSV import should not be a primary wizard path until the CSV backend exists. Keep it outside this wizard or show it as disabled with plain copy.
+Legacy mode is generated from the current normalized dataset by filtering wilaya codes `01` through `58`. Counts are derived from the loaded dataset response.
 
-### 2. Coverage
+When `Repair existing setup` is selected, diagnostics preselects missing wilayas and managed zones with method gaps when that information is available. Manual/conflict rows are not selected for repair.
 
-Purpose: select the wilayas covered by this store.
+If repair has no missing or incomplete managed setup, the wizard shows `No repair needed` and points merchants back to Shipping Zones.
 
-Options:
+## Communes
 
-- Current Algeria dataset, 69 wilayas.
-- Legacy 58-compatible dataset, visible but unavailable.
-- Select all wilayas.
-- Select individual wilayas.
-- Search wilayas by code, French name, or Arabic name.
-- Show commune count per wilaya.
+Communes are not a main step.
 
-Recommended copy:
+Coverage includes a collapsed `Commune reference` section with this boundary:
 
-> Select the wilayas where you deliver. Yaxii will preview WooCommerce shipping zones for these wilayas.
+```text
+Yaxii uses wilaya-level WooCommerce zones in this release. Communes are shown for reference only.
+```
 
-Legacy unavailable copy:
+Opening commune reference lazy-loads commune records for selected wilayas through the dataset REST endpoint using the active dataset mode. Commune-specific pricing is not implemented.
 
-> Legacy 58-compatible mode is not available yet. We will add it only after a safe mapping is verified.
+## Methods And Prices
 
-### 3. Cities And Communes
-
-Purpose: make commune coverage visible without promising unsupported commune-level pricing.
-
-MVP decision:
-
-- Show communes inside selected wilayas for visibility.
-- Default coverage is all communes inside selected wilayas.
-- Commune list is informational and read-only.
-- Do not allow commune exclusions in the MVP.
-- Do not add commune-level pricing controls.
-- Native WooCommerce zone generation remains wilaya-level.
-
-Recommended UI:
-
-- Show a coverage summary: selected wilayas and total communes covered.
-- Add a collapsible section per selected wilaya.
-- Each wilaya row shows commune count.
-- Add search/filter inside the commune list.
-- Disabled exclusion controls may appear only if the copy is explicit that exclusions are not available yet; otherwise omit them to avoid confusion.
-
-Recommended copy:
-
-> All communes inside selected wilayas are covered. WooCommerce zones are created at wilaya level. Commune-specific prices need a future Yaxii shipping method and are not part of this setup yet.
-
-Backend path:
-
-- Use `GET /dataset?mode=current&include=communes&wilaya_code=NN` when a wilaya section is opened.
-- Do not import `data/algeria/current/communes.json` into React.
-- Do not fetch all communes by default unless needed for a small summary; prefer lazy loading per wilaya.
-
-Future option:
-
-- City or commune-specific pricing requires a custom Yaxii WooCommerce shipping method or checkout city integration.
-- It must be planned separately because native WooCommerce zones cannot safely express all commune-level price rules by themselves.
-
-### 4. Delivery Methods
-
-Purpose: choose the flat-rate methods Yaxii should preview.
-
-MVP methods:
+This step combines method selection and pricing:
 
 - Home delivery
-- Office / stop desk delivery
+- Office / stopdesk delivery
 - Custom method 1
 - Custom method 2
 
-Rules:
+Home delivery and office delivery remain required. Custom method slots are optional. Prices are local draft values until Preview and Generate.
 
-- Home delivery and office / stop desk delivery are required.
-- Custom method 1 and 2 are optional.
-- Unlimited custom methods are not in the MVP.
-- Method type remains `flat_rate`.
+## Names
 
-Recommended copy:
+This step controls draft naming:
 
-> Choose the delivery methods customers should see at checkout. Home delivery and office / stop desk delivery stay on for the MVP.
+- Zone prefix
+- Zone name format
+- Region label format
+- Office wording and custom office label
 
-### 5. Shipping Prices
+The UI states:
 
-Purpose: set default and per-wilaya prices before preview.
+```text
+Existing WooCommerce zone names are not changed in this release.
+```
 
-Options:
+Zone-name updates may appear in preview details, but SafeApplyEngine does not update existing zone names.
 
-- Default home delivery price.
-- Default office / stop desk price.
-- Custom method prices when custom methods are enabled.
-- Per-wilaya price override.
-- Bulk apply a price to selected wilayas.
-- Optional free shipping value by setting price to `0`.
-- Empty means unset local draft.
+## Preview
 
-Validation:
+Preview auto-runs the real `POST /preview` request when the draft is valid and the merchant reaches the Preview step.
 
-- Reject negative values.
-- Reject invalid numbers.
-- Keep currency display as WooCommerce currency later, fallback `DZD`.
-- Do not do WooCommerce money writes in the wizard.
+The preview request includes:
 
-Recommended copy:
+- `datasetMode`
+- `selectedWilayaCodes`
+- `pricingRows`
+- `methods`
+- `zoneNameFormat`
+- `zonePrefix`
+- `regionLabelFormat`
 
-> Set the prices Yaxii should preview. These prices are not written to WooCommerce yet.
+Preview shows safety copy inline:
 
-### 6. Names And Labels
+- Manual zones are protected.
+- No deletes will be made.
+- WooCommerce is checked again before applying.
 
-Purpose: decide how zones and method labels appear in preview.
+## Generate
 
-Options:
+Generate calls the real `POST /apply` endpoint through `fetchApply` when all backend gates allow it.
 
-- Zone prefix.
-- Zone name format.
-- Region label format: French, Arabic, French - Arabic, Arabic - French.
-- Office wording: Office delivery, Stopdesk, Bureau, Custom label.
+Generate is hidden or replaced with a no-op action when:
 
-Recommended copy:
+- Setup mode is `Preview only`
+- The preview has no supported work
+- Conflicts block apply
+- Readiness is blocked
 
-> Choose how wilayas and WooCommerce zones should be named in the preview.
+If no work is needed, the wizard says `Setup already matches this selection` and offers `Open Shipping Zones`.
 
-### 7. Safety Check
+## Backend Boundary
 
-Purpose: explain what the apply engine protects before preview.
+The wizard does not write directly to WooCommerce. All writes still go through:
 
-Show locked safety rules:
+- Preview
+- Apply
+- REST nonce and capability checks
+- Preview hash and accepted summary validation
+- Locked safety policy
+- Managed registry ownership checks
+- Fresh WooCommerce re-read
 
-- Manual zones are skipped.
-- Conflicts are blocked.
-- No deletes are planned.
-- Preview is required before apply.
+Still not implemented:
 
-Recommended copy:
-
-> Yaxii protects manual WooCommerce zones. Conflicts must be reviewed before apply.
-
-### 8. Preview
-
-Purpose: call the real preview endpoint and show the plan.
-
-The preview request should send:
-
-- selected wilaya codes
-- pricing rows
-- methods
-- zone name format
-- zone prefix
-- region label format
-
-Behavior:
-
-- Auto-run preview once when the merchant reaches the final step and the draft is valid.
-- Show `Checking your WooCommerce shipping setup...` while the preview request is running.
-- Keep `Refresh preview` as a secondary action.
-- Keep technical fields collapsed in `Advanced details`.
-
-Show in the main action card:
-
-- `Ready to prepare shipping` when safe creates or method additions are available.
-- `Shipping setup already exists` when no missing zones or methods are found.
-- `Ready to update prices` when registry-owned method price or label updates can be applied safely.
-- `Setup exists. Updates are coming next.` when only unsupported zone name updates remain for a later task.
-- `Needs review before applying` only for real blockers.
-
-Show in the setup summary:
-
-- selected wilayas count
-- commune coverage summary
-- enabled methods
-- price summary
-- safety rules
-- readiness state
-- grouped methods/prices to add
-- grouped method price/label updates
-- short note for unsupported zone name updates that will be handled later
-
-Recommended copy:
-
-> Yaxii checks WooCommerce before apply and protects manual zones.
-
-Advanced details may show the preview hash, contract version, generated timestamp, raw preview groups, zone IDs, method keys, and internal ownership labels.
-
-### 9. Apply Managed Zones And Methods
-
-Purpose: make the current boundary obvious.
-
-Recommended copy:
-
-> Apply can create missing Yaxii-managed zones, add selected methods with prices, and update Yaxii-managed method prices or labels. Manual zones are not touched.
-
-The active apply button should appear only when a reviewed preview has supported work, no conflicts, and the merchant checks the confirmation checkbox. Supported work means missing zones, missing methods, or registry-owned method price/label updates. The frontend still submits the backend-required confirmation phrase internally for the current safe apply scope.
-
-Preview-only setup mode hides the apply action and shows:
-
-> Preview-only mode. Switch setup mode if you want to apply changes.
-
-The final wizard footer uses `Done`, not draft-oriented copy.
-
-## Shipping Zones Management Center
-
-The Shipping Zones screen is a live status and supported pending-change management table, not a direct WooCommerce write surface.
-
-Current control classification:
-
-- Status badges and live prices: read-only diagnostics.
-- Row details: collapsed technical zone, ownership, method enabled state, and method cost data.
-- Price inputs: pending changes for registry-owned Yaxii methods.
-- `Make free`: sets a supported pending price to `0`.
-- `Review changes`: calls the existing preview endpoint and displays the final preview/apply panel.
-- `Open Generator`: opens the full Generator flow.
-- `Check diagnostics`: opens the read-only diagnostics screen.
-- `Open WooCommerce zones`: opens WooCommerce's native shipping settings in a new browser tab.
-- `Save settings` in Settings: functional settings persistence only; it does not directly update WooCommerce zones or existing methods. Use wizard preview/apply for supported Yaxii-managed method price or label updates.
-- CSV import/export controls: coming soon and disabled.
-
-Unsupported controls:
-
-- Enable/disable method and row controls are not active until a safe method-status update task is scoped.
-- Manual or unknown WooCommerce method price and label updates remain out of scope.
-- Zone name updates remain out of scope for apply.
-
-The UI must say pending changes are reviewed before WooCommerce is updated.
-
-## UI Copy Recommendations
-
-Fresh store:
-
-> Ready to create Yaxii zones. No existing Algeria wilaya zones were found.
-
-Manual zones detected:
-
-> Manual zones are protected and will be skipped.
-
-Conflicts detected:
-
-> Conflicts found. Resolve duplicate or overlapping zones before applying.
-
-No wilayas selected:
-
-> Select at least one wilaya to preview shipping setup.
-
-Preview only:
-
-> This is a preview only. No WooCommerce changes were made.
-
-Apply managed zones and methods:
-
-> Create zones and add methods.
-
-Commune coverage:
-
-> All communes inside selected wilayas are covered. Commune-specific prices are not available yet.
-
-Legacy 58 unavailable:
-
-> Legacy 58-compatible mode is not available yet.
-
-## Next UI Implementation Scope
-
-Must implement next:
-
-- Replace the current wizard step order with the product flow above.
-- Add commune visibility for selected wilayas.
-- Add wilaya search and commune search/filter.
-- Show commune count per wilaya.
-- Keep commune coverage informational/read-only.
-- Improve selected wilaya and pricing review.
-- Move preview into the final wizard step.
-- Make safety copy clear before preview.
-- Enable apply only for the reviewed managed-zone path.
-
-Must not implement next:
-
-- WooCommerce zone updates, deletes, reset/wipe tools, manual-zone adoption, or unknown method updates.
-- Commune-level pricing engine.
-- Checkout city field changes.
-- CSV backend.
-- Provider imports.
-- YSF sync.
-- Remote calls, remote tracking, licensing, or Pro locks.
-
-## Risks
-
-- Showing communes may cause merchants to expect commune-specific pricing. The UI must say clearly that MVP coverage is wilaya-level.
-- Fetching all 1541 communes at once may make the wizard feel heavy. Lazy-load communes per selected wilaya when possible.
-- The wizard source is currently in a large route file. The next implementation should split new wizard components without changing unrelated screens.
-- The current dataset is candidate data and not independently verified as official administrative truth. UI copy should avoid official claims.
+- CSV backend
+- Commune-level pricing
+- Provider imports
+- YSF sync
+- Manual-zone adoption
+- Zone-name apply
+- Reset/delete/wipe tooling

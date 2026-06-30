@@ -65,14 +65,15 @@ final class AlgeriaStatesRegistrar {
 	 * @return array<string,mixed>
 	 */
 	public function status(): array {
+		$dataset_mode     = $this->dataset_mode();
 		$registered_count = count( $this->algeria_states() );
 
 		return array(
 			'woocommerceActive' => $this->woocommerce_active,
 			'active'            => $this->woocommerce_active && $registered_count > 0,
-			'datasetMode'       => DatasetMode::CURRENT,
+			'datasetMode'       => $dataset_mode,
 			'wilayaCount'       => $registered_count,
-			'legacyAvailable'   => false,
+			'legacyAvailable'   => (bool) ( $this->datasets->dataset_status()['legacy58']['available'] ?? false ),
 		);
 	}
 
@@ -84,7 +85,7 @@ final class AlgeriaStatesRegistrar {
 			return $this->algeria_states;
 		}
 
-		$this->algeria_states = $this->read_current_wilayas_as_states();
+		$this->algeria_states = $this->read_wilayas_as_states();
 
 		return $this->algeria_states;
 	}
@@ -92,9 +93,9 @@ final class AlgeriaStatesRegistrar {
 	/**
 	 * @return array<string,string>
 	 */
-	private function read_current_wilayas_as_states(): array {
+	private function read_wilayas_as_states(): array {
 		try {
-			$wilayas = $this->datasets->wilayas( DatasetMode::CURRENT );
+			$wilayas = $this->datasets->wilayas( $this->dataset_mode() );
 		} catch ( DatasetReadException $exception ) {
 			return array();
 		}
@@ -131,6 +132,13 @@ final class AlgeriaStatesRegistrar {
 		}
 
 		return 'fr';
+	}
+
+	private function dataset_mode(): string {
+		$response = $this->settings->read();
+		$mode     = (string) ( $response['settings']['datasetMode'] ?? DatasetMode::CURRENT );
+
+		return DatasetMode::is_valid( $mode ) ? $mode : DatasetMode::CURRENT;
 	}
 
 	private function format_wilaya_label( string $name_fr, string $name_ar, string $format ): string {

@@ -43,8 +43,9 @@ final class PreviewPlanner {
 	public function plan( array $overrides ): array {
 		$settings_payload = $this->settings->read();
 		$settings         = $this->preview_settings( $settings_payload['settings'], $overrides );
-		$wilayas          = $this->datasets->wilayas( DatasetMode::CURRENT );
-		$diagnostics      = $this->diagnostics->diagnostics();
+		$dataset_mode     = $this->dataset_mode( $settings );
+		$wilayas          = $this->datasets->wilayas( $dataset_mode );
+		$diagnostics      = $this->diagnostics->diagnostics( $dataset_mode );
 		$context          = $this->planning_context( $settings, $wilayas, $diagnostics, $overrides );
 		$selected_count   = count( $context['selectedCodes'] );
 		$plan_groups      = $this->empty_plan_groups();
@@ -96,7 +97,7 @@ final class PreviewPlanner {
 	 * @return array<string,mixed>
 	 */
 	private function preview_settings( array $settings, array $overrides ): array {
-		foreach ( array( 'regionLabelFormat', 'zoneNameFormat', 'zonePrefix' ) as $field ) {
+		foreach ( array( 'datasetMode', 'regionLabelFormat', 'zoneNameFormat', 'zonePrefix' ) as $field ) {
 			if ( array_key_exists( $field, $overrides ) ) {
 				$settings[ $field ] = $overrides[ $field ];
 			}
@@ -107,6 +108,15 @@ final class PreviewPlanner {
 		}
 
 		return $settings;
+	}
+
+	/**
+	 * @param array<string,mixed> $settings Preview settings.
+	 */
+	private function dataset_mode( array $settings ): string {
+		$mode = (string) ( $settings['datasetMode'] ?? DatasetMode::CURRENT );
+
+		return DatasetMode::is_valid( $mode ) ? $mode : DatasetMode::CURRENT;
 	}
 
 	/**

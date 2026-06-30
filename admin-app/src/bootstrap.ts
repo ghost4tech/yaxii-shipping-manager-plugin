@@ -1,4 +1,5 @@
 import type { DatasetStatus } from "./types/dataset";
+import type { DatasetMode } from "./types/dataset";
 
 export type AdminBootstrapConfig = {
   restUrl: string;
@@ -32,9 +33,9 @@ export type BootstrapPayload = {
   wooStatesStatus: {
     woocommerceActive: boolean;
     active: boolean;
-    datasetMode: "current";
+    datasetMode: DatasetMode;
     wilayaCount: number;
-    legacyAvailable: false;
+    legacyAvailable: boolean;
   };
 };
 

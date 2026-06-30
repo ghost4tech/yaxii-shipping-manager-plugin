@@ -38,12 +38,14 @@ final class ShippingDiagnosticsService {
 	/**
 	 * @return array<string,mixed>
 	 */
-	public function diagnostics(): array {
+	public function diagnostics( ?string $dataset_mode = null ): array {
+		$mode = $this->dataset_mode( $dataset_mode );
+
 		if ( ! $this->woocommerce_active ) {
-			return $this->inactive_payload();
+			return $this->inactive_payload( $mode );
 		}
 
-		$wilayas             = $this->datasets->wilayas( DatasetMode::CURRENT );
+		$wilayas             = $this->datasets->wilayas( $mode );
 		$zones               = $this->zone_reader->zones();
 		$rest_of_world_zone  = $this->zone_reader->rest_of_world_zone();
 		$zone_results        = $this->zone_results( $zones, $wilayas );
@@ -63,13 +65,19 @@ final class ShippingDiagnosticsService {
 	/**
 	 * @return array<string,mixed>
 	 */
-	private function inactive_payload(): array {
+	private function inactive_payload( string $dataset_mode ): array {
+		try {
+			$wilaya_count = count( $this->datasets->wilayas( $dataset_mode ) );
+		} catch ( DatasetReadException $exception ) {
+			$wilaya_count = 0;
+		}
+
 		return array(
 			'woocommerceActive' => false,
 			'summary'           => array(
-				'totalWilayas'            => 69,
+				'totalWilayas'            => $wilaya_count,
 				'configuredWilayas'       => 0,
-				'missingWilayas'          => 69,
+				'missingWilayas'          => $wilaya_count,
 				'duplicateConflictCount'  => 0,
 				'zonesWithoutMethods'     => 0,
 				'checkoutFallbackRisk'    => 'high',
@@ -243,6 +251,17 @@ final class ShippingDiagnosticsService {
 				$registry_record['methodInstances']
 			)
 		);
+	}
+
+	private function dataset_mode( ?string $dataset_mode ): string {
+		$mode = $dataset_mode;
+
+		if ( null === $mode ) {
+			$settings = $this->settings->read();
+			$mode     = (string) ( $settings['settings']['datasetMode'] ?? DatasetMode::CURRENT );
+		}
+
+		return DatasetMode::is_valid( $mode ) ? $mode : DatasetMode::CURRENT;
 	}
 
 	/**

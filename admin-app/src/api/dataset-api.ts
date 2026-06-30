@@ -16,7 +16,7 @@ export async function fetchDatasetWilayas(
     include: "wilayas",
   });
 
-  if (payload.mode !== "current" || !Array.isArray(payload.wilayas)) {
+  if (payload.mode !== mode || !Array.isArray(payload.wilayas)) {
     throw new Error("Dataset wilaya response did not match the expected contract.");
   }
 
@@ -34,9 +34,10 @@ export async function fetchDatasetSummary(
 export async function fetchDatasetCommunes(
   config: AdminBootstrapConfig,
   wilayaCode?: string,
+  mode: DatasetMode = "current",
 ): Promise<DatasetCommunesResponse> {
   const payload = await fetchDataset<DatasetCommunesResponse>(config, {
-    mode: "current",
+    mode,
     include: "communes",
     wilaya_code: wilayaCode,
   });

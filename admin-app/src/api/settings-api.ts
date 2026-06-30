@@ -56,7 +56,7 @@ function parseSettingsResponse(payload: unknown): SettingsResponse {
       : {
           optionName: "yaxii_shipping_manager_settings",
           datasetModes: ["current", "legacy_58"],
-          availableModes: ["current"],
+          availableModes: ["current", "legacy_58"],
           regionLabelFormats: ["fr", "ar", "fr_ar", "ar_fr"],
           zoneNameFormats: ["prefix_code_name", "code_name", "name_only", "prefix_name"],
           officeWordingModes: ["office_delivery", "stopdesk", "bureau", "custom"],

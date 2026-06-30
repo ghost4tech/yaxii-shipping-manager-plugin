@@ -4,6 +4,9 @@ export type DatasetStatusEntry = {
   available: boolean;
   complete: boolean;
   verified: boolean;
+  wilayaCount?: number;
+  communeCount?: number;
+  version?: string;
   reason?: string;
 };
 
@@ -39,7 +42,7 @@ export type WilayaDatasetRecord = {
   name_fr: string;
   name_ar: string;
   label: string;
-  mode: "current";
+  mode: DatasetMode;
   supported: boolean;
   notes: string[];
 };
@@ -50,7 +53,7 @@ export type CommuneDatasetRecord = {
   wilaya_code: string;
   name_fr: string;
   name_ar: string;
-  mode: "current";
+  mode: DatasetMode;
   supported: boolean;
   notes: string[];
 };
@@ -63,14 +66,14 @@ export type DatasetSummaryResponse = {
 };
 
 export type DatasetWilayasResponse = {
-  mode: "current";
+  mode: DatasetMode;
   include: "wilayas";
   metadata: DatasetMetadata;
   wilayas: WilayaDatasetRecord[];
 };
 
 export type DatasetCommunesResponse = {
-  mode: "current";
+  mode: DatasetMode;
   include: "communes";
   metadata: DatasetMetadata;
   communes: CommuneDatasetRecord[];

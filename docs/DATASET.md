@@ -2,7 +2,7 @@
 
 ## Current Position
 
-Yaxii Shipping Manager stores the copied upstream S450R1 source separately from the normalized runtime dataset.
+Yaxii Shipping Manager stores copied upstream source data separately from normalized runtime datasets.
 
 Raw upstream source:
 
@@ -10,56 +10,62 @@ Raw upstream source:
 - `data/sources/s450r1-algeria-cities-2025/cities.json`
 - `data/sources/s450r1-algeria-cities-2025/SOURCE.md`
 
-Normalized runtime data:
+Runtime PHP reads only `data/algeria/`.
+
+## Dataset Modes
+
+### Current
+
+Files:
 
 - `data/algeria/current/metadata.json`
 - `data/algeria/current/wilayas.json`
 - `data/algeria/current/communes.json`
-- `data/algeria/legacy-58/metadata.json`
 
-Runtime PHP code reads only `data/algeria/`. It must not read from `data/sources/`.
-
-## Current Mode
-
-The current mode is generated from the S450R1 candidate source into the Yaxii-owned schema.
-
-Current metadata:
+Metadata:
 
 - Mode: `current`
 - Version: `current-candidate-2025`
 - Complete: `true`
 - Verified: `false`
-- Wilaya rows: `69`
-- Commune rows: `1541`
+- Wilaya rows: derived from metadata
+- Commune rows: derived from metadata
 
-The dataset is complete as normalized candidate data, but it is not independently verified as official administrative truth. UI and docs must keep this distinction.
+The current dataset is normalized candidate data and is not independently verified as official administrative truth.
 
-## Legacy 58 Mode
+### Legacy 58-Compatible Dataset
 
-Legacy compatibility is represented only by metadata:
+Files:
 
-- `mode`: `legacy_58`
-- `available`: `false`
-- `complete`: `false`
-- `verified`: `false`
+- `data/algeria/legacy-58/metadata.json`
+- `data/algeria/legacy-58/wilayas.json`
+- `data/algeria/legacy-58/communes.json`
 
-Do not guess a 58-row mapping. Populate legacy mode only after an auditable mapping or cross-source comparison is implemented.
+Legacy mode is available as:
+
+```text
+Legacy 58-compatible dataset
+```
+
+It is generated from the current normalized dataset by filtering wilaya codes `01` through `58` and including communes whose `wilaya_code` is in that range.
+
+It is derived from user-verified first 58 records of the current normalized dataset. It is not independently verified as official/legal administrative truth.
 
 ## Commands
 
-Normalize from the raw S450R1 source:
+Normalize runtime datasets:
 
 ```bash
 node tools/normalize-s450r1-dataset.mjs
 ```
 
-Validate the normalized runtime dataset:
+Validate runtime datasets:
 
 ```bash
 node tools/validate-normalized-dataset.mjs
 ```
 
-The source import validator remains:
+Validate the copied source:
 
 ```bash
 node tools/validate-s450r1-source.mjs
@@ -77,7 +83,7 @@ Supported query parameters:
 
 - `mode=current|legacy_58`
 - `include=summary|wilayas|communes`
-- `wilaya_code=01` for filtering communes when `include=communes`
+- `wilaya_code=01`
 
 Default behavior uses `mode=current&include=wilayas`.
 
@@ -88,6 +94,19 @@ The endpoint uses the same permission policy as bootstrap:
 
 No dataset endpoint writes to WordPress, WooCommerce, or the filesystem.
 
+## Mode-Aware Consumers
+
+The active settings `datasetMode` is used by:
+
+- Admin dataset loading
+- Generator dataset selector
+- Generator preview request
+- Preview planner
+- Diagnostics coverage
+- WooCommerce Algeria states registration
+
+Legacy mode should not report additional current-dataset wilayas as missing.
+
 ## Frontend Rule
 
 The admin app must fetch dataset rows through REST.
@@ -97,21 +116,19 @@ Do not import these files directly into React:
 - `data/sources/s450r1-algeria-cities-2025/cities.json`
 - `data/algeria/current/wilayas.json`
 - `data/algeria/current/communes.json`
-- `data/algeria/current/metadata.json`
+- `data/algeria/legacy-58/wilayas.json`
+- `data/algeria/legacy-58/communes.json`
 
-The full source dataset and normalized JSON must not be bundled into `assets/admin/*.js`.
+The source dataset and normalized JSON must not be bundled into `assets/admin/*.js`.
 
 ## MVP Boundary
 
-Communes are reference/mapping data in this phase.
-
-Do not implement commune-level checkout pricing in the MVP unless a real WooCommerce custom shipping method is explicitly scoped.
+Communes are reference/mapping data in this phase. WooCommerce zones remain wilaya-level.
 
 This dataset work does not implement:
 
-- WooCommerce diagnostics
-- Preview planner
-- Safe apply engine
 - CSV import/export backend
+- Commune-level checkout pricing
+- Provider imports
 - YSF sync
-- WooCommerce shipping-zone writes
+- Manual-zone adoption

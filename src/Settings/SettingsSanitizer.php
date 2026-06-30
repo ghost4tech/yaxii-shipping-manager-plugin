@@ -95,15 +95,6 @@ final class SettingsSanitizer {
 			return $dataset_mode;
 		}
 
-		if ( 'legacy_58' === $dataset_mode ) {
-			if ( $strict ) {
-				return $this->validation_error( __( 'Legacy mapping is not available yet.', 'yaxii-shipping-manager' ) );
-			}
-
-			$dataset_mode = 'current';
-			$warnings[]   = __( 'Stored legacy dataset mode was reset to current because legacy mapping is not available yet.', 'yaxii-shipping-manager' );
-		}
-
 		$settings = $defaults;
 		$settings['datasetMode']       = $dataset_mode;
 		$settings['regionLabelFormat'] = $this->string_choice( $raw_settings, 'regionLabelFormat', array( 'fr', 'ar', 'fr_ar', 'ar_fr' ), $defaults['regionLabelFormat'], $strict );

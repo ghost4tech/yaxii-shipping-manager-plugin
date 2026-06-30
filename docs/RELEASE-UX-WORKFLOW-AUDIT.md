@@ -430,6 +430,28 @@ TASK-012B implemented the first release cleanup pass:
 - Settings now frames saved values as defaults for future setup, with `Save defaults` and copy that existing WooCommerce shipping zones are not changed.
 - Diagnostics health cards now expose simple issue-specific actions for missing setup, conflicts, manual zones, method issues, and rest-of-world warnings.
 
+## TASK-012C Implementation Note
+
+TASK-012C supersedes the earlier recommendation to hide legacy mode. The user verified that the first 58 wilaya records in the current normalized dataset are valid for a legacy 58-compatible setup, so the plugin now exposes `Legacy 58-compatible dataset`.
+
+Release UX changes:
+
+- Generator is reduced to Coverage, Methods and prices, Names, Preview, and Generate.
+- Coverage includes diagnostics-guided start recommendations.
+- Setup choices are now `Create new setup`, `Repair existing setup`, and advanced `Preview only`.
+- Repair mode preselects missing managed zones or method gaps from diagnostics when available.
+- Communes moved from a main step to collapsed reference information.
+- Safety moved from a standalone step to inline Preview/Generate copy.
+- CSV is no longer a primary generator card; it remains future-only.
+
+Dataset/backend changes:
+
+- Legacy mode is generated from current normalized wilaya codes `01` through `58`.
+- Legacy communes are filtered by `wilaya_code` in `01` through `58`.
+- `/dataset?mode=legacy_58` returns legacy data.
+- Settings can save `datasetMode: legacy_58`.
+- Preview and diagnostics use the selected dataset mode so legacy mode does not report current additional wilayas as missing.
+
 ## Blockers
 
 None for this audit. Implementation should stay blocked until the user approves the next scoped task because this task is audit/planning only.

@@ -16,6 +16,7 @@ final class PreviewRequestSanitizer {
 		'selectedWilayaCodes',
 		'pricingRows',
 		'methods',
+		'datasetMode',
 		'zoneNameFormat',
 		'zonePrefix',
 		'regionLabelFormat',
@@ -74,6 +75,7 @@ final class PreviewRequestSanitizer {
 		}
 
 		$choices = array(
+			'datasetMode'       => array( 'current', 'legacy_58' ),
 			'zoneNameFormat'    => self::ZONE_NAME_FORMATS,
 			'regionLabelFormat' => self::REGION_LABEL_FORMATS,
 		);

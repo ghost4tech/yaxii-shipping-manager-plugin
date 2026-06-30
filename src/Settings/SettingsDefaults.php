@@ -84,7 +84,7 @@ final class SettingsDefaults {
 	public static function options_metadata(): array {
 		return array(
 			'datasetModes'       => array( 'current', 'legacy_58' ),
-			'availableModes'     => array( 'current' ),
+			'availableModes'     => array( 'current', 'legacy_58' ),
 			'regionLabelFormats' => array( 'fr', 'ar', 'fr_ar', 'ar_fr' ),
 			'zoneNameFormats'    => array( 'prefix_code_name', 'code_name', 'name_only', 'prefix_name' ),
 			'officeWordingModes' => array( 'office_delivery', 'stopdesk', 'bureau', 'custom' ),

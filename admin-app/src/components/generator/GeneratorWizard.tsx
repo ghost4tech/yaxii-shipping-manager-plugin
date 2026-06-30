@@ -7,13 +7,10 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Download,
   Eye,
   FileEdit,
-  FileSpreadsheet,
   Home,
   Info,
-  Lock,
   MapPin,
   Package,
   Plus,
@@ -27,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 
-import { fetchDatasetCommunes } from "@/api/dataset-api";
+import { fetchDatasetCommunes, fetchDatasetWilayas } from "@/api/dataset-api";
 import { fetchPreview } from "@/api/preview-api";
 import type { AdminBootstrapConfig } from "@/bootstrap";
 import { GeneratorGenerateStep } from "@/components/generator/GeneratorGenerateStep";
@@ -68,17 +65,18 @@ import {
   DATASET_MODE_OPTIONS,
   OFFICE_METHOD_WORDING_OPTIONS,
   REGION_LABEL_FORMAT_OPTIONS,
-  SAFETY_RULES,
   ZONE_NAMING_OPTIONS,
   generatorDraftFromSettings,
   officeLabelForWording,
 } from "@/data/default-settings";
 import { formatRegionLabel } from "@/domain/format-region-label";
 import { zoneNamePreview } from "@/domain/zone-name-preview";
+import { generatorRecommendation, repairWilayaCodes } from "@/lib/generator/diagnostics-guidance";
 import { enabledMethodDefs } from "@/lib/generator/methods";
 import { formatDraftPrice, parseOptionalPrice } from "@/lib/generator/pricing";
 import { cn } from "@/lib/utils";
 import type { CommuneDatasetRecord, DatasetMode } from "@/types/dataset";
+import type { DiagnosticsResponse } from "@/types/diagnostics";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "@/types/generator";
 import type { PreviewRequest, PreviewResponse } from "@/types/preview";
 import type {
@@ -101,15 +99,15 @@ type CommuneLoadState =
   | { status: "loading" }
   | { status: "ready"; communes: CommuneDatasetRecord[] }
   | { status: "error"; message: string };
+type DatasetListState =
+  | { status: "ready"; wilayas: WilayaReference[]; mode: DatasetMode }
+  | { status: "loading"; wilayas: WilayaReference[]; mode: DatasetMode }
+  | { status: "error"; wilayas: WilayaReference[]; mode: DatasetMode; message: string };
 
 const WIZARD_STEPS = [
-  { id: "start", label: "Start", icon: Sparkles },
-  { id: "coverage", label: "Wilayas", icon: MapPin },
-  { id: "communes", label: "Communes", icon: Building2 },
-  { id: "methods", label: "Methods", icon: Package },
-  { id: "prices", label: "Prices", icon: Activity },
+  { id: "coverage", label: "Coverage", icon: MapPin },
+  { id: "methods", label: "Methods and prices", icon: Package },
   { id: "labels", label: "Names", icon: Tag },
-  { id: "safety", label: "Safety", icon: ShieldCheck },
   { id: "preview", label: "Preview", icon: Eye },
   { id: "generate", label: "Generate", icon: Wand2 },
 ] as const;
@@ -125,6 +123,7 @@ export function GeneratorWizard({
   onComplete,
   onPreviewReady,
   onOpenDiagnostics,
+  diagnostics,
 }: {
   config: AdminBootstrapConfig;
   settings: PersistedSettings;
@@ -137,11 +136,17 @@ export function GeneratorWizard({
     request: PreviewRequest,
   ) => void;
   onOpenDiagnostics: () => void;
+  diagnostics?: DiagnosticsResponse;
 }) {
   const initialDraft = useMemo(() => generatorDraftFromSettings(settings), [settings]);
   const [step, setStep] = useState(0);
   const [setupMode, setSetupModeState] = useState<SetupMode>("fresh");
   const [dataset, setDataset] = useState<DatasetMode>(initialDraft.datasetMode);
+  const [datasetListState, setDatasetListState] = useState<DatasetListState>({
+    status: "ready",
+    wilayas: baseList,
+    mode: initialDraft.datasetMode,
+  });
   const [selectedCodes, setSelectedCodes] = useState<string[]>(
     baseList.map((wilaya) => wilaya.code),
   );
@@ -168,32 +173,82 @@ export function GeneratorWizard({
   const [previewContext, setPreviewContext] = useState<GeneratorPreviewContext | null>(null);
   const [autoPreviewSignature, setAutoPreviewSignature] = useState<string | null>(null);
 
+  const activeBaseList = datasetListState.wilayas;
   const selectedCodeSet = useMemo(() => new Set(selectedCodes), [selectedCodes]);
   const filteredWilayas = useMemo(() => {
     const query = wilayaSearch.trim().toLowerCase();
     if (!query) {
-      return baseList;
+      return activeBaseList;
     }
 
-    return baseList.filter(
+    return activeBaseList.filter(
       (wilaya) =>
         wilaya.code.includes(query) ||
         wilaya.name.toLowerCase().includes(query) ||
         wilaya.ar.includes(query),
     );
-  }, [baseList, wilayaSearch]);
+  }, [activeBaseList, wilayaSearch]);
   const selectedWilayas = useMemo(
-    () => baseList.filter((wilaya) => selectedCodeSet.has(wilaya.code)),
-    [baseList, selectedCodeSet],
+    () => activeBaseList.filter((wilaya) => selectedCodeSet.has(wilaya.code)),
+    [activeBaseList, selectedCodeSet],
   );
   const enabledMethods = useMemo(() => methods.filter((method) => method.enabled), [methods]);
   const activeMethodDefs = useMemo(() => enabledMethodDefs(methods), [methods]);
   const currentStep = WIZARD_STEPS[step];
 
+  useEffect(() => {
+    let cancelled = false;
+
+    setDatasetListState((previous) => ({
+      status: "loading",
+      wilayas: previous.wilayas,
+      mode: dataset,
+    }));
+
+    async function loadDatasetMode() {
+      try {
+        const response = await fetchDatasetWilayas(config, dataset);
+        const nextWilayas = response.wilayas.map((wilaya) => ({
+          code: wilaya.code,
+          name: wilaya.name_fr,
+          ar: wilaya.name_ar,
+        }));
+
+        if (!cancelled) {
+          setDatasetListState({ status: "ready", wilayas: nextWilayas, mode: dataset });
+          setSelectedCodes(nextWilayas.map((wilaya) => wilaya.code));
+          setCommunesByWilaya({});
+          setOpenCommuneWilaya(null);
+          setAutoPreviewSignature(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDatasetListState((previous) => ({
+            status: "error",
+            wilayas: previous.wilayas,
+            mode: dataset,
+            message:
+              error instanceof Error ? error.message : "Unable to load selected dataset mode.",
+          }));
+        }
+      }
+    }
+
+    void loadDatasetMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config, dataset]);
+
   const setSetupMode = (nextMode: SetupMode) => {
     setSetupModeState(nextMode);
     if (nextMode === "fresh") {
-      setSelectedCodes(baseList.map((wilaya) => wilaya.code));
+      setSelectedCodes(activeBaseList.map((wilaya) => wilaya.code));
+    }
+    if (nextMode === "continue") {
+      const codes = repairWilayaCodes(diagnostics, activeBaseList);
+      setSelectedCodes(codes.length > 0 ? codes : []);
     }
   };
 
@@ -209,7 +264,7 @@ export function GeneratorWizard({
     }));
 
     try {
-      const response = await fetchDatasetCommunes(config, wilayaCode);
+      const response = await fetchDatasetCommunes(config, wilayaCode, dataset);
       setCommunesByWilaya((previous) => ({
         ...previous,
         [wilayaCode]: { status: "ready", communes: response.communes },
@@ -319,7 +374,7 @@ export function GeneratorWizard({
   };
 
   const buildDraft = (): Wilaya[] => {
-    return baseList.map((wilaya) => {
+    return activeBaseList.map((wilaya) => {
       const rowEnabled = selectedCodeSet.has(wilaya.code);
       const formattedName = formatRegionLabel(
         { nameFr: wilaya.name, nameAr: wilaya.ar },
@@ -350,6 +405,7 @@ export function GeneratorWizard({
 
   const currentPreviewRequest = useMemo<PreviewRequest>(
     () => ({
+      datasetMode: dataset,
       selectedWilayaCodes: selectedCodes,
       pricingRows: selectedWilayas.map((wilaya) => ({
         wilayaCode: wilaya.code,
@@ -369,6 +425,7 @@ export function GeneratorWizard({
     }),
     [
       enabledMethods,
+      dataset,
       labelFormat,
       methods,
       priceOverrides,
@@ -503,55 +560,54 @@ export function GeneratorWizard({
             key={currentStep.id}
             className="animate-in fade-in slide-in-from-bottom-2 duration-300"
           >
-            {step === 0 && <StepStart mode={setupMode} setMode={setSetupMode} />}
+            {step === 0 && (
+              <div className="space-y-8">
+                <StepStart mode={setupMode} setMode={setSetupMode} diagnostics={diagnostics} />
+                <StepCoverage
+                  dataset={dataset}
+                  setDataset={setDataset}
+                  datasetListState={datasetListState}
+                  setupMode={setupMode}
+                  baseList={activeBaseList}
+                  filteredWilayas={filteredWilayas}
+                  selectedCodes={selectedCodes}
+                  setSelectedCodes={setSelectedCodes}
+                  selectedCodeSet={selectedCodeSet}
+                  search={wilayaSearch}
+                  setSearch={setWilayaSearch}
+                  mode={communeMode}
+                  setMode={setCommuneMode}
+                  selectedWilayas={selectedWilayas}
+                  communeSearch={communeSearch}
+                  setCommuneSearch={setCommuneSearch}
+                  communesByWilaya={communesByWilaya}
+                  openWilaya={openCommuneWilaya}
+                  toggleWilaya={toggleCommuneWilaya}
+                  loadCommunes={loadCommunes}
+                />
+              </div>
+            )}
             {step === 1 && (
-              <StepCoverage
-                dataset={dataset}
-                setDataset={setDataset}
-                baseList={baseList}
-                filteredWilayas={filteredWilayas}
-                selectedCodes={selectedCodes}
-                setSelectedCodes={setSelectedCodes}
-                selectedCodeSet={selectedCodeSet}
-                search={wilayaSearch}
-                setSearch={setWilayaSearch}
-              />
+              <div className="space-y-8">
+                <StepMethods
+                  methods={methods}
+                  updateMethod={updateMethod}
+                  enableNextCustomMethod={enableNextCustomMethod}
+                />
+                <StepPrices
+                  selectedWilayas={selectedWilayas}
+                  enabledMethods={enabledMethods}
+                  overrides={priceOverrides}
+                  priceError={priceError}
+                  updateDefaultPrice={updateDefaultPrice}
+                  updateOverridePrice={updateOverridePrice}
+                  applyBulkPrice={applyBulkPrice}
+                />
+              </div>
             )}
             {step === 2 && (
-              <StepCommunes
-                mode={communeMode}
-                setMode={setCommuneMode}
-                selectedWilayas={selectedWilayas}
-                selectedCount={selectedCodes.length}
-                communeSearch={communeSearch}
-                setCommuneSearch={setCommuneSearch}
-                communesByWilaya={communesByWilaya}
-                openWilaya={openCommuneWilaya}
-                toggleWilaya={toggleCommuneWilaya}
-                loadCommunes={loadCommunes}
-              />
-            )}
-            {step === 3 && (
-              <StepMethods
-                methods={methods}
-                updateMethod={updateMethod}
-                enableNextCustomMethod={enableNextCustomMethod}
-              />
-            )}
-            {step === 4 && (
-              <StepPrices
-                selectedWilayas={selectedWilayas}
-                enabledMethods={enabledMethods}
-                overrides={priceOverrides}
-                priceError={priceError}
-                updateDefaultPrice={updateDefaultPrice}
-                updateOverridePrice={updateOverridePrice}
-                applyBulkPrice={applyBulkPrice}
-              />
-            )}
-            {step === 5 && (
               <StepLabels
-                baseList={baseList}
+                baseList={activeBaseList}
                 labelFormat={labelFormat}
                 setLabelFormat={setLabelFormat}
                 zoneNameFormat={zoneNameFormat}
@@ -566,7 +622,6 @@ export function GeneratorWizard({
                 officeLabel={methodLabel(methods, "office_delivery")}
               />
             )}
-            {step === 6 && <StepSafety />}
             {step === PREVIEW_STEP_INDEX && (
               <StepPreview
                 setupMode={setupMode}
@@ -629,7 +684,17 @@ export function GeneratorWizard({
   );
 }
 
-function StepStart({ mode, setMode }: { mode: SetupMode; setMode: (mode: SetupMode) => void }) {
+function StepStart({
+  mode,
+  setMode,
+  diagnostics,
+}: {
+  mode: SetupMode;
+  setMode: (mode: SetupMode) => void;
+  diagnostics?: DiagnosticsResponse;
+}) {
+  const recommendation = generatorRecommendation(diagnostics);
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[11px] font-medium text-primary">
@@ -637,53 +702,40 @@ function StepStart({ mode, setMode }: { mode: SetupMode; setMode: (mode: SetupMo
       </div>
       <h3 className="text-2xl font-semibold tracking-tight">How would you like to start?</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Choose how you want to prepare your Algeria shipping setup. Preview runs before any apply.
+        Generator is for setup and repair. Use Shipping Zones for daily price changes.
       </p>
-      <div className="mt-6 grid gap-3 md:grid-cols-3">
+      <Card className="mt-5 border-primary/30 bg-primary/5">
+        <CardContent className="p-4">
+          <div className="text-[11px] font-medium uppercase text-primary">Recommended path</div>
+          <div className="mt-1 text-base font-semibold">{recommendation.title}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{recommendation.description}</p>
+        </CardContent>
+      </Card>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
         <StartCard
           active={mode === "fresh"}
           onClick={() => setMode("fresh")}
           icon={<Sparkles className="h-5 w-5" />}
-          title="Fresh setup"
-          desc="Create a new shipping setup for selected wilayas."
+          title="Create new setup"
+          desc="Select all wilayas for the chosen dataset and preview new managed setup."
         />
         <StartCard
           active={mode === "continue"}
           onClick={() => setMode("continue")}
           icon={<FileEdit className="h-5 w-5" />}
-          title="Continue existing"
-          desc="Add only missing managed zones or methods. Manual zones are protected."
+          title="Repair existing setup"
+          desc="Preselect missing or incomplete managed setup. Manual zones are not touched."
         />
         <StartCard
           active={mode === "preview"}
           onClick={() => setMode("preview")}
           icon={<Eye className="h-5 w-5" />}
-          title="Preview changes"
-          desc="Review a plan only. Switch modes if you want to apply changes."
+          title="Preview only"
+          desc="Advanced support review. Preview runs, but generate/apply stays hidden."
         />
       </div>
 
-      <Card className="mt-6 border-dashed">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FileSpreadsheet className="h-4 w-4" /> CSV import
-          </CardTitle>
-          <CardDescription>
-            CSV import is coming soon. For now, use the wizard to prepare your shipping setup.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled>
-            Import CSV
-          </Button>
-          <Button variant="outline" disabled>
-            <Download className="h-4 w-4" /> Download sample
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            Download sample is a UI preview only until CSV backend is added.
-          </span>
-        </CardContent>
-      </Card>
+      <div className="mt-4 text-xs text-muted-foreground">CSV import coming later.</div>
     </div>
   );
 }
@@ -734,6 +786,8 @@ function StartCard({
 function StepCoverage({
   dataset,
   setDataset,
+  datasetListState,
+  setupMode,
   baseList,
   filteredWilayas,
   selectedCodes,
@@ -741,9 +795,20 @@ function StepCoverage({
   selectedCodeSet,
   search,
   setSearch,
+  mode,
+  setMode,
+  selectedWilayas,
+  communeSearch,
+  setCommuneSearch,
+  communesByWilaya,
+  openWilaya,
+  toggleWilaya,
+  loadCommunes,
 }: {
   dataset: DatasetMode;
   setDataset: (dataset: DatasetMode) => void;
+  datasetListState: DatasetListState;
+  setupMode: SetupMode;
   baseList: WilayaReference[];
   filteredWilayas: WilayaReference[];
   selectedCodes: string[];
@@ -751,6 +816,15 @@ function StepCoverage({
   selectedCodeSet: Set<string>;
   search: string;
   setSearch: (search: string) => void;
+  mode: CommuneMode;
+  setMode: (mode: CommuneMode) => void;
+  selectedWilayas: WilayaReference[];
+  communeSearch: string;
+  setCommuneSearch: (search: string) => void;
+  communesByWilaya: Record<string, CommuneLoadState>;
+  openWilaya: string | null;
+  toggleWilaya: (wilayaCode: string) => void;
+  loadCommunes: (wilayaCode: string) => Promise<void>;
 }) {
   const allSelected = selectedCodes.length === baseList.length;
   const toggle = (code: string) => {
@@ -788,18 +862,12 @@ function StepCoverage({
                 dataset === option.mode
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground",
-                !option.available && "cursor-not-allowed opacity-60",
               )}
             >
-              <RadioGroupItem
-                value={option.mode}
-                disabled={!option.available}
-                className="sr-only"
-              />
-              {!option.available && <Lock className="h-3 w-3" />}
+              <RadioGroupItem value={option.mode} className="sr-only" />
               {option.mode === "current"
                 ? `Current dataset (${baseList.length} wilayas)`
-                : option.label}
+                : `${option.label} (${baseList.length} wilayas)`}
             </label>
           ))}
         </RadioGroup>
@@ -808,14 +876,53 @@ function StepCoverage({
         </Badge>
       </div>
 
-      <Alert className="mt-4 border-amber-200 bg-amber-50/50">
-        <Info className="h-4 w-4 text-amber-600" />
-        <AlertTitle className="text-amber-900">Legacy 58 mode not available yet</AlertTitle>
-        <AlertDescription className="text-amber-800/90">
-          Legacy 58-compatible mode is not available yet. We will add it only after a safe mapping
-          is verified.
-        </AlertDescription>
-      </Alert>
+      {datasetListState.status === "loading" && (
+        <Alert className="mt-4 border-primary/20 bg-primary/5">
+          <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+          <AlertTitle>Loading dataset mode</AlertTitle>
+          <AlertDescription>Yaxii is loading wilayas for the selected dataset.</AlertDescription>
+        </Alert>
+      )}
+
+      {datasetListState.status === "error" && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Dataset mode could not be loaded</AlertTitle>
+          <AlertDescription>{datasetListState.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {dataset === "legacy_58" && (
+        <Alert className="mt-4 border-primary/20 bg-primary/5">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertTitle>Legacy 58-compatible dataset</AlertTitle>
+          <AlertDescription>
+            Derived from the user-verified first 58 records of the current normalized dataset.
+            Additional current dataset wilayas are not included in this mode.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {setupMode === "continue" && selectedCodes.length === 0 && (
+        <Alert className="mt-4 border-emerald-200 bg-emerald-50/60">
+          <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+          <AlertTitle className="text-emerald-900">No repair needed</AlertTitle>
+          <AlertDescription className="text-emerald-800/90">
+            Diagnostics did not find missing managed zones or method gaps for this dataset. Use
+            Shipping Zones for daily price changes.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {setupMode === "continue" && selectedCodes.length > 0 && (
+        <Alert className="mt-4 border-primary/20 bg-primary/5">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertTitle>Repair existing setup</AlertTitle>
+          <AlertDescription>
+            Yaxii will repair missing managed zones or methods. Manual zones are not touched.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[240px] flex-1">
@@ -887,174 +994,70 @@ function StepCoverage({
         })}
       </div>
 
+      <details className="mt-5 rounded-xl border border-border bg-card p-4">
+        <summary className="cursor-pointer text-sm font-medium">Commune reference</summary>
+        <div className="mt-3 space-y-4">
+          <Alert className="border-primary/20 bg-primary/5">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle>Wilaya-level WooCommerce zones</AlertTitle>
+            <AlertDescription>
+              Yaxii uses wilaya-level WooCommerce zones in this release. Communes are shown for
+              reference only.
+            </AlertDescription>
+          </Alert>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant={mode === "show" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("show")}
+            >
+              Show selected communes
+            </Button>
+            <Button
+              type="button"
+              variant={mode === "skip" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMode("skip")}
+            >
+              Keep collapsed
+            </Button>
+          </div>
+          {mode === "show" && (
+            <>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={communeSearch}
+                  onChange={(event) => setCommuneSearch(event.target.value)}
+                  placeholder="Filter loaded communes by name"
+                  className="pl-9"
+                />
+              </div>
+              <div className="space-y-2">
+                {selectedWilayas.map((wilaya) => (
+                  <CommuneWilayaRow
+                    key={wilaya.code}
+                    wilaya={wilaya}
+                    state={communesByWilaya[wilaya.code] ?? { status: "idle" }}
+                    open={openWilaya === wilaya.code}
+                    search={communeSearch}
+                    onToggle={() => toggleWilaya(wilaya.code)}
+                    onRetry={() => void loadCommunes(wilaya.code)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </details>
+
       {selectedCodes.length === 0 && (
         <div className="mt-6 rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
           Select at least one wilaya to preview shipping setup.
         </div>
       )}
     </div>
-  );
-}
-
-function StepCommunes({
-  mode,
-  setMode,
-  selectedWilayas,
-  selectedCount,
-  communeSearch,
-  setCommuneSearch,
-  communesByWilaya,
-  openWilaya,
-  toggleWilaya,
-  loadCommunes,
-}: {
-  mode: CommuneMode;
-  setMode: (mode: CommuneMode) => void;
-  selectedWilayas: WilayaReference[];
-  selectedCount: number;
-  communeSearch: string;
-  setCommuneSearch: (search: string) => void;
-  communesByWilaya: Record<string, CommuneLoadState>;
-  openWilaya: string | null;
-  toggleWilaya: (wilayaCode: string) => void;
-  loadCommunes: (wilayaCode: string) => Promise<void>;
-}) {
-  if (selectedCount === 0) {
-    return (
-      <div className="mx-auto max-w-xl text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-          <MapPin className="h-6 w-6" />
-        </div>
-        <h3 className="mt-4 text-xl font-semibold">No wilayas selected</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Go back and pick at least one wilaya to review commune coverage.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h3 className="text-2xl font-semibold tracking-tight">Commune coverage</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Choose whether you want to load commune lists while preparing this setup.
-      </p>
-
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
-        <CommuneModeCard
-          active={mode === "show"}
-          onClick={() => setMode("show")}
-          title="Show communes in this setup"
-          desc="Load commune lists only when you open a selected wilaya."
-          icon={<Building2 className="h-5 w-5" />}
-        />
-        <CommuneModeCard
-          active={mode === "skip"}
-          onClick={() => setMode("skip")}
-          title="Skip communes for now"
-          desc="Continue with wilaya-level setup without loading commune records."
-          icon={<MapPin className="h-5 w-5" />}
-        />
-      </div>
-
-      {mode === "skip" ? (
-        <Alert className="mt-5 border-primary/20 bg-primary/5">
-          <Info className="h-4 w-4 text-primary" />
-          <AlertTitle>You can continue with wilaya-level setup.</AlertTitle>
-          <AlertDescription>
-            All communes inside selected wilayas are covered. WooCommerce zones are created at
-            wilaya level. Commune-specific prices are not available yet.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <div className="mt-5">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile
-              label="Wilayas selected"
-              value={String(selectedCount)}
-              icon={<MapPin className="h-4 w-4" />}
-            />
-            <StatTile
-              label="Commune lists loaded"
-              value={String(loadedCommuneWilayaCount(communesByWilaya))}
-              icon={<Building2 className="h-4 w-4" />}
-            />
-            <StatTile label="Zone level" value="Wilaya" icon={<Package className="h-4 w-4" />} />
-          </div>
-
-          <Alert className="mt-5 border-primary/20 bg-primary/5">
-            <Info className="h-4 w-4 text-primary" />
-            <AlertTitle>Communes are informational and read-only.</AlertTitle>
-            <AlertDescription>
-              All communes inside selected wilayas are covered. WooCommerce zones are created at
-              wilaya level. Commune-specific prices are not available yet.
-            </AlertDescription>
-          </Alert>
-
-          <div className="relative mt-5">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={communeSearch}
-              onChange={(event) => setCommuneSearch(event.target.value)}
-              placeholder="Filter loaded communes by name"
-              className="pl-9"
-            />
-          </div>
-
-          <div className="mt-4 space-y-2">
-            {selectedWilayas.map((wilaya) => (
-              <CommuneWilayaRow
-                key={wilaya.code}
-                wilaya={wilaya}
-                state={communesByWilaya[wilaya.code] ?? { status: "idle" }}
-                open={openWilaya === wilaya.code}
-                search={communeSearch}
-                onToggle={() => toggleWilaya(wilaya.code)}
-                onRetry={() => void loadCommunes(wilaya.code)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CommuneModeCard({
-  active,
-  onClick,
-  icon,
-  title,
-  desc,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: ReactNode;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex items-start gap-4 rounded-xl border bg-card p-4 text-left transition-all hover:shadow-sm",
-        active ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40",
-      )}
-    >
-      <div
-        className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-xl",
-          active ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground",
-        )}
-      >
-        {icon}
-      </div>
-      <div>
-        <div className="text-sm font-semibold">{title}</div>
-        <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
-      </div>
-    </button>
   );
 }
 
@@ -1506,6 +1509,13 @@ function StepLabels({
       <p className="mt-2 text-sm text-muted-foreground">
         Choose how wilayas and WooCommerce zones should be named in the preview.
       </p>
+      <Alert className="mt-4 border-primary/20 bg-primary/5">
+        <Info className="h-4 w-4 text-primary" />
+        <AlertTitle>Existing zone names are protected</AlertTitle>
+        <AlertDescription>
+          Existing WooCommerce zone names are not changed in this release.
+        </AlertDescription>
+      </Alert>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <Card>
@@ -1609,36 +1619,6 @@ function PreviewLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StepSafety() {
-  const items = [
-    "Manual zones are protected and skipped by default.",
-    "Conflicts must be reviewed before apply.",
-    "No deletes are planned in this MVP flow.",
-    "Preview is required before apply.",
-  ];
-
-  return (
-    <div className="mx-auto max-w-2xl">
-      <h3 className="text-2xl font-semibold tracking-tight">Safety check</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Yaxii protects manual WooCommerce zones. Conflicts must be reviewed before apply.
-      </p>
-      <Card className="mt-6 border-emerald-200 bg-emerald-50/40">
-        <CardContent className="space-y-3 p-5">
-          {items.map((item) => (
-            <div key={item} className="flex items-start gap-3 rounded-lg bg-card p-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-              <div className="text-sm">{item}</div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 function StepPreview({
   setupMode,
   previewState,
@@ -1674,6 +1654,15 @@ function StepPreview({
           {previewState.status === "loading" ? "Checking setup..." : "Refresh preview"}
         </Button>
       </div>
+
+      <Alert className="mt-5 border-primary/20 bg-primary/5">
+        <ShieldCheck className="h-4 w-4 text-primary" />
+        <AlertTitle>Safety rules stay on</AlertTitle>
+        <AlertDescription>
+          Manual zones are protected. No deletes will be made. WooCommerce is checked again before
+          applying.
+        </AlertDescription>
+      </Alert>
 
       {previewState.status === "idle" && previewDraftValid && (
         <Alert className="mt-6">
@@ -1743,11 +1732,11 @@ function canContinueFromStep(
   previewState: PreviewLoadState,
   currentPreviewSignature: string,
 ): boolean {
-  if (step === 1) {
+  if (step === 0) {
     return selectedCodes.length > 0;
   }
 
-  if (step === 3) {
+  if (step === 1) {
     return enabledMethods.length > 0;
   }
 
@@ -1860,19 +1849,19 @@ function regionFormatLabel(format: RegionLabelFormat): string {
 
 function setupModeBadgeLabel(mode: SetupMode): string {
   if (mode === "continue") {
-    return "Continue existing";
+    return "Repair existing setup";
   }
 
   if (mode === "preview") {
     return "Preview only";
   }
 
-  return "Fresh setup";
+  return "Create new setup";
 }
 
 function setupModePreviewCopy(mode: SetupMode): string {
   if (mode === "continue") {
-    return "Yaxii will add only missing managed zones or methods. Existing manual zones are protected.";
+    return "Yaxii will repair missing managed zones or methods. Manual zones are not touched.";
   }
 
   if (mode === "preview") {
