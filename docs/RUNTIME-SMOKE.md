@@ -6,22 +6,27 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 
 1. Open `wp-admin/admin.php?page=yaxii-shipping-manager` as an administrator.
 2. Confirm the plugin admin page loads without console errors.
-3. Confirm Shipping Zones shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices and method enabled status.
-4. Open the generator.
-5. Confirm setup modes are distinct:
+3. Confirm the main navigation shows only `Shipping Zones`, `Generator`, `Diagnostics`, and `Settings`.
+4. Confirm `Import / Export` and `Smart Form Sync` are not visible in the top navigation.
+5. Confirm Shipping Zones shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices and method enabled status.
+6. Confirm Shipping Zones no longer shows bare `Protected`; manual/unknown rows use `Manual zone` or `Not managed by Yaxii`.
+7. Confirm a successful price or status apply shows `Updating...` for affected rows while diagnostics refreshes, not stale `Needs update`.
+8. Open the generator.
+9. Confirm setup modes are distinct:
    - Fresh setup: create a new shipping setup for selected wilayas.
    - Continue existing: add only missing managed zones or methods; manual zones are protected.
    - Preview changes: review only, without apply pressure.
-6. Confirm wilaya selection works and Fresh setup defaults to all current wilayas.
-7. Confirm commune coverage can be skipped.
-8. Confirm commune coverage can be shown, and opening one wilaya lazy-loads read-only commune rows.
-9. Confirm delivery methods can be reviewed.
-10. Confirm prices can be edited as draft values.
-11. Confirm names and safety steps are reachable.
-12. Confirm final preview auto-runs.
-13. Confirm final details are collapsed by default.
-14. Confirm Preview-only mode hides apply controls and shows `Check diagnostics`.
-15. Confirm `Check diagnostics` opens the Diagnostics tab.
+10. Confirm wilaya selection works and Fresh setup defaults to all current wilayas.
+11. Confirm commune coverage can be skipped.
+12. Confirm commune coverage can be shown, and opening one wilaya lazy-loads read-only commune rows.
+13. Confirm delivery methods can be reviewed.
+14. Confirm prices can be edited as draft values.
+15. Confirm names and safety steps are reachable.
+16. Confirm final preview auto-runs.
+17. Confirm final details are collapsed by default.
+18. Confirm Preview-only mode hides apply controls and shows `Check diagnostics`.
+19. Confirm `Check diagnostics` opens the Diagnostics tab.
+20. Confirm Settings is titled `Defaults for future setup`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
 
 ### Diagnostics Health-Check Smoke
 
@@ -36,6 +41,7 @@ Expected result:
 - `Open Shipping Zones` navigates to the Shipping Zones tab.
 - `Open Generator` navigates to the Generator tab.
 - `Open WooCommerce zones` opens WooCommerce shipping settings in a new tab.
+- Issue cards with warnings/failures show direct actions such as `Open Shipping Zones` or `Open WooCommerce zones`.
 
 TASK-011B local smoke result:
 

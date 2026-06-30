@@ -6,6 +6,7 @@ import type {
   DiagnosticsHealthCheck,
   DiagnosticsHealthSummary as DiagnosticsHealthSummaryModel,
   DiagnosticsHealthTone,
+  DiagnosticsHealthAction,
 } from "@/lib/diagnostics/status";
 
 import { DiagnosticsHealthCard } from "./DiagnosticsHealthCard";
@@ -13,9 +14,11 @@ import { DiagnosticsHealthCard } from "./DiagnosticsHealthCard";
 export function DiagnosticsHealthSummary({
   checks,
   summary,
+  onAction,
 }: {
   checks: DiagnosticsHealthCheck[];
   summary: DiagnosticsHealthSummaryModel;
+  onAction: (action: DiagnosticsHealthAction) => void;
 }) {
   const Icon = summary.overallStatus === "ok" ? ShieldCheck : AlertTriangle;
 
@@ -51,7 +54,7 @@ export function DiagnosticsHealthSummary({
 
       <div className="grid gap-3 md:grid-cols-2">
         {checks.map((check) => (
-          <DiagnosticsHealthCard key={check.id} check={check} />
+          <DiagnosticsHealthCard key={check.id} check={check} onAction={onAction} />
         ))}
       </div>
     </div>

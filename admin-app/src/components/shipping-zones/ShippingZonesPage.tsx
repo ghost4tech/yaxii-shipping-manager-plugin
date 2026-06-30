@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   pendingChangeCount,
@@ -12,6 +12,8 @@ import {
 } from "@/lib/shipping-zones/preview-request";
 import {
   buildShippingZoneRows,
+  isShippingMethodKey,
+  liveMethodEnabledForKey,
   livePriceForKey,
   methodKeys,
   rowMatchesFilter,
@@ -23,6 +25,8 @@ import type { ShippingMethodKey } from "@/types/generator";
 import type {
   PendingPriceMap,
   PendingStatusMap,
+  PostApplyVerificationMap,
+  DiagnosticsLoadState,
   ShippingZoneQuickTool,
   ShippingZoneFilter,
   ShippingZoneMethodView,
@@ -39,6 +43,10 @@ import { ShippingZonesTable } from "./ShippingZonesTable";
 import { ShippingZonesToolbar } from "./ShippingZonesToolbar";
 
 type BulkTarget = ShippingMethodKey | "all";
+type PostApplyVerificationState = {
+  expected: PostApplyVerificationMap;
+  refreshStarted: boolean;
+};
 
 export function ShippingZonesPage({
   config,
@@ -59,6 +67,9 @@ export function ShippingZonesPage({
   const [pendingStatuses, setPendingStatuses] = useState<PendingStatusMap>({});
   const [reviewOpen, setReviewOpen] = useState(false);
   const [repairRows, setRepairRows] = useState<ShippingZoneRowView[]>([]);
+  const [postApplyVerification, setPostApplyVerification] =
+    useState<PostApplyVerificationState | null>(null);
+  const [verificationWarning, setVerificationWarning] = useState<string | null>(null);
 
   const displayMethodDefs = useMemo(
     () => shippingZoneMethodDefs(methodDefs, diagnosticsState),
@@ -74,8 +85,16 @@ export function ShippingZonesPage({
         diagnosticsState,
         pendingPrices,
         pendingStatuses,
+        postApplyVerification?.expected,
       ),
-    [diagnosticsState, displayMethodDefs, pendingPrices, pendingStatuses, wilayas],
+    [
+      diagnosticsState,
+      displayMethodDefs,
+      pendingPrices,
+      pendingStatuses,
+      postApplyVerification,
+      wilayas,
+    ],
   );
   const bulkTargetMethods = bulkTargetMethodViews(rows, editableMethodKeys);
   const visibleRows = rows.filter(
@@ -110,6 +129,41 @@ export function ShippingZonesPage({
     pendingStatuses,
   );
   const repairContext = repairContextFromRows(repairRows, displayMethodDefs);
+
+  useEffect(() => {
+    if (!postApplyVerification) {
+      return;
+    }
+
+    if (diagnosticsState.status === "loading" || diagnosticsState.status === "waiting") {
+      if (!postApplyVerification.refreshStarted) {
+        setPostApplyVerification({
+          ...postApplyVerification,
+          refreshStarted: true,
+        });
+      }
+      return;
+    }
+
+    if (!postApplyVerification.refreshStarted) {
+      return;
+    }
+
+    if (diagnosticsState.status === "error") {
+      setPostApplyVerification(null);
+      setVerificationWarning("Update sent, but verification failed. Refresh diagnostics.");
+      return;
+    }
+
+    if (postApplyMatchesDiagnostics(postApplyVerification.expected, diagnosticsState)) {
+      setPostApplyVerification(null);
+      setVerificationWarning(null);
+      return;
+    }
+
+    setPostApplyVerification(null);
+    setVerificationWarning("Update sent, but WooCommerce still differs. Review changes.");
+  }, [diagnosticsState, postApplyVerification]);
 
   const updatePendingPrice = (
     row: ShippingZoneRowView,
@@ -254,6 +308,26 @@ export function ShippingZonesPage({
     setReviewOpen(false);
   };
 
+  const reviewRowDefaultChanges = (row: ShippingZoneRowView) => {
+    setPendingPrices((current) =>
+      row.methods.reduce((nextPrices, method) => {
+        const draftPrice = row.wilaya.methods[method.key]?.price ?? method.defaultPrice;
+        if (!method.canEdit || draftPrice === method.livePrice) {
+          return nextPrices;
+        }
+
+        return withPendingPrice(
+          nextPrices,
+          row.wilaya.code,
+          method.key,
+          method.livePrice,
+          draftPrice,
+        );
+      }, current),
+    );
+    setReviewOpen(true);
+  };
+
   const openRepairDialog = (nextRepairRows: ShippingZoneRowView[]) => {
     setRepairRows(nextRepairRows.filter((row) => row.canRepair));
   };
@@ -266,6 +340,16 @@ export function ShippingZonesPage({
 
   const handleSetupRepaired = () => {
     setSelectedCodes([]);
+  };
+
+  const handleChangesApplied = () => {
+    const expected = postApplyVerificationFromChanges(changes);
+    setPostApplyVerification(
+      Object.keys(expected).length > 0 ? { expected, refreshStarted: false } : null,
+    );
+    setVerificationWarning(null);
+    setPendingPrices({});
+    setPendingStatuses({});
   };
 
   return (
@@ -294,6 +378,11 @@ export function ShippingZonesPage({
         onReviewChanges={() => setReviewOpen(true)}
         onRepairSelected={() => openRepairDialog(selectedRepairableRows)}
       />
+      {verificationWarning && (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {verificationWarning}
+        </div>
+      )}
       <ShippingZonesTable
         rows={visibleRows}
         selectedCodes={selectedCodes}
@@ -318,7 +407,11 @@ export function ShippingZonesPage({
         onUndo={(row, method) => updatePendingPrice(row, method, undefined)}
         onUndoStatus={(row, method) => updatePendingStatus(row, method, undefined)}
         onOpenDiagnostics={onOpenDiagnostics}
+        onOpenWooCommerceZones={() =>
+          window.open(woocommerceSettingsUrl, "_blank", "noopener,noreferrer")
+        }
         onLaunchWizard={onLaunchWizard}
+        onReviewRowChanges={reviewRowDefaultChanges}
         onRepairSetup={(row) => openRepairDialog([row])}
         onClearSearch={() => {
           setSearch("");
@@ -344,10 +437,7 @@ export function ShippingZonesPage({
         reviewContext={reviewContext}
         onOpenChange={setReviewOpen}
         onPreviewReady={onPreviewReady}
-        onApplied={() => {
-          setPendingPrices({});
-          setPendingStatuses({});
-        }}
+        onApplied={handleChangesApplied}
         onOpenDiagnostics={onOpenDiagnostics}
         onRefreshDiagnostics={onRefreshDiagnostics}
       />
@@ -364,6 +454,68 @@ export function ShippingZonesPage({
       />
     </div>
   );
+}
+
+function postApplyVerificationFromChanges(
+  changes: ReturnType<typeof pendingReviewItems>,
+): PostApplyVerificationMap {
+  return changes.reduce<PostApplyVerificationMap>((expected, change) => {
+    expected[change.wilayaCode] = expected[change.wilayaCode] ?? {};
+    const methodExpectation = expected[change.wilayaCode]?.[change.methodKey] ?? {};
+
+    expected[change.wilayaCode] = {
+      ...expected[change.wilayaCode],
+      [change.methodKey]:
+        change.kind === "price"
+          ? { ...methodExpectation, price: change.to }
+          : { ...methodExpectation, enabled: change.to },
+    };
+
+    return expected;
+  }, {});
+}
+
+function postApplyMatchesDiagnostics(
+  expected: PostApplyVerificationMap,
+  diagnosticsState: DiagnosticsLoadState,
+): boolean {
+  if (diagnosticsState.status !== "ready") {
+    return false;
+  }
+
+  return Object.entries(expected).every(([wilayaCode, methodExpectations]) => {
+    const wilayaResult = diagnosticsState.response.wilayaResults.find(
+      (wilaya) => wilaya.code === wilayaCode,
+    );
+    const zones = wilayaResult
+      ? diagnosticsState.response.zoneResults.filter((zone) =>
+          wilayaResult.zoneIds.includes(zone.zoneId),
+        )
+      : [];
+    const liveZone = { status: "active" as const, message: "", zones };
+
+    return Object.entries(methodExpectations).every(([methodKey, expectation]) => {
+      if (!isShippingMethodKey(methodKey)) {
+        return false;
+      }
+
+      if (
+        expectation.price !== undefined &&
+        livePriceForKey(liveZone, methodKey) !== expectation.price
+      ) {
+        return false;
+      }
+
+      if (
+        expectation.enabled !== undefined &&
+        liveMethodEnabledForKey(liveZone, methodKey) !== expectation.enabled
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  });
 }
 
 function methodViewsForBulkTarget(

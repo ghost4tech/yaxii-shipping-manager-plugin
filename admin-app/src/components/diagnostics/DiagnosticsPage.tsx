@@ -8,6 +8,7 @@ import {
   diagnosticsHealthChecks,
   diagnosticsHealthSummary,
   diagnosticsRecommendedAction,
+  type DiagnosticsHealthAction,
 } from "@/lib/diagnostics/status";
 import type { DiagnosticsResponse } from "@/types/diagnostics";
 
@@ -26,11 +27,13 @@ export function DiagnosticsPage({
   onRefresh,
   onOpenShippingZones,
   onOpenGenerator,
+  onOpenWooCommerceZones,
 }: {
   diagnosticsState: DiagnosticsLoadState;
   onRefresh: () => void;
   onOpenShippingZones: () => void;
   onOpenGenerator: () => void;
+  onOpenWooCommerceZones: () => void;
 }) {
   return (
     <>
@@ -48,6 +51,7 @@ export function DiagnosticsPage({
           onRefresh={onRefresh}
           onOpenShippingZones={onOpenShippingZones}
           onOpenGenerator={onOpenGenerator}
+          onOpenWooCommerceZones={onOpenWooCommerceZones}
         />
       )}
     </>
@@ -101,12 +105,14 @@ function DiagnosticsReadyState({
   onRefresh,
   onOpenShippingZones,
   onOpenGenerator,
+  onOpenWooCommerceZones,
 }: {
   response: DiagnosticsResponse;
   refreshDisabled: boolean;
   onRefresh: () => void;
   onOpenShippingZones: () => void;
   onOpenGenerator: () => void;
+  onOpenWooCommerceZones: () => void;
 }) {
   const checks = useMemo(() => diagnosticsHealthChecks(response), [response]);
   const summary = useMemo(() => diagnosticsHealthSummary(checks), [checks]);
@@ -124,15 +130,47 @@ function DiagnosticsReadyState({
           <AlertDescription>{response.warnings[0]}</AlertDescription>
         </Alert>
       )}
-      <DiagnosticsHealthSummary checks={checks} summary={summary} />
+      <DiagnosticsHealthSummary
+        checks={checks}
+        summary={summary}
+        onAction={(action) =>
+          runDiagnosticsAction(action, {
+            onOpenShippingZones,
+            onOpenGenerator,
+            onOpenWooCommerceZones,
+          })
+        }
+      />
       <DiagnosticsRecommendationCard
         recommendation={recommendation}
         refreshDisabled={refreshDisabled}
         onRefresh={onRefresh}
         onOpenShippingZones={onOpenShippingZones}
         onOpenGenerator={onOpenGenerator}
+        onOpenWooCommerceZones={onOpenWooCommerceZones}
       />
       <DiagnosticsAdvancedDetails response={response} />
     </div>
   );
+}
+
+function runDiagnosticsAction(
+  action: DiagnosticsHealthAction,
+  handlers: {
+    onOpenShippingZones: () => void;
+    onOpenGenerator: () => void;
+    onOpenWooCommerceZones: () => void;
+  },
+) {
+  if (action === "shipping_zones") {
+    handlers.onOpenShippingZones();
+    return;
+  }
+
+  if (action === "generator") {
+    handlers.onOpenGenerator();
+    return;
+  }
+
+  handlers.onOpenWooCommerceZones();
 }

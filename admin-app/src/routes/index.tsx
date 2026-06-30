@@ -88,6 +88,7 @@ const TABS = [
   { id: "settings", label: "Settings", icon: SettingsIcon },
   { id: "sync", label: "Smart Form Sync", icon: Zap },
 ] as const;
+const PRIMARY_TABS: Array<(typeof TABS)[number]> = [TABS[0], TABS[1], TABS[2], TABS[4]];
 
 type TabId = (typeof TABS)[number]["id"];
 type DatasetLoadState =
@@ -300,6 +301,9 @@ export default function AdminApp({
             onRefresh={() => setDiagnosticsReloadKey((current) => current + 1)}
             onOpenShippingZones={() => setTab("zones")}
             onOpenGenerator={() => setTab("generator")}
+            onOpenWooCommerceZones={() =>
+              window.open(bootstrap.adminUrls.woocommerceSettings, "_blank", "noopener,noreferrer")
+            }
           />
         )}
         {tab === "import" && <ImportExportScreen />}
@@ -474,7 +478,7 @@ function TopNav({ tab, setTab }: { tab: TabId; setTab: (tab: TabId) => void }) {
   return (
     <nav className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">
-        {TABS.map((item) => {
+        {PRIMARY_TABS.map((item) => {
           const Icon = item.icon;
           const active = tab === item.id;
           return (
@@ -652,7 +656,7 @@ function SettingsScreen({
     return (
       <>
         <SectionHeader
-          title="Settings"
+          title="Defaults for future setup"
           description="Loading saved plugin settings from WordPress."
         />
         <Card>
@@ -668,7 +672,10 @@ function SettingsScreen({
   if (settingsState.status === "error") {
     return (
       <>
-        <SectionHeader title="Settings" description="Saved settings could not be loaded." />
+        <SectionHeader
+          title="Defaults for future setup"
+          description="Saved defaults could not be loaded."
+        />
         <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Settings unavailable</AlertTitle>
@@ -745,9 +752,7 @@ function SettingsForm({
       const savedResponse = await onSave(settings);
       setDraft(savedResponse.settings);
       setSaveState("saved");
-      setSaveMessage(
-        savedResponse.warnings.length ? savedResponse.warnings.join(" ") : "Settings saved.",
-      );
+      setSaveMessage("Defaults saved. Existing WooCommerce shipping zones were not changed.");
     } catch (error) {
       setSaveState("error");
       setSaveMessage(error instanceof Error ? error.message : "Settings could not be saved.");
@@ -757,8 +762,8 @@ function SettingsForm({
   return (
     <>
       <SectionHeader
-        title="Settings"
-        description="Persisted plugin settings. WooCommerce zones are not read or written here."
+        title="Defaults for future setup"
+        description="Save labels, prices, and naming defaults for future Generator previews. Existing WooCommerce shipping zones are not changed here."
         action={
           <div className="flex flex-wrap gap-2">
             <Button
@@ -766,10 +771,10 @@ function SettingsForm({
               onClick={() => saveDraft(response.defaults)}
               disabled={saveState === "saving"}
             >
-              Reset to defaults
+              Reset defaults
             </Button>
             <Button onClick={() => saveDraft(draft)} disabled={saveState === "saving"}>
-              {saveState === "saving" ? "Saving..." : "Save settings"}
+              {saveState === "saving" ? "Saving..." : "Save defaults"}
             </Button>
           </div>
         }
@@ -777,7 +782,7 @@ function SettingsForm({
       {saveState === "saved" && (
         <Alert className="mb-4 border-emerald-200 bg-emerald-50 text-emerald-950">
           <CheckCircle2 className="h-4 w-4" />
-          <AlertTitle>Settings saved</AlertTitle>
+          <AlertTitle>Defaults saved</AlertTitle>
           <AlertDescription>{saveMessage}</AlertDescription>
         </Alert>
       )}
@@ -833,7 +838,10 @@ function SettingsForm({
             </Select>
           </SettingRow>
           <Separator />
-          <SettingRow label="Zone name format" desc="Draft naming only; no zones are written.">
+          <SettingRow
+            label="Zone name format"
+            desc="Existing WooCommerce zone names are not changed by saving settings."
+          >
             <Select
               value={draft.zoneNameFormat}
               onValueChange={(value) => updateDraft({ zoneNameFormat: value as ZoneNameFormat })}
@@ -850,7 +858,10 @@ function SettingsForm({
               </SelectContent>
             </Select>
           </SettingRow>
-          <SettingRow label="Zone prefix" desc="Default local draft prefix.">
+          <SettingRow
+            label="Zone prefix"
+            desc="Existing WooCommerce zone names are not changed by saving settings."
+          >
             <Input
               value={draft.zonePrefix}
               onChange={(event) => updateDraft({ zonePrefix: event.target.value })}
@@ -858,7 +869,10 @@ function SettingsForm({
             />
           </SettingRow>
           <Separator />
-          <SettingRow label="Office method wording" desc="Controls the office_delivery label.">
+          <SettingRow
+            label="Office method wording"
+            desc="Default label for future setup previews. Use Shipping Zones to update live WooCommerce prices."
+          >
             <Select
               value={draft.officeWordingMode}
               onValueChange={(value) => updateOfficeWording(value as OfficeMethodWording)}
@@ -876,7 +890,7 @@ function SettingsForm({
             </Select>
           </SettingRow>
           {draft.officeWordingMode === "custom" && (
-            <SettingRow label="Office custom label" desc="Local draft label only.">
+            <SettingRow label="Office custom label" desc="Future setup default label only.">
               <Input
                 value={draft.officeCustomLabel}
                 onChange={(event) => updateOfficeCustomLabel(event.target.value)}
@@ -889,11 +903,20 @@ function SettingsForm({
             Currency comes from WooCommerce. Fallback: DZD.
           </div>
           <Separator />
+          <div className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-sm text-muted-foreground">
+            Use Shipping Zones to update live WooCommerce prices. These labels and default prices
+            are used for future setup previews.
+          </div>
+          <Separator />
           {draft.methods.map((method) => (
             <SettingRow
               key={method.key}
               label={method.label}
-              desc={method.locked ? "Required flat_rate method." : "Optional flat_rate method."}
+              desc={
+                method.locked
+                  ? "Required flat_rate method default for future setup."
+                  : "Optional flat_rate method default for future setup."
+              }
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Switch

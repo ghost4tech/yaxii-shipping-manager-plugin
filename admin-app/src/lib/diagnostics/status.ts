@@ -7,7 +7,10 @@ export type DiagnosticsHealthCheck = {
   label: string;
   detail: string;
   status: DiagnosticsHealthTone;
+  action?: DiagnosticsHealthAction;
+  actionLabel?: string;
 };
+export type DiagnosticsHealthAction = "shipping_zones" | "generator" | "woocommerce_zones";
 
 export type DiagnosticsHealthSummary = {
   passed: number;
@@ -126,6 +129,8 @@ function missingSetupHealthCheck(response: DiagnosticsResponse): DiagnosticsHeal
         ? "No missing Algeria setup was found."
         : `${missingCount} records need setup review or repair.`,
     status: missingCount === 0 ? "ok" : "warn",
+    action: missingCount === 0 ? undefined : "shipping_zones",
+    actionLabel: missingCount === 0 ? undefined : "Open Shipping Zones",
   };
 }
 
@@ -140,18 +145,22 @@ function conflictsHealthCheck(response: DiagnosticsResponse): DiagnosticsHealthC
         ? "No duplicate direct-zone conflicts were found."
         : `${conflictCount} duplicate direct-zone conflicts need review.`,
     status: conflictCount === 0 ? "ok" : "fail",
+    action: conflictCount === 0 ? undefined : "woocommerce_zones",
+    actionLabel: conflictCount === 0 ? undefined : "Open WooCommerce zones",
   };
 }
 
 function protectedZonesHealthCheck(protectedZoneCount: number): DiagnosticsHealthCheck {
   return {
     id: "protected-zones",
-    label: "Manual/protected zones",
+    label: "Manual zones",
     detail:
       protectedZoneCount === 0
         ? "No overlapping manual or unknown Algeria zones were found."
         : `${protectedZoneCount} manual or unknown zones are protected from Yaxii writes.`,
     status: protectedZoneCount === 0 ? "ok" : "warn",
+    action: protectedZoneCount === 0 ? undefined : "woocommerce_zones",
+    actionLabel: protectedZoneCount === 0 ? undefined : "Open WooCommerce zones",
   };
 }
 
@@ -164,6 +173,8 @@ function methodIssuesHealthCheck(methodIssueCount: number): DiagnosticsHealthChe
         ? "No obvious method gaps were found in matched zones."
         : `${methodIssueCount} zones have missing, disabled, or incomplete method signals.`,
     status: methodIssueCount === 0 ? "ok" : "warn",
+    action: methodIssueCount === 0 ? undefined : "shipping_zones",
+    actionLabel: methodIssueCount === 0 ? undefined : "Open Shipping Zones",
   };
 }
 
@@ -186,6 +197,8 @@ function restOfWorldHealthCheck(response: DiagnosticsResponse): DiagnosticsHealt
       ? "Rest-of-world has shipping methods available."
       : "Rest-of-world has no methods; confirm that this is intentional.",
     status: response.summary.restOfWorldHasMethods ? "ok" : "warn",
+    action: response.summary.restOfWorldHasMethods ? undefined : "woocommerce_zones",
+    actionLabel: response.summary.restOfWorldHasMethods ? undefined : "Open WooCommerce zones",
   };
 }
 

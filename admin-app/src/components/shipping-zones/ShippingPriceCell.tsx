@@ -42,7 +42,7 @@ export function ShippingPriceCell({
               </span>
             )}
           </div>
-          <DisabledStatus reason={method.disabledReason ?? "Not managed"} />
+          <DisabledStatus reason={method.disabledReason ?? "Not managed by Yaxii"} />
         </div>
         <PendingStatusLine method={method} pending={pendingStatus} onUndo={onUndoStatus} />
       </div>

@@ -4,7 +4,7 @@
 
 TASK-003B persists the MVP settings contract in WordPress options and exposes read/write REST endpoints for the admin app.
 
-The settings remain product-configuration draft data. They do not create, update, delete, or inspect WooCommerce shipping zones.
+The settings remain defaults for future setup previews. They do not create, update, delete, or inspect WooCommerce shipping zones.
 
 ## Option Storage
 
@@ -63,6 +63,26 @@ Currency is not user-editable and is not persisted. The UI displays:
 ```text
 Currency comes from WooCommerce. Fallback: DZD.
 ```
+
+The Settings page is labeled:
+
+```text
+Defaults for future setup
+```
+
+The primary save action is:
+
+```text
+Save defaults
+```
+
+Successful saves show:
+
+```text
+Defaults saved. Existing WooCommerce shipping zones were not changed.
+```
+
+Method labels and default prices are future setup defaults. The UI directs merchants to Shipping Zones for live WooCommerce price updates. Naming controls also state that existing WooCommerce zone names are not changed by saving settings.
 
 ## Dataset Modes
 

@@ -19,7 +19,9 @@ export function ShippingZonesTable({
   onUndo,
   onUndoStatus,
   onOpenDiagnostics,
+  onOpenWooCommerceZones,
   onLaunchWizard,
+  onReviewRowChanges,
   onRepairSetup,
   onClearSearch,
 }: {
@@ -39,7 +41,9 @@ export function ShippingZonesTable({
   onUndo: (row: ShippingZoneRowView, method: ShippingMethodKey) => void;
   onUndoStatus: (row: ShippingZoneRowView, method: ShippingMethodKey) => void;
   onOpenDiagnostics: () => void;
+  onOpenWooCommerceZones: () => void;
   onLaunchWizard: () => void;
+  onReviewRowChanges: (row: ShippingZoneRowView) => void;
   onRepairSetup: (row: ShippingZoneRowView) => void;
   onClearSearch: () => void;
 }) {
@@ -82,7 +86,9 @@ export function ShippingZonesTable({
             onUndo={(method) => onUndo(row, method)}
             onUndoStatus={(method) => onUndoStatus(row, method)}
             onOpenDiagnostics={onOpenDiagnostics}
+            onOpenWooCommerceZones={onOpenWooCommerceZones}
             onLaunchWizard={onLaunchWizard}
+            onReviewRowChanges={() => onReviewRowChanges(row)}
             onRepairSetup={() => onRepairSetup(row)}
           />
         ))

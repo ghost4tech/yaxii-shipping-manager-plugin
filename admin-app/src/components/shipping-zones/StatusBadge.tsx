@@ -12,12 +12,16 @@ const STATUS_STYLES: Record<ShippingZoneStatus, { label: string; className: stri
     label: "Needs update",
     className: "border-amber-200 bg-amber-50 text-amber-700",
   },
+  updating: {
+    label: "Updating...",
+    className: "border-sky-200 bg-sky-50 text-sky-700",
+  },
   missing: {
     label: "Missing setup",
     className: "border-amber-200 bg-amber-50 text-amber-700",
   },
   protected: {
-    label: "Protected",
+    label: "Manual zone",
     className: "border-slate-200 bg-slate-50 text-slate-700",
   },
   conflict: {
@@ -33,7 +37,7 @@ const STATUS_STYLES: Record<ShippingZoneStatus, { label: string; className: stri
     className: "border-slate-200 bg-slate-50 text-slate-700",
   },
   not_managed: {
-    label: "Not managed",
+    label: "Not managed by Yaxii",
     className: "border-slate-200 bg-slate-50 text-slate-700",
   },
 };
@@ -51,7 +55,9 @@ export function StatusBadge({ status }: { status: ShippingZoneStatus }) {
       {status === "active" && <Check className="h-3 w-3" />}
       {(status === "missing" || status === "conflict") && <AlertTriangle className="h-3 w-3" />}
       {(status === "protected" || status === "not_managed") && <Lock className="h-3 w-3" />}
-      {status === "checking" && <RefreshCw className="h-3 w-3 animate-spin" />}
+      {(status === "checking" || status === "updating") && (
+        <RefreshCw className="h-3 w-3 animate-spin" />
+      )}
       {style.label}
     </span>
   );

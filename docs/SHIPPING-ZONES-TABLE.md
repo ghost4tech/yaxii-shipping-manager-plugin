@@ -11,13 +11,13 @@ Rows combine the current wilaya dataset with read-only WooCommerce diagnostics.
 The page shows:
 
 - a reference-based management page with the table as the primary workspace
-- a compact live status card with active wilayas, managed methods, pending changes, and protected manual zones
+- a compact live status card with active wilayas, managed methods, pending changes, and manual zones
 - secondary actions for diagnostics and WooCommerce's native shipping settings
 - search by wilaya name, Arabic name, or code
-- filters for all, active, pending changes, needs update, missing setup, and protected/manual rows
+- filters for all, active, pending changes, needs update, missing setup, and manual/not-managed rows
 - whether a direct WooCommerce zone exists for the wilaya
 - whether the zone is recorded in the Yaxii managed registry
-- simple row status such as `Active`, `Missing setup`, `Needs update`, `Conflict detected`, `Protected manual zone`, or `Not managed`
+- simple row status such as `Active`, `Missing setup`, `Needs update`, `Updating...`, `Conflict detected`, `Manual zone`, or `Not managed by Yaxii`
 - home and office live flat-rate method prices when the methods are registry-owned
 - technical zone and ownership details only after the merchant opens row details
 - a `Repair setup` action when a row is missing its Yaxii-managed WooCommerce setup
@@ -53,6 +53,14 @@ Changes will be reviewed before WooCommerce is updated.
 ```
 
 Review/apply uses the same preview endpoint and apply endpoint as the Generator. The table does not create a second apply engine.
+
+After a successful apply, affected wilaya/method rows show `Updating...` while diagnostics refreshes. During that verification window the table suppresses stale `Needs update` labels for the affected rows. If diagnostics cannot be refreshed, the page shows:
+
+```text
+Update sent, but verification failed. Refresh diagnostics.
+```
+
+If refreshed diagnostics still differs from the requested change, the row returns to `Needs update` and the merchant can review the change again.
 
 The review dialog shows only:
 
@@ -94,7 +102,7 @@ Repair uses the existing preview/apply path:
 
 Repair does not bypass preview/apply and does not write directly from the table.
 
-If a missing-looking wilaya also has a duplicate/manual conflict, the row is treated as `Conflict detected` or `Protected manual zone`; direct repair is not offered and the merchant is sent to Diagnostics.
+If a missing-looking wilaya also has a duplicate/manual conflict, the row is treated as `Conflict detected` or `Manual zone`; direct repair is not offered and the merchant is sent to Diagnostics.
 
 ## Unsupported Actions
 
@@ -106,10 +114,10 @@ Unsupported actions must be hidden, disabled, or labeled as later work:
 - updating zone names
 - deleting zones or methods
 
-For protected rows:
+For manual or unknown rows:
 
 ```text
-Protected manual zone
+Yaxii will not edit this WooCommerce zone.
 ```
 
 ## Supported Actions
@@ -117,8 +125,9 @@ Protected manual zone
 The table routes merchants to:
 
 - `Open Generator`
-- `Diagnostics`
+- `Review in Diagnostics`
 - `WooCommerce zones`
+- `Review changes`
 - `Repair setup`
 - `Repair selected`
 - `Save changes`

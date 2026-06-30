@@ -23,7 +23,9 @@ export function ShippingZoneRow({
   onUndo,
   onUndoStatus,
   onOpenDiagnostics,
+  onOpenWooCommerceZones,
   onLaunchWizard,
+  onReviewRowChanges,
   onRepairSetup,
 }: {
   row: ShippingZoneRowView;
@@ -36,7 +38,9 @@ export function ShippingZoneRow({
   onUndo: (method: ShippingMethodKey) => void;
   onUndoStatus: (method: ShippingMethodKey) => void;
   onOpenDiagnostics: () => void;
+  onOpenWooCommerceZones: () => void;
   onLaunchWizard: () => void;
+  onReviewRowChanges: () => void;
   onRepairSetup: () => void;
 }) {
   const hasPending = row.pendingMethodCount > 0;
@@ -96,7 +100,9 @@ export function ShippingZoneRow({
             row={row}
             contextualAction={contextualAction}
             onOpenDiagnostics={onOpenDiagnostics}
+            onOpenWooCommerceZones={onOpenWooCommerceZones}
             onLaunchWizard={onLaunchWizard}
+            onReviewRowChanges={onReviewRowChanges}
             onRepairSetup={onRepairSetup}
             onWilayaStatusChange={onWilayaStatusChange}
             onDiscardPending={() => {
@@ -127,15 +133,19 @@ function RowActions({
   row,
   contextualAction,
   onOpenDiagnostics,
+  onOpenWooCommerceZones,
   onLaunchWizard,
+  onReviewRowChanges,
   onRepairSetup,
   onWilayaStatusChange,
   onDiscardPending,
 }: {
   row: ShippingZoneRowView;
-  contextualAction: "generator" | "diagnostics" | null;
+  contextualAction: "generator" | "diagnostics" | "review" | null;
   onOpenDiagnostics: () => void;
+  onOpenWooCommerceZones: () => void;
   onLaunchWizard: () => void;
+  onReviewRowChanges: () => void;
   onRepairSetup: () => void;
   onWilayaStatusChange: (enabled: boolean) => void;
   onDiscardPending: () => void;
@@ -169,13 +179,31 @@ function RowActions({
         </button>
       )}
       {contextualAction === "diagnostics" && (
+        <>
+          <button
+            type="button"
+            onClick={onOpenDiagnostics}
+            className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+          >
+            <Activity className="h-3.5 w-3.5" />
+            Review in Diagnostics
+          </button>
+          <button
+            type="button"
+            onClick={onOpenWooCommerceZones}
+            className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+          >
+            WooCommerce zones
+          </button>
+        </>
+      )}
+      {contextualAction === "review" && (
         <button
           type="button"
-          onClick={onOpenDiagnostics}
-          className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+          onClick={onReviewRowChanges}
+          className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-primary/25 bg-primary/10 px-2 text-xs font-medium text-primary hover:border-primary/40 hover:bg-primary/15"
         >
-          <Activity className="h-3.5 w-3.5" />
-          Diagnostics
+          Review changes
         </button>
       )}
       <Switch
@@ -234,13 +262,19 @@ export function ShippingZoneTableHeader({
   );
 }
 
-function actionForRow(status: ShippingZoneRowView["status"]): "generator" | "diagnostics" | null {
+function actionForRow(
+  status: ShippingZoneRowView["status"],
+): "generator" | "diagnostics" | "review" | null {
   if (status === "missing" || status === "unavailable") {
     return "generator";
   }
 
   if (status === "protected" || status === "conflict" || status === "not_managed") {
     return "diagnostics";
+  }
+
+  if (status === "needs_update") {
+    return "review";
   }
 
   return null;

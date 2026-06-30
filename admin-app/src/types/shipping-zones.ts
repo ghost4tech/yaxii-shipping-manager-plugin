@@ -14,6 +14,7 @@ export type DiagnosticsLoadState =
 export type ShippingZoneStatus =
   | "active"
   | "needs_update"
+  | "updating"
   | "missing"
   | "protected"
   | "conflict"
@@ -31,6 +32,14 @@ export type ShippingZoneFilter =
 
 export type PendingPriceMap = Record<string, Partial<Record<ShippingMethodKey, number | null>>>;
 export type PendingStatusMap = Record<string, Partial<Record<ShippingMethodKey, boolean>>>;
+export type PostApplyMethodExpectation = {
+  price?: number | null;
+  enabled?: boolean;
+};
+export type PostApplyVerificationMap = Record<
+  string,
+  Partial<Record<ShippingMethodKey, PostApplyMethodExpectation>>
+>;
 
 export type ShippingZoneQuickTool =
   | { kind: "set"; value: number }

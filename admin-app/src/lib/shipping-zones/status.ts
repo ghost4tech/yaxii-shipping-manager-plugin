@@ -5,6 +5,7 @@ import type {
   LiveZoneSummary,
   PendingPriceMap,
   PendingStatusMap,
+  PostApplyVerificationMap,
   ShippingZoneFilter,
   ShippingZoneMethodView,
   ShippingZoneRowView,
@@ -19,18 +20,19 @@ export const SHIPPING_ZONE_FILTERS: Array<{ key: ShippingZoneFilter; label: stri
   { key: "pending", label: "Pending changes" },
   { key: "needs_update", label: "Needs update" },
   { key: "missing", label: "Missing setup" },
-  { key: "protected", label: "Protected" },
+  { key: "protected", label: "Manual zones" },
 ];
 
 const STATUS_LABELS: Record<ShippingZoneStatus, string> = {
   active: "Active",
   needs_update: "Needs update",
+  updating: "Updating...",
   missing: "Missing setup",
-  protected: "Protected",
+  protected: "Manual zone",
   conflict: "Conflict detected",
   checking: "Checking",
   unavailable: "Unavailable",
-  not_managed: "Not managed",
+  not_managed: "Not managed by Yaxii",
 };
 
 const FALLBACK_HOME_METHOD: MethodDef = {
@@ -46,11 +48,16 @@ export function buildShippingZoneRows(
   diagnosticsState: DiagnosticsLoadState,
   pendingPrices: PendingPriceMap,
   pendingStatuses: PendingStatusMap,
+  postApplyVerification: PostApplyVerificationMap = {},
 ): ShippingZoneRowView[] {
   const displayMethodDefs = shippingZoneMethodDefs(methodDefs, diagnosticsState);
 
   return wilayas.map((wilaya) => {
-    const liveZone = liveStatusForWilaya(wilaya, diagnosticsState, displayMethodDefs);
+    const liveZone = statusWithPostApplyVerification(
+      wilaya.code,
+      liveStatusForWilaya(wilaya, diagnosticsState, displayMethodDefs),
+      postApplyVerification,
+    );
     const methods = displayMethodDefs.map((methodDef) =>
       methodViewForRow(wilaya, methodDef, liveZone, pendingPrices, pendingStatuses),
     );
@@ -233,10 +240,10 @@ export function ownershipLabel(ownershipHint: ZoneDiagnostic["ownershipHint"]): 
   }
 
   if (ownershipHint === "manual_unknown") {
-    return "Protected";
+    return "Manual zone";
   }
 
-  return "Name match only";
+  return "Not managed by Yaxii";
 }
 
 function methodViewForRow(
@@ -271,19 +278,31 @@ function methodViewForRow(
 }
 
 function disabledReasonForStatus(status: ShippingZoneStatus): string {
-  if (status === "protected" || status === "conflict" || status === "not_managed") {
-    return "Protected";
+  if (status === "protected") {
+    return "Manual zone";
+  }
+
+  if (status === "not_managed") {
+    return "Not managed by Yaxii";
+  }
+
+  if (status === "conflict") {
+    return "Conflict detected";
   }
 
   if (status === "missing") {
     return "Missing setup";
   }
 
+  if (status === "updating") {
+    return "Updating";
+  }
+
   if (status === "checking") {
     return "Checking";
   }
 
-  return "Not managed";
+  return "Not managed by Yaxii";
 }
 
 function canEditManagedMethod(liveZone: LiveZoneSummary, methodKey: ShippingMethodKey): boolean {
@@ -355,11 +374,19 @@ function liveStatusForWilaya(
   }
 
   if (zone.ownershipHint === "manual_unknown") {
-    return { status: "protected", message: "Protected", zones };
+    return {
+      status: "protected",
+      message: "Yaxii will not edit this WooCommerce zone.",
+      zones,
+    };
   }
 
   if (zone.ownershipHint !== "managed_registry") {
-    return { status: "not_managed", message: "Name match only", zones };
+    return {
+      status: "not_managed",
+      message: "This zone is not recorded in Yaxii's managed registry.",
+      zones,
+    };
   }
 
   if (!hasRequiredManagedMethods(zone, methodDefs)) {
@@ -371,6 +398,22 @@ function liveStatusForWilaya(
   }
 
   return { status: "active", message: "Managed by Yaxii", zones };
+}
+
+function statusWithPostApplyVerification(
+  wilayaCode: string,
+  liveZone: LiveZoneSummary,
+  postApplyVerification: PostApplyVerificationMap,
+): LiveZoneSummary {
+  if (!postApplyVerification[wilayaCode]) {
+    return liveZone;
+  }
+
+  return {
+    status: "updating",
+    message: "Refreshing WooCommerce after the last update.",
+    zones: liveZone.zones,
+  };
 }
 
 function hasDraftPriceDifference(

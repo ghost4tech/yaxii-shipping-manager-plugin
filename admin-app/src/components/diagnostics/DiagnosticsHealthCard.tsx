@@ -2,9 +2,16 @@ import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { DiagnosticsHealthCheck } from "@/lib/diagnostics/status";
+import type { DiagnosticsHealthAction, DiagnosticsHealthCheck } from "@/lib/diagnostics/status";
 
-export function DiagnosticsHealthCard({ check }: { check: DiagnosticsHealthCheck }) {
+export function DiagnosticsHealthCard({
+  check,
+  onAction,
+}: {
+  check: DiagnosticsHealthCheck;
+  onAction: (action: DiagnosticsHealthAction) => void;
+}) {
+  const action = check.action;
   const Icon =
     check.status === "ok" ? CheckCircle2 : check.status === "warn" ? AlertTriangle : AlertCircle;
   const toneClass =
@@ -22,9 +29,18 @@ export function DiagnosticsHealthCard({ check }: { check: DiagnosticsHealthCheck
         >
           <Icon className="h-4 w-4" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="text-sm font-medium">{check.label}</div>
           <div className="text-xs text-muted-foreground">{check.detail}</div>
+          {action && check.actionLabel && (
+            <button
+              type="button"
+              onClick={() => onAction(action)}
+              className="mt-2 text-xs font-medium text-primary hover:text-primary/80"
+            >
+              {check.actionLabel}
+            </button>
+          )}
         </div>
       </CardContent>
     </Card>

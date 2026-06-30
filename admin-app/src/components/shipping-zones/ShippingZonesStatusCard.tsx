@@ -16,7 +16,7 @@ export function ShippingZonesStatusCard({
     { label: "Active wilayas", value: stats.activeWilayas, icon: Activity },
     { label: "Managed methods", value: stats.managedMethods, icon: Zap },
     { label: "Pending changes", value: stats.pendingChanges, icon: ChevronRight },
-    { label: "Protected zones", value: stats.protectedManualZones, icon: Lock },
+    { label: "Manual zones", value: stats.protectedManualZones, icon: Lock },
   ];
 
   return (

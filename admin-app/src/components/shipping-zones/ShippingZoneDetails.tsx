@@ -22,6 +22,21 @@ export function ShippingZoneDetails({ row }: { row: ShippingZoneRowView }) {
           This wilaya is missing its Yaxii-managed zone or methods.
         </div>
       )}
+      {row.status === "protected" && (
+        <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800">
+          Yaxii will not edit this WooCommerce zone.
+        </div>
+      )}
+      {row.status === "not_managed" && (
+        <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800">
+          This zone is not recorded in Yaxii's managed registry.
+        </div>
+      )}
+      {row.status === "updating" && (
+        <div className="mb-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sky-900">
+          Update sent. Refreshing WooCommerce diagnostics before showing the final status.
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {row.liveZone.zones.map((zone) => (
           <div key={zone.zoneId} className="space-y-2">

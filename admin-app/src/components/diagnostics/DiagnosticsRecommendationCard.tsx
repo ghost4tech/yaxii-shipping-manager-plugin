@@ -9,12 +9,14 @@ export function DiagnosticsRecommendationCard({
   onRefresh,
   onOpenShippingZones,
   onOpenGenerator,
+  onOpenWooCommerceZones,
 }: {
   recommendation: string;
   refreshDisabled: boolean;
   onRefresh: () => void;
   onOpenShippingZones: () => void;
   onOpenGenerator: () => void;
+  onOpenWooCommerceZones: () => void;
 }) {
   return (
     <Card>
@@ -34,13 +36,7 @@ export function DiagnosticsRecommendationCard({
           <Wand2 className="h-4 w-4" />
           Open Generator
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            window.open("admin.php?page=wc-settings&tab=shipping", "_blank", "noopener")
-          }
-        >
+        <Button type="button" variant="outline" onClick={onOpenWooCommerceZones}>
           <ExternalLink className="h-4 w-4" />
           Open WooCommerce zones
         </Button>
