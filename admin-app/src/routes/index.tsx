@@ -331,6 +331,13 @@ export default function AdminApp({
             setLatestPreview({ response, context, request })
           }
           onOpenDiagnostics={() => closeWizardAndOpenDiagnostics()}
+          onOpenShippingZones={() => {
+            setWizardOpen(false);
+            setTab("zones");
+          }}
+          onOpenWooCommerceZones={() =>
+            window.open(bootstrap.adminUrls.woocommerceSettings, "_blank", "noopener,noreferrer")
+          }
         />
       )}
     </div>

@@ -29,29 +29,32 @@ Safety copy is shown inline in Preview and Generate.
 
 Start is a dedicated first step.
 
-Recommended path is derived from diagnostics when available:
+The Start screen is state-aware and is derived from diagnostics when available:
 
-- No configured Yaxii-managed setup or many missing wilayas: `Create new setup`
-- Missing managed zones or method gaps: `Repair existing setup`
-- Fully managed setup: `Setup already active`
+- No configured Yaxii-managed setup or many missing wilayas: `Create a new shipping setup`
+- Missing managed zones or method gaps: `Repair missing setup`
+- Fully managed setup: `Your shipping setup is already active`
 - Duplicate/manual conflicts: `Manual zones need review`
 
-Available user choices:
+State actions:
 
-- `Create new setup`
-- `Repair existing setup`
-- `Preview only`
+- Fresh setup shows `Start setup` and defaults to all wilayas in the selected dataset.
+- Repair setup shows `Repair setup` and preselects only missing or method-incomplete managed wilayas.
+- Fully active setup shows `Open Shipping Zones` as the primary action and `Modify setup anyway` as the secondary action.
+- Manual conflicts show `Review Diagnostics` and `Open WooCommerce zones`.
+- `Preview only` is a small advanced/support option with the copy `Review a plan without applying changes.`
 
 Choice copy:
 
 - `Create new setup`: `Create a new shipping setup for selected wilayas.`
 - `Repair existing setup`: `Fix missing Yaxii-managed zones or methods. Manual zones are not touched.`
-- `Preview only`: `Review the plan without applying changes.`
+- `Preview only`: `Review a plan without applying changes.`
 
 When setup is already active, Start shows:
 
 ```text
-Your setup is already active. Use Shipping Zones for daily price changes.
+Your shipping setup is already active
+Yaxii-managed zones and methods already exist. Use Shipping Zones to change prices or enable/disable methods.
 ```
 
 `Preview only` is for support or agency review. It stops at Preview with a `Done reviewing` action and does not show Generate/apply controls.
@@ -72,6 +75,12 @@ Legacy mode is generated from the current normalized dataset by filtering wilaya
 When `Repair existing setup` is selected, diagnostics preselects missing wilayas and managed zones with method gaps when that information is available. Manual/conflict rows are not selected for repair.
 
 If repair has no missing or incomplete managed setup, the wizard shows `No repair needed` and points merchants back to Shipping Zones.
+
+When `Create new setup` is used while Yaxii-managed setup already exists, the wizard warns:
+
+```text
+Existing Yaxii-managed setup found. This mode will only preview supported missing or changed work.
+```
 
 ## Communes
 
@@ -143,6 +152,14 @@ Preview shows safety copy inline:
 - No deletes will be made.
 - WooCommerce is checked again before applying.
 
+If the preview has no creates, method additions, method updates, or method status changes, the preview says:
+
+```text
+Setup already matches this selection
+```
+
+This no-op state is not treated as blocked. Detailed plan groups are hidden by default for this no-op state; advanced details remain collapsed for support.
+
 ## Generate
 
 Generate calls the real `POST /apply` endpoint through `fetchApply` when all backend gates allow it.
@@ -155,6 +172,26 @@ Generate is hidden or replaced with a no-op action when:
 - Readiness is blocked
 
 If no work is needed, the wizard says `Setup already matches this selection` and offers `Open Shipping Zones`.
+
+The Generate step does not show a normal Generate button when the preview has no supported work. It shows:
+
+```text
+No setup changes needed
+WooCommerce already matches this setup. Use Shipping Zones for daily price changes.
+```
+
+Actions:
+
+- `Open Shipping Zones`
+- `Back to edit setup`
+
+If the preview contains only unsupported work such as existing zone-name updates, the Generate step says:
+
+```text
+No supported changes in this release
+```
+
+It explains that zone-name updates are previewed for support but are not written by this release.
 
 ## Backend Boundary
 

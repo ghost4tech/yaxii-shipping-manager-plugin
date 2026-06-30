@@ -31,16 +31,20 @@ export function GeneratorGenerateStep({
   previewRequest,
   setupMode,
   onOpenDiagnostics,
+  onOpenShippingZones,
   onRefreshPreview,
   onReturnToEditor,
+  onBackToEditor,
 }: {
   response: PreviewResponse;
   config: AdminBootstrapConfig;
   previewRequest: PreviewRequest;
   setupMode: SetupMode;
   onOpenDiagnostics: () => void;
+  onOpenShippingZones: () => void;
   onRefreshPreview: () => Promise<void>;
   onReturnToEditor: () => void;
+  onBackToEditor: () => void;
 }) {
   const [generateState, setGenerateState] = useState<GenerateState>({ status: "idle" });
   const finalStatus = useMemo(() => finalApplyStatus(response), [response]);
@@ -96,8 +100,10 @@ export function GeneratorGenerateStep({
             finalStatus={finalStatus}
             onGenerate={generateSetup}
             onOpenDiagnostics={onOpenDiagnostics}
+            onOpenShippingZones={onOpenShippingZones}
             onRefreshPreview={onRefreshPreview}
             onReturnToEditor={onReturnToEditor}
+            onBackToEditor={onBackToEditor}
           />
         </div>
         <CardContent className="grid gap-2 p-5 text-xs text-muted-foreground sm:grid-cols-2">
@@ -145,8 +151,10 @@ function GenerateActions({
   finalStatus,
   onGenerate,
   onOpenDiagnostics,
+  onOpenShippingZones,
   onRefreshPreview,
   onReturnToEditor,
+  onBackToEditor,
 }: {
   state: GenerateState;
   setupMode: SetupMode;
@@ -154,8 +162,10 @@ function GenerateActions({
   finalStatus: ReturnType<typeof finalApplyStatus>;
   onGenerate: () => Promise<void>;
   onOpenDiagnostics: () => void;
+  onOpenShippingZones: () => void;
   onRefreshPreview: () => Promise<void>;
   onReturnToEditor: () => void;
+  onBackToEditor: () => void;
 }) {
   if (state.status === "ready") {
     return <ResultActions onReturnToEditor={onReturnToEditor} />;
@@ -168,10 +178,11 @@ function GenerateActions({
   if (!canGenerate) {
     return (
       <BlockedActions
-        noGeneratorWork={finalStatus === "setup_already_matches"}
+        finalStatus={finalStatus}
         onOpenDiagnostics={onOpenDiagnostics}
+        onOpenShippingZones={onOpenShippingZones}
         onRefreshPreview={onRefreshPreview}
-        onReturnToEditor={onReturnToEditor}
+        onBackToEditor={onBackToEditor}
       />
     );
   }
@@ -207,25 +218,40 @@ function PreviewOnlyActions({ onOpenDiagnostics }: { onOpenDiagnostics: () => vo
 }
 
 function BlockedActions({
-  noGeneratorWork,
+  finalStatus,
   onOpenDiagnostics,
+  onOpenShippingZones,
   onRefreshPreview,
-  onReturnToEditor,
+  onBackToEditor,
 }: {
-  noGeneratorWork: boolean;
+  finalStatus: ReturnType<typeof finalApplyStatus>;
   onOpenDiagnostics: () => void;
+  onOpenShippingZones: () => void;
   onRefreshPreview: () => Promise<void>;
-  onReturnToEditor: () => void;
+  onBackToEditor: () => void;
 }) {
-  if (noGeneratorWork) {
+  if (finalStatus === "setup_already_matches") {
     return (
       <div className="mt-6 flex flex-col items-center gap-2">
-        <Button type="button" size="lg" onClick={onReturnToEditor}>
+        <Button type="button" size="lg" onClick={onOpenShippingZones}>
           Open Shipping Zones
         </Button>
-        <span className="text-[11px] text-muted-foreground">
-          Setup already matches this selection.
-        </span>
+        <Button type="button" variant="outline" size="lg" onClick={onBackToEditor}>
+          Back to edit setup
+        </Button>
+      </div>
+    );
+  }
+
+  if (finalStatus === "unsupported_only") {
+    return (
+      <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+        <Button type="button" variant="outline" size="lg" onClick={onBackToEditor}>
+          Back to edit setup
+        </Button>
+        <Button type="button" variant="outline" size="lg" onClick={onOpenDiagnostics}>
+          Check diagnostics
+        </Button>
       </div>
     );
   }
@@ -296,7 +322,11 @@ function generateTitle(
   }
 
   if (!canGenerate && finalStatus === "setup_already_matches") {
-    return "Shipping setup already matches this preview.";
+    return "No setup changes needed";
+  }
+
+  if (!canGenerate && finalStatus === "unsupported_only") {
+    return "No supported changes in this release";
   }
 
   if (!canGenerate) {
@@ -330,6 +360,10 @@ function generateMessage(
   }
 
   if (!canGenerate) {
+    if (finalStatus === "setup_already_matches") {
+      return "WooCommerce already matches this setup. Use Shipping Zones for daily price changes.";
+    }
+
     return finalStatusMessage(response, finalStatus);
   }
 

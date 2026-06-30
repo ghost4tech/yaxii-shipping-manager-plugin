@@ -71,7 +71,7 @@ import {
 } from "@/data/default-settings";
 import { formatRegionLabel } from "@/domain/format-region-label";
 import { zoneNamePreview } from "@/domain/zone-name-preview";
-import { repairWilayaCodes } from "@/lib/generator/diagnostics-guidance";
+import { hasExistingManagedSetup, repairWilayaCodes } from "@/lib/generator/diagnostics-guidance";
 import { enabledMethodDefs } from "@/lib/generator/methods";
 import { formatDraftPrice, parseOptionalPrice } from "@/lib/generator/pricing";
 import type { SetupMode } from "@/lib/generator/preview-summary";
@@ -125,6 +125,8 @@ export function GeneratorWizard({
   onComplete,
   onPreviewReady,
   onOpenDiagnostics,
+  onOpenShippingZones,
+  onOpenWooCommerceZones,
   diagnostics,
 }: {
   config: AdminBootstrapConfig;
@@ -138,6 +140,8 @@ export function GeneratorWizard({
     request: PreviewRequest,
   ) => void;
   onOpenDiagnostics: () => void;
+  onOpenShippingZones: () => void;
+  onOpenWooCommerceZones: () => void;
   diagnostics?: DiagnosticsResponse;
 }) {
   const initialDraft = useMemo(() => generatorDraftFromSettings(settings), [settings]);
@@ -197,6 +201,7 @@ export function GeneratorWizard({
   const enabledMethods = useMemo(() => methods.filter((method) => method.enabled), [methods]);
   const activeMethodDefs = useMemo(() => enabledMethodDefs(methods), [methods]);
   const currentStep = WIZARD_STEPS[step];
+  const existingManagedSetup = hasExistingManagedSetup(diagnostics);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,7 +223,11 @@ export function GeneratorWizard({
 
         if (!cancelled) {
           setDatasetListState({ status: "ready", wilayas: nextWilayas, mode: dataset });
-          setSelectedCodes(nextWilayas.map((wilaya) => wilaya.code));
+          setSelectedCodes(
+            setupMode === "continue"
+              ? repairWilayaCodes(diagnostics, nextWilayas)
+              : nextWilayas.map((wilaya) => wilaya.code),
+          );
           setCommunesByWilaya({});
           setOpenCommuneWilaya(null);
           setAutoPreviewSignature(null);
@@ -241,7 +250,7 @@ export function GeneratorWizard({
     return () => {
       cancelled = true;
     };
-  }, [config, dataset]);
+  }, [config, dataset, diagnostics, setupMode]);
 
   const setSetupMode = (nextMode: SetupMode) => {
     setSetupModeState(nextMode);
@@ -568,6 +577,10 @@ export function GeneratorWizard({
                 mode={setupMode}
                 setMode={setSetupMode}
                 diagnostics={diagnostics}
+                onAdvance={() => setStep(1)}
+                onOpenShippingZones={onOpenShippingZones}
+                onOpenDiagnostics={onOpenDiagnostics}
+                onOpenWooCommerceZones={onOpenWooCommerceZones}
               />
             )}
             {step === 1 && (
@@ -592,6 +605,8 @@ export function GeneratorWizard({
                 openWilaya={openCommuneWilaya}
                 toggleWilaya={toggleCommuneWilaya}
                 loadCommunes={loadCommunes}
+                existingManagedSetup={existingManagedSetup}
+                onOpenShippingZones={onOpenShippingZones}
               />
             )}
             {step === 2 && (
@@ -645,8 +660,10 @@ export function GeneratorWizard({
                 previewRequest={previewState.request}
                 setupMode={setupMode}
                 onOpenDiagnostics={onOpenDiagnostics}
+                onOpenShippingZones={onOpenShippingZones}
                 onRefreshPreview={loadPreview}
                 onReturnToEditor={useDraftAndClose}
+                onBackToEditor={() => setStep(1)}
               />
             )}
             {step === GENERATE_STEP_INDEX && previewState.status !== "ready" && (
@@ -672,7 +689,9 @@ export function GeneratorWizard({
             <ChevronLeft className="h-4 w-4" /> Back
           </Button>
           <div />
-          {setupMode === "preview" && step === PREVIEW_STEP_INDEX ? (
+          {step === 0 ? (
+            <div />
+          ) : setupMode === "preview" && step === PREVIEW_STEP_INDEX ? (
             <Button variant="outline" onClick={useDraftAndClose}>
               Done reviewing
             </Button>
@@ -716,6 +735,8 @@ function StepCoverage({
   openWilaya,
   toggleWilaya,
   loadCommunes,
+  existingManagedSetup,
+  onOpenShippingZones,
 }: {
   dataset: DatasetMode;
   setDataset: (dataset: DatasetMode) => void;
@@ -737,6 +758,8 @@ function StepCoverage({
   openWilaya: string | null;
   toggleWilaya: (wilayaCode: string) => void;
   loadCommunes: (wilayaCode: string) => Promise<void>;
+  existingManagedSetup: boolean;
+  onOpenShippingZones: () => void;
 }) {
   const allSelected = selectedCodes.length === baseList.length;
   const toggle = (code: string) => {
@@ -815,6 +838,16 @@ function StepCoverage({
         </Alert>
       )}
 
+      {setupMode === "fresh" && existingManagedSetup && (
+        <Alert className="mt-4 border-amber-200 bg-amber-50/60">
+          <Info className="h-4 w-4 text-amber-700" />
+          <AlertTitle className="text-amber-900">Existing Yaxii-managed setup found</AlertTitle>
+          <AlertDescription className="text-amber-800/90">
+            This mode will only preview supported missing or changed work.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {setupMode === "continue" && selectedCodes.length === 0 && (
         <Alert className="mt-4 border-emerald-200 bg-emerald-50/60">
           <CheckCircle2 className="h-4 w-4 text-emerald-700" />
@@ -823,6 +856,11 @@ function StepCoverage({
             Diagnostics did not find missing managed zones or method gaps for this dataset. Use
             Shipping Zones for daily price changes.
           </AlertDescription>
+          <div className="mt-3">
+            <Button type="button" size="sm" onClick={onOpenShippingZones}>
+              Open Shipping Zones
+            </Button>
+          </div>
         </Alert>
       )}
 

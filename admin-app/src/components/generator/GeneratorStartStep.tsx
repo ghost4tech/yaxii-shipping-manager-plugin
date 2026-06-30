@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { CheckCircle2, Eye, FileEdit, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, ExternalLink, FileEdit, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { generatorRecommendation } from "@/lib/generator/diagnostics-guidance";
+import { generatorStartGuidance } from "@/lib/generator/diagnostics-guidance";
 import type { SetupMode } from "@/lib/generator/preview-summary";
 import { cn } from "@/lib/utils";
 import type { DiagnosticsResponse } from "@/types/diagnostics";
@@ -12,12 +13,24 @@ export function GeneratorStartStep({
   mode,
   setMode,
   diagnostics,
+  onAdvance,
+  onOpenShippingZones,
+  onOpenDiagnostics,
+  onOpenWooCommerceZones,
 }: {
   mode: SetupMode;
   setMode: (mode: SetupMode) => void;
   diagnostics?: DiagnosticsResponse;
+  onAdvance: () => void;
+  onOpenShippingZones: () => void;
+  onOpenDiagnostics: () => void;
+  onOpenWooCommerceZones: () => void;
 }) {
-  const recommendation = generatorRecommendation(diagnostics);
+  const guidance = generatorStartGuidance(diagnostics);
+  const startPreviewOnly = () => {
+    setMode("preview");
+    onAdvance();
+  };
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -31,40 +44,125 @@ export function GeneratorStartStep({
       <Card className="mt-5 border-primary/30 bg-primary/5">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="text-[11px] font-medium uppercase text-primary">Recommended path</div>
-            {recommendation.title === "Setup already active" && (
+            <div className="text-[11px] font-medium uppercase text-primary">Current setup</div>
+            {guidance.state === "setup_active" && (
               <Badge variant="secondary" className="text-[10px]">
                 Daily changes live in Shipping Zones
               </Badge>
             )}
           </div>
-          <div className="mt-1 text-base font-semibold">{recommendation.title}</div>
-          <p className="mt-1 text-sm text-muted-foreground">{recommendation.description}</p>
+          <div className="mt-1 text-base font-semibold">{guidance.title}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{guidance.message}</p>
+          <StartActions
+            state={guidance.state}
+            setMode={setMode}
+            onAdvance={onAdvance}
+            onOpenShippingZones={onOpenShippingZones}
+            onOpenDiagnostics={onOpenDiagnostics}
+            onOpenWooCommerceZones={onOpenWooCommerceZones}
+          />
         </CardContent>
       </Card>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <StartCard
-          active={mode === "fresh"}
-          onClick={() => setMode("fresh")}
-          icon={<Sparkles className="h-5 w-5" />}
-          title="Create new setup"
-          desc="Create a new shipping setup for selected wilayas."
-        />
-        <StartCard
-          active={mode === "continue"}
-          onClick={() => setMode("continue")}
-          icon={<FileEdit className="h-5 w-5" />}
-          title="Repair existing setup"
-          desc="Fix missing Yaxii-managed zones or methods. Manual zones are not touched."
-        />
-        <StartCard
-          active={mode === "preview"}
-          onClick={() => setMode("preview")}
-          icon={<Eye className="h-5 w-5" />}
-          title="Preview only"
-          desc="Review the plan without applying changes."
-        />
+      {(guidance.state === "diagnostics_unavailable" || guidance.state === "fresh_setup") && (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <StartCard
+            active={mode === "fresh"}
+            onClick={() => setMode("fresh")}
+            icon={<Sparkles className="h-5 w-5" />}
+            title="Create new setup"
+            desc="Create a new shipping setup for selected wilayas."
+          />
+        </div>
+      )}
+      {guidance.state === "repair_needed" && (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <StartCard
+            active={mode === "continue"}
+            onClick={() => setMode("continue")}
+            icon={<FileEdit className="h-5 w-5" />}
+            title="Repair existing setup"
+            desc="Fix missing Yaxii-managed zones or methods. Manual zones are not touched."
+          />
+        </div>
+      )}
+      <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/30 p-3">
+        <button
+          type="button"
+          onClick={startPreviewOnly}
+          className="text-left text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          Preview only
+        </button>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Review a plan without applying changes.
+        </p>
       </div>
+    </div>
+  );
+}
+
+function StartActions({
+  state,
+  setMode,
+  onAdvance,
+  onOpenShippingZones,
+  onOpenDiagnostics,
+  onOpenWooCommerceZones,
+}: {
+  state: ReturnType<typeof generatorStartGuidance>["state"];
+  setMode: (mode: SetupMode) => void;
+  onAdvance: () => void;
+  onOpenShippingZones: () => void;
+  onOpenDiagnostics: () => void;
+  onOpenWooCommerceZones: () => void;
+}) {
+  const startMode = (mode: SetupMode) => {
+    setMode(mode);
+    onAdvance();
+  };
+
+  if (state === "setup_active") {
+    return (
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button type="button" onClick={onOpenShippingZones}>
+          Open Shipping Zones
+        </Button>
+        <Button type="button" variant="outline" onClick={() => startMode("fresh")}>
+          Modify setup anyway
+        </Button>
+      </div>
+    );
+  }
+
+  if (state === "manual_review") {
+    return (
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button type="button" onClick={onOpenDiagnostics}>
+          Review Diagnostics
+        </Button>
+        <Button type="button" variant="outline" onClick={onOpenWooCommerceZones}>
+          <ExternalLink className="h-4 w-4" />
+          Open WooCommerce zones
+        </Button>
+      </div>
+    );
+  }
+
+  if (state === "repair_needed") {
+    return (
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button type="button" onClick={() => startMode("continue")}>
+          Repair setup
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-2">
+      <Button type="button" onClick={() => startMode("fresh")}>
+        Start setup
+      </Button>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { SetupMode } from "@/lib/generator/preview-summary";
+import { finalApplyStatus, type SetupMode } from "@/lib/generator/preview-summary";
 import type { PreviewResponse } from "@/types/preview";
 
 import { GeneratorAdvancedDetails } from "./GeneratorAdvancedDetails";
@@ -15,10 +15,12 @@ export function GeneratorFinalStep({
   context?: GeneratorPreviewContext;
   setupMode?: SetupMode;
 }) {
+  const finalStatus = finalApplyStatus(response);
+
   return (
     <div className="mt-6 space-y-5">
       <GeneratorPreviewSummary response={response} context={context} setupMode={setupMode} />
-      <GeneratorPreviewGroups response={response} />
+      {finalStatus !== "setup_already_matches" && <GeneratorPreviewGroups response={response} />}
       <GeneratorAdvancedDetails response={response} />
     </div>
   );

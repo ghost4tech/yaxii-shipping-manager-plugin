@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import type { ApplyReadinessSeverity, PreviewResponse } from "@/types/preview";
 
-import type { SetupMode } from "@/lib/generator/preview-summary";
+import { finalApplyStatus, type SetupMode } from "@/lib/generator/preview-summary";
 
 export function GeneratorPreviewSummary({
   response,
@@ -30,6 +30,8 @@ export function GeneratorPreviewSummary({
   context?: GeneratorPreviewContext;
   setupMode: SetupMode;
 }) {
+  const finalStatus = finalApplyStatus(response);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -39,6 +41,16 @@ export function GeneratorPreviewSummary({
         </div>
         <ReadinessBadge severity={response.applyReadiness.severity} />
       </div>
+
+      {finalStatus === "setup_already_matches" && (
+        <Alert className="border-emerald-200 bg-emerald-50/60">
+          <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+          <AlertTitle className="text-emerald-900">Setup already matches this selection</AlertTitle>
+          <AlertDescription className="text-emerald-800/90">
+            No setup changes are needed. Use Shipping Zones for daily price changes.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile

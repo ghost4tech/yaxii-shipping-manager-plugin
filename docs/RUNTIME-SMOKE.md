@@ -31,6 +31,24 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 22. Confirm no-op previews show `Setup already matches this selection` and offer `Open Shipping Zones`.
 23. Confirm Settings is titled `Defaults for future setup`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
 
+### TASK-012E Generator State and No-op Smoke
+
+Expected:
+
+- A fully managed setup shows `Your shipping setup is already active`.
+- The fully managed primary action opens Shipping Zones.
+- `Modify setup anyway` allows continuing into Coverage and warns that existing setup was found.
+- Fresh/no setup shows `Create a new shipping setup` with `Start setup`.
+- Missing setup shows `Repair missing setup` with `Repair setup`.
+- Manual conflicts show `Manual zones need review`, `Review Diagnostics`, and `Open WooCommerce zones`.
+- Repair mode preselects only missing or method-incomplete managed wilayas.
+- Repair mode with no missing setup says `No repair needed` and offers `Open Shipping Zones`.
+- `Preview only` is a small secondary support option and stops at Preview.
+- No-op Preview says `Setup already matches this selection`.
+- No-op Generate says `No setup changes needed` and does not show a Generate button.
+- Unsupported-only Generate says `No supported changes in this release` and does not show a Generate button.
+- No WooCommerce write occurs during these navigation and no-op checks.
+
 ### TASK-012D Generator Step Layout Smoke
 
 Expected:

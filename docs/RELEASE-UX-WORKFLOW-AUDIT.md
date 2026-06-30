@@ -452,6 +452,22 @@ Dataset/backend changes:
 - Settings can save `datasetMode: legacy_58`.
 - Preview and diagnostics use the selected dataset mode so legacy mode does not report current additional wilayas as missing.
 
+## TASK-012E Implementation Note
+
+TASK-012E updates Generator behavior for stores that already have Yaxii-managed setup:
+
+- Start is now state-aware instead of showing all setup modes as equal choices.
+- Fully managed setup routes primarily to Shipping Zones and offers `Modify setup anyway` only as a secondary action.
+- Fresh setup defaults to all wilayas in the selected dataset.
+- Repair setup preselects missing or method-incomplete managed wilayas instead of behaving like create.
+- Manual conflicts route to Diagnostics or WooCommerce zones and do not imply adoption or repair.
+- Preview-only is kept as a small support option and still stops at Preview.
+- No-op previews show `Setup already matches this selection`.
+- No-op Generate shows `No setup changes needed`, offers `Open Shipping Zones`, and does not show a Generate button.
+- Unsupported-only Generate shows `No supported changes in this release`.
+
+The destructive cleanup need is documented only in `docs/RESET-AND-CLEANUP-TOOL-PLAN.md`; no reset/delete/wipe behavior was implemented.
+
 ## Blockers
 
 None for this audit. Implementation should stay blocked until the user approves the next scoped task because this task is audit/planning only.
