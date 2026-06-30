@@ -61,8 +61,8 @@ Expected:
 - Manual zones are not included in `zonesToRemoveLater`.
 - WooCommerce zone count does not change after the endpoint call.
 - WooCommerce method count does not change after the endpoint call.
-- Settings shows `Advanced tools` and `Remove Yaxii-managed setup`.
-- Clicking `Preview removal` shows the dry-run result and the copy `This is a dry run. Nothing was deleted.`
+- Settings shows `Advanced tools` and `Remove Yaxii setup`.
+- If no Yaxii-managed setup exists, the tool says `No Yaxii setup found.` and no remove button is shown.
 - No working remove/delete/reset button is shown.
 
 ### TASK-012G Remove Managed Setup Execution Smoke
@@ -78,22 +78,34 @@ Expected:
 - Verified removable zones are deleted through WooCommerce shipping zone APIs only after registry ownership is proven.
 - Missing WooCommerce zone or method registry entries are cleaned only after confirmed removal.
 - Manual zones and methods remain unchanged.
-- Settings refreshes the preview after removal and shows the result counts.
+- Settings refreshes the preview after removal and shows `Yaxii setup removed. Manual WooCommerce zones were not touched.`
 
-### TASK-012H Post-Removal Recovery Smoke
+### TASK-012I Empty Setup and Removal UI Smoke
 
 Expected:
 
-- Shipping Zones shows `No Yaxii shipping setup found` when the managed registry is empty and most wilayas are missing.
-- The global recovery state shows `Create setup` before the merchant has to interpret many `Missing setup` rows.
-- If protected manual WooCommerce zones exist, Shipping Zones shows `Manual WooCommerce zones found and protected. Yaxii will not edit them.`
-- `View manual zones` filters the table to protected/manual rows.
+- Shipping Zones shows `No shipping setup yet` when the managed registry is empty, no active managed rows exist, and most or all wilayas are missing.
+- The full wilaya table is hidden until `View all wilayas` is clicked.
+- `Generate shipping zones` opens Generator in the create setup flow.
+- If protected manual WooCommerce zones exist, Shipping Zones shows protected manual-zone copy.
+- If no manual WooCommerce zones exist, no manual-zone warning is shown.
+- Settings `Advanced tools` says `No Yaxii setup found.` when no Yaxii-managed setup exists.
+- When Yaxii-managed setup exists, `Remove Yaxii setup` opens a confirmation modal.
+- The confirmation modal asks the user to type `REMOVE`, not the backend confirmation string.
+- The modal shows only Yaxii-managed zones to remove, manual zones protected, and warnings/blockers counts by default.
+- `View technical details` contains candidate, blocker, warning, and protected manual-zone records.
+- If blockers exist, the modal says `Yaxii setup cannot be safely removed yet.` and does not show `Confirm removal`.
+- After successful removal, Settings shows `Yaxii setup removed. Manual WooCommerce zones were not touched.` and offers `Generate shipping zones`.
 - Expanding a manual/protected row shows the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when readable.
 - Manual/protected row details offer only `Open WooCommerce zones` and `Review in Diagnostics`.
 - `Repair setup` and `Repair selected` send preview pricing rows with `methodStatuses` as an object, using an empty object when there are no status changes.
 - Generator Start shows `Create a new Yaxii setup` after removal even when protected manual zones remain.
 - Generator Start warns `Manual WooCommerce zones exist and will be protected.`
 - Preview/Apply still skips or blocks manual conflicts and does not edit manual zones or manual methods.
+
+### TASK-012H Post-Removal Recovery Smoke
+
+Superseded by the TASK-012I empty setup smoke above. The repair payload and manual-zone read-only details expectations from TASK-012H still apply.
 
 ### TASK-012D Generator Step Layout Smoke
 

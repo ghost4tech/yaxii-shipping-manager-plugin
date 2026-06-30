@@ -71,6 +71,8 @@ Manual WooCommerce zones exist and will be protected.
 
 The primary action remains `Start setup`. `Review manual zones` opens Diagnostics. Manual conflicts can still be skipped or blocked by Preview/Apply for selected wilayas, but a protected manual zone does not make the whole generator start screen unusable.
 
+When Shipping Zones is in the empty setup state, its `Generate shipping zones` action opens this same create setup path.
+
 ## Coverage
 
 Coverage lets the merchant choose the dataset mode and selected wilayas.

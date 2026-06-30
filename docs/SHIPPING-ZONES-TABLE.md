@@ -10,9 +10,9 @@ Rows combine the current wilaya dataset with read-only WooCommerce diagnostics.
 
 The page shows:
 
-- a reference-based management page with the table as the primary workspace
+- a reference-based management page with the table as the primary workspace when a Yaxii-managed setup exists
 - a compact live status card with active wilayas, managed methods, pending changes, and manual zones
-- a global rebuild state when the managed registry is empty and most wilayas are missing
+- a strong empty setup state when the managed registry is empty and most or all wilayas are missing
 - secondary actions for diagnostics and WooCommerce's native shipping settings
 - search by wilaya name, Arabic name, or code
 - filters for all, active, pending changes, needs update, missing setup, and manual/not-managed rows
@@ -25,24 +25,24 @@ The page shows:
 
 Diagnostics remain read-only. They do not create, update, or delete zones or methods.
 
-## Post-Removal Recovery State
+## Empty Setup State
 
-When diagnostics report an empty Yaxii managed registry and most or all dataset wilayas are missing, the page shows a global rebuild state above the table:
-
-```text
-No Yaxii shipping setup found
-Yaxii-managed zones were removed or are not created yet. Start the Generator to create a new setup.
-```
-
-The primary action is `Create setup`. The secondary action is `View manual zones`.
-
-If manual WooCommerce zones exist, the state also says:
+When diagnostics report an empty Yaxii managed registry, no active managed rows, and most or all dataset wilayas missing, the page leads with a setup state instead of a table full of `Missing setup` rows:
 
 ```text
-Manual WooCommerce zones found and protected. Yaxii will not edit them.
+No shipping setup yet
+Generate Yaxii-managed WooCommerce shipping zones, then manage prices and methods from this page.
 ```
 
-The table remains available below for inspection, but merchants are not expected to repair many missing wilayas one row at a time after a full Yaxii-managed setup removal.
+The primary action is `Generate shipping zones`. It opens Generator in the normal create setup flow.
+
+The secondary action is `View all wilayas`. It reveals the full table for inspection and partial repair work.
+
+The full table and row-level `Repair setup` buttons are hidden until the merchant chooses `View all wilayas`.
+
+Manual WooCommerce zones do not block this empty setup state. If manual zones exist, the state shows protected manual-zone copy. If no manual zones exist, no manual-zone warning is shown.
+
+Partial setup is different: when some Yaxii-managed rows exist and some rows are missing, the table remains the primary workspace and the row-level `Repair setup` plus selected-row `Repair selected` actions remain visible.
 
 ## Supported Pending Changes
 

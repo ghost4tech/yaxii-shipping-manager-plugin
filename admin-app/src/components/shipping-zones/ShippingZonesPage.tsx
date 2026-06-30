@@ -68,6 +68,7 @@ export function ShippingZonesPage({
   const [pendingStatuses, setPendingStatuses] = useState<PendingStatusMap>({});
   const [reviewOpen, setReviewOpen] = useState(false);
   const [repairRows, setRepairRows] = useState<ShippingZoneRowView[]>([]);
+  const [emptySetupTableVisible, setEmptySetupTableVisible] = useState(false);
   const [postApplyVerification, setPostApplyVerification] =
     useState<PostApplyVerificationState | null>(null);
   const [verificationWarning, setVerificationWarning] = useState<string | null>(null);
@@ -120,7 +121,8 @@ export function ShippingZonesPage({
   ]);
   const protectedSelectionCount = selectedRows.length - actionableSelectionCodes.size;
   const stats = shippingZoneStats(rows);
-  const recoveryState = postRemovalRecoveryState(rows, diagnosticsState);
+  const emptySetupState = emptySetupViewState(rows, diagnosticsState);
+  const tableVisible = !emptySetupState.show || emptySetupTableVisible;
   const pendingCount = pendingChangeCount(pendingPrices, pendingStatuses);
   const changes = pendingReviewItems(rows, pendingPrices, pendingStatuses);
   const reviewContext = reviewContextFromPendingChanges(
@@ -362,72 +364,81 @@ export function ShippingZonesPage({
         woocommerceSettingsUrl={woocommerceSettingsUrl}
         onOpenDiagnostics={onOpenDiagnostics}
       />
-      {recoveryState.show && (
-        <PostRemovalRecoveryPanel
-          manualZoneCount={recoveryState.manualZoneCount}
-          onCreateSetup={onLaunchWizard}
-          onViewManualZones={() => setFilter("protected")}
+      {emptySetupState.show && (
+        <EmptySetupPanel
+          manualZoneCount={emptySetupState.manualZoneCount}
+          tableVisible={emptySetupTableVisible}
+          onGenerateSetup={onLaunchWizard}
+          onViewAllWilayas={() => {
+            setFilter("all");
+            setSearch("");
+            setEmptySetupTableVisible(true);
+          }}
         />
       )}
-      <ShippingZonesToolbar
-        rows={rows}
-        search={search}
-        filter={filter}
-        pendingCount={pendingCount}
-        selectedCount={selectedCodes.length}
-        editableSelectionCount={selectedRowsWithEditableMethods.length}
-        statusSelectionCount={selectedRowsWithToggleableMethods.length}
-        repairableSelectionCount={selectedRepairableRows.length}
-        protectedSelectionCount={protectedSelectionCount}
-        targetMethods={bulkTargetMethods}
-        onSearchChange={setSearch}
-        onFilterChange={setFilter}
-        onRunQuickTool={runQuickTool}
-        onClearSelection={() => setSelectedCodes([])}
-        onReviewChanges={() => setReviewOpen(true)}
-        onRepairSelected={() => openRepairDialog(selectedRepairableRows)}
-      />
+      {tableVisible && (
+        <ShippingZonesToolbar
+          rows={rows}
+          search={search}
+          filter={filter}
+          pendingCount={pendingCount}
+          selectedCount={selectedCodes.length}
+          editableSelectionCount={selectedRowsWithEditableMethods.length}
+          statusSelectionCount={selectedRowsWithToggleableMethods.length}
+          repairableSelectionCount={selectedRepairableRows.length}
+          protectedSelectionCount={protectedSelectionCount}
+          targetMethods={bulkTargetMethods}
+          onSearchChange={setSearch}
+          onFilterChange={setFilter}
+          onRunQuickTool={runQuickTool}
+          onClearSelection={() => setSelectedCodes([])}
+          onReviewChanges={() => setReviewOpen(true)}
+          onRepairSelected={() => openRepairDialog(selectedRepairableRows)}
+        />
+      )}
       {verificationWarning && (
         <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {verificationWarning}
         </div>
       )}
-      <ShippingZonesTable
-        rows={visibleRows}
-        selectedCodes={selectedCodes}
-        expandedRows={expandedRows}
-        allSelected={allSelected}
-        onSelectAll={toggleSelectAll}
-        onToggleSelect={toggleRowSelection}
-        onToggleExpand={(wilayaCode) =>
-          setExpandedRows((current) => ({
-            ...current,
-            [wilayaCode]: !current[wilayaCode],
-          }))
-        }
-        onPriceChange={updatePendingPrice}
-        onWilayaStatusChange={(row, enabled) =>
-          methodViewsForBulkTarget(row, "all").forEach((method) => {
-            if (method.canToggleStatus) {
-              updatePendingStatus(row, method.key, enabled);
-            }
-          })
-        }
-        onUndo={(row, method) => updatePendingPrice(row, method, undefined)}
-        onUndoStatus={(row, method) => updatePendingStatus(row, method, undefined)}
-        onOpenDiagnostics={onOpenDiagnostics}
-        onOpenWooCommerceZones={() =>
-          window.open(woocommerceSettingsUrl, "_blank", "noopener,noreferrer")
-        }
-        onLaunchWizard={onLaunchWizard}
-        onReviewRowChanges={reviewRowDefaultChanges}
-        onRepairSetup={(row) => openRepairDialog([row])}
-        onClearSearch={() => {
-          setSearch("");
-          setFilter("all");
-        }}
-      />
-      {pendingCount === 0 && (
+      {tableVisible && (
+        <ShippingZonesTable
+          rows={visibleRows}
+          selectedCodes={selectedCodes}
+          expandedRows={expandedRows}
+          allSelected={allSelected}
+          onSelectAll={toggleSelectAll}
+          onToggleSelect={toggleRowSelection}
+          onToggleExpand={(wilayaCode) =>
+            setExpandedRows((current) => ({
+              ...current,
+              [wilayaCode]: !current[wilayaCode],
+            }))
+          }
+          onPriceChange={updatePendingPrice}
+          onWilayaStatusChange={(row, enabled) =>
+            methodViewsForBulkTarget(row, "all").forEach((method) => {
+              if (method.canToggleStatus) {
+                updatePendingStatus(row, method.key, enabled);
+              }
+            })
+          }
+          onUndo={(row, method) => updatePendingPrice(row, method, undefined)}
+          onUndoStatus={(row, method) => updatePendingStatus(row, method, undefined)}
+          onOpenDiagnostics={onOpenDiagnostics}
+          onOpenWooCommerceZones={() =>
+            window.open(woocommerceSettingsUrl, "_blank", "noopener,noreferrer")
+          }
+          onLaunchWizard={onLaunchWizard}
+          onReviewRowChanges={reviewRowDefaultChanges}
+          onRepairSetup={(row) => openRepairDialog([row])}
+          onClearSearch={() => {
+            setSearch("");
+            setFilter("all");
+          }}
+        />
+      )}
+      {tableVisible && pendingCount === 0 && (
         <p className="mt-6 text-center text-xs text-muted-foreground">
           No pending changes. Edit a managed price or status to start.
         </p>
@@ -465,57 +476,66 @@ export function ShippingZonesPage({
   );
 }
 
-function PostRemovalRecoveryPanel({
+function EmptySetupPanel({
   manualZoneCount,
-  onCreateSetup,
-  onViewManualZones,
+  tableVisible,
+  onGenerateSetup,
+  onViewAllWilayas,
 }: {
   manualZoneCount: number;
-  onCreateSetup: () => void;
-  onViewManualZones: () => void;
+  tableVisible: boolean;
+  onGenerateSetup: () => void;
+  onViewAllWilayas: () => void;
 }) {
   return (
-    <div className="mt-5 rounded-md border border-primary/25 bg-primary/5 px-5 py-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            No Yaxii shipping setup found
-          </div>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Yaxii-managed zones were removed or are not created yet. Start the Generator to create a
-            new setup.
-          </p>
-          {manualZoneCount > 0 && (
-            <p className="mt-2 text-xs font-medium text-amber-900">
-              Manual WooCommerce zones found and protected. Yaxii will not edit them.
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onCreateSetup}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <Wand2 className="h-3.5 w-3.5" />
-            Create setup
-          </button>
-          <button
-            type="button"
-            onClick={onViewManualZones}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground hover:bg-muted"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            View manual zones
-          </button>
-        </div>
+    <div className="mt-5 rounded-md border border-primary/25 bg-primary/5 px-6 py-8 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <ShieldCheck className="h-5 w-5" />
       </div>
+      <div className="mx-auto mt-4 max-w-2xl">
+        <h2 className="text-xl font-semibold tracking-tight">No shipping setup yet</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Generate Yaxii-managed WooCommerce shipping zones, then manage prices and methods from
+          this page.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Manual WooCommerce zones, if any, are protected and will not be edited by Yaxii.
+        </p>
+        {manualZoneCount > 0 && (
+          <p className="mt-3 text-xs font-medium text-amber-900">
+            Manual WooCommerce zones are protected.
+          </p>
+        )}
+      </div>
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          onClick={onGenerateSetup}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <Wand2 className="h-4 w-4" />
+          Generate shipping zones
+        </button>
+        <button
+          type="button"
+          onClick={onViewAllWilayas}
+          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60"
+          disabled={tableVisible}
+        >
+          <Eye className="h-4 w-4" />
+          {tableVisible ? "All wilayas visible" : "View all wilayas"}
+        </button>
+      </div>
+      {tableVisible && (
+        <div className="mt-5 text-xs text-muted-foreground">
+          The full wilaya table is visible below for inspection and partial repair work.
+        </div>
+      )}
     </div>
   );
 }
 
-function postRemovalRecoveryState(
+function emptySetupViewState(
   rows: ShippingZoneRowView[],
   diagnosticsState: DiagnosticsLoadState,
 ): { show: boolean; manualZoneCount: number } {
@@ -531,17 +551,24 @@ function postRemovalRecoveryState(
     summary.totalWilayas - manualZoneCount,
     Math.ceil(summary.totalWilayas * 0.8),
   );
-  const activeManagedRows = rows.filter(
-    (row) => row.status === "active" || row.status === "needs_update",
+  const activeManagedRows = rows.filter((row) =>
+    ["active", "needs_update", "updating"].includes(row.status),
   ).length;
+  const mostWilayasMissing = summary.missingWilayas >= missingThreshold;
+  const onlyManualRowsConfigured =
+    manualZoneCount > 0 && summary.configuredWilayas > 0 && rows.every(rowIsMissingOrProtected);
 
   return {
     show:
       summary.managedRegistryZoneCount === 0 &&
-      summary.missingWilayas >= missingThreshold &&
+      (mostWilayasMissing || onlyManualRowsConfigured) &&
       activeManagedRows === 0,
     manualZoneCount,
   };
+}
+
+function rowIsMissingOrProtected(row: ShippingZoneRowView): boolean {
+  return row.status === "missing" || row.status === "protected" || row.status === "not_managed";
 }
 
 function postApplyVerificationFromChanges(

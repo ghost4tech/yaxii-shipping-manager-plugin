@@ -91,7 +91,15 @@ Removal requires typed confirmation:
 REMOVE YAXII SETUP
 ```
 
-The UI repeats:
+The simplified Settings UI asks the merchant to type:
+
+```text
+REMOVE
+```
+
+The client maps that visible confirmation to the backend-required `REMOVE YAXII SETUP` value when it sends the trusted request. The backend confirmation contract is unchanged.
+
+The visible UI repeats:
 
 - `This removes only Yaxii-managed WooCommerce zones and methods.`
 - `Manual WooCommerce zones will not be touched.`
@@ -133,8 +141,9 @@ The removal engine:
 
 After confirmed removal, the plugin does not automatically recreate setup. Shipping Zones and Generator guide the merchant back into the existing preview/apply flow:
 
-- Shipping Zones shows `No Yaxii shipping setup found` when the managed registry is empty and most wilayas are missing.
-- `Create setup` opens Generator.
+- Shipping Zones shows `No shipping setup yet` when the managed registry is empty, no active managed rows exist, and most or all wilayas are missing.
+- The full wilaya table is collapsed behind `View all wilayas`.
+- `Generate shipping zones` opens Generator.
 - protected manual WooCommerce zones remain visible for inspection and are not edited.
 - repair/create actions still go through Preview and Safe Apply.
 

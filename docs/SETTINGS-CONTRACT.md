@@ -91,41 +91,45 @@ Settings includes an `Advanced tools` section.
 The first tool is:
 
 ```text
-Remove Yaxii-managed setup
+Remove Yaxii setup
 ```
 
 The visible action is:
 
 ```text
-Preview removal
+Remove Yaxii setup
 ```
 
-This action calls:
+Settings checks the removal preview endpoint so it can show `No Yaxii setup found.` when there is nothing Yaxii-managed to remove.
+
+Opening the confirmation modal, or refreshing the tool status, calls:
 
 ```text
 GET /wp-json/yaxii-shipping-manager/v1/managed-setup/removal-preview
 ```
 
-The preview shows:
+The main UI shows only:
 
-- Yaxii-managed zones found
-- Yaxii-managed methods found
+- Yaxii-managed zones to remove
 - manual zones protected
-- registry warnings when the registry references missing WooCommerce zones or methods
-- blocked zones when a managed zone has unsafe state
-- the required confirmation text, `REMOVE YAXII SETUP`
+- warnings/blockers
 
-The UI must show:
+Detailed candidates, warnings, blockers, protected manual zones, and method records are hidden under:
 
 ```text
-This is a dry run. Nothing was deleted.
+View technical details
 ```
 
-When the preview has removable Yaxii-managed candidates and no blockers, the UI shows a dangerous confirmation area. The user must type:
+The modal copy is:
 
 ```text
-REMOVE YAXII SETUP
+Remove Yaxii setup?
+This removes only Yaxii-managed WooCommerce shipping zones and methods. Manual WooCommerce zones will not be touched.
+This cannot be undone from Yaxii.
+Use this only for testing, cleanup, or starting over.
 ```
+
+When the preview has removable Yaxii-managed candidates and no blockers, the user must type `REMOVE`. The client maps that visible confirmation to the backend-required `REMOVE YAXII SETUP` value when sending the request.
 
 The confirmed action calls:
 
@@ -141,8 +145,9 @@ The UI copy must say:
 - `Manual WooCommerce zones will not be touched.`
 - `This cannot be undone from Yaxii.`
 - `Use this only for testing, cleanup, or starting over.`
+- `Yaxii setup removed. Manual WooCommerce zones were not touched.`
 
-If blockers exist, no remove button is shown. Manual zones remain protected and are never candidates.
+If blockers exist, no confirm removal button is shown. The UI says `Yaxii setup cannot be safely removed yet.` and exposes blocker data only inside `View technical details`. Manual zones remain protected and are never candidates.
 
 ## Dataset Modes
 
