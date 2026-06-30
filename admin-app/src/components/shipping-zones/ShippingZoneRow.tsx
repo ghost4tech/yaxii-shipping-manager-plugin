@@ -10,7 +10,7 @@ import { ShippingPriceCell } from "./ShippingPriceCell";
 import { ShippingZoneDetails } from "./ShippingZoneDetails";
 import { StatusBadge } from "./StatusBadge";
 
-const DESKTOP_GRID = "lg:grid-cols-[36px_1.2fr_130px_minmax(280px,2fr)_150px_44px]";
+const DESKTOP_GRID = "lg:grid-cols-[36px_1.1fr_120px_minmax(280px,2fr)_minmax(190px,auto)_44px]";
 
 export function ShippingZoneRow({
   row,
@@ -147,15 +147,35 @@ function RowActions({
   const canToggle = row.methods.some((method) => method.canToggleStatus);
 
   return (
-    <div className="flex items-center justify-end gap-1.5">
+    <div className="flex flex-nowrap items-center justify-end gap-1.5">
       {row.canRepair && (
         <button
           type="button"
           onClick={onRepairSetup}
-          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2 text-xs font-medium text-primary hover:border-primary/40 hover:bg-primary/15"
+          className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-primary/25 bg-primary/10 px-2 text-xs font-medium text-primary hover:border-primary/40 hover:bg-primary/15"
         >
           <Wrench className="h-3.5 w-3.5" />
           Repair setup
+        </button>
+      )}
+      {contextualAction === "generator" && !row.canRepair && (
+        <button
+          type="button"
+          onClick={onLaunchWizard}
+          className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+        >
+          <Wrench className="h-3.5 w-3.5" />
+          Generator
+        </button>
+      )}
+      {contextualAction === "diagnostics" && (
+        <button
+          type="button"
+          onClick={onOpenDiagnostics}
+          className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
+        >
+          <Activity className="h-3.5 w-3.5" />
+          Diagnostics
         </button>
       )}
       <Switch
@@ -176,35 +196,17 @@ function RowActions({
           <RotateCcw className="h-3.5 w-3.5" />
         </button>
       )}
-      {contextualAction === "generator" && !row.canRepair && (
-        <button
-          type="button"
-          onClick={onLaunchWizard}
-          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
-        >
-          <Wrench className="h-3.5 w-3.5" />
-          Open Generator
-        </button>
-      )}
-      {contextualAction === "diagnostics" && (
-        <button
-          type="button"
-          onClick={onOpenDiagnostics}
-          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
-        >
-          <Activity className="h-3.5 w-3.5" />
-          Check diagnostics
-        </button>
-      )}
     </div>
   );
 }
 
 export function ShippingZoneTableHeader({
   allSelected,
+  methodLabels,
   onSelectAll,
 }: {
   allSelected: boolean;
+  methodLabels: Array<{ key: ShippingMethodKey; label: string }>;
   onSelectAll: (selected: boolean) => void;
 }) {
   return (
@@ -219,7 +221,13 @@ export function ShippingZoneTableHeader({
       </div>
       <div>Wilaya</div>
       <div>Status</div>
-      <div>Methods</div>
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {methodLabels.map((method) => (
+          <span key={method.key} className="truncate">
+            {method.label}
+          </span>
+        ))}
+      </div>
       <div className="text-right">Active</div>
       <div />
     </div>

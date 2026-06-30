@@ -43,9 +43,18 @@ export function ShippingZonesTable({
   onRepairSetup: (row: ShippingZoneRowView) => void;
   onClearSearch: () => void;
 }) {
+  const headerMethods = rows[0]?.methods.map((method) => ({
+    key: method.key,
+    label: method.label,
+  }));
+
   return (
     <div className="mt-4 overflow-hidden rounded-md border border-border bg-card">
-      <ShippingZoneTableHeader allSelected={allSelected} onSelectAll={onSelectAll} />
+      <ShippingZoneTableHeader
+        allSelected={allSelected}
+        methodLabels={headerMethods ?? []}
+        onSelectAll={onSelectAll}
+      />
       {rows.length === 0 ? (
         <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
