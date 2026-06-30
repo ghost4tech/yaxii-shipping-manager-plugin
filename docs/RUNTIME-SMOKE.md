@@ -6,10 +6,10 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 
 1. Open `wp-admin/admin.php?page=yaxii-shipping-manager` as an administrator.
 2. Confirm the plugin admin page loads without console errors.
-3. Confirm the main navigation shows only `Shipping Zones`, `Generator`, `Diagnostics`, and `Settings`.
+3. Confirm the main navigation shows only `Shipping Editor`, `Generator`, `Diagnostics`, and `Settings`.
 4. Confirm `Import / Export` and `Smart Form Sync` are not visible in the top navigation.
-5. Confirm Shipping Zones shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices and method enabled status.
-6. Confirm Shipping Zones no longer shows bare `Protected`; manual/unknown rows use `Manual zone` or `Not managed by Yaxii`.
+5. Confirm Shipping Editor shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices and method enabled status.
+6. Confirm Shipping Editor no longer shows bare `Protected`; manual/unknown rows use `Manual zone` or `Not managed by Yaxii`.
 7. Confirm a successful price or status apply shows `Updating...` for affected rows while diagnostics refreshes, not stale `Needs update`.
 8. Open the generator.
 9. Confirm the wizard uses seven steps: Start, Coverage, Methods, Prices, Names, Preview, Generate.
@@ -28,7 +28,7 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 19. Confirm Names says existing WooCommerce zone names are not changed in this release.
 20. Confirm final preview auto-runs and shows safety copy inline.
 21. Confirm Preview-only mode stops at Preview with no Generate/apply controls.
-22. Confirm no-op previews show `Setup already matches this selection` and offer `Open Shipping Zones`.
+22. Confirm no-op previews show `Setup already matches this selection` and offer `Open Shipping Editor`.
 23. Confirm Settings is titled `Defaults for future setup`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
 
 ### TASK-012E Generator State and No-op Smoke
@@ -36,13 +36,13 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 Expected:
 
 - A fully managed setup shows `Your shipping setup is already active`.
-- The fully managed primary action opens Shipping Zones.
+- The fully managed primary action opens Shipping Editor.
 - `Modify setup anyway` allows continuing into Coverage and warns that existing setup was found.
 - Fresh/no setup shows `Create a new shipping setup` with `Start setup`.
 - Missing setup shows `Repair missing setup` with `Repair setup`.
 - Manual conflicts show `Manual zones need review`, `Review Diagnostics`, and `Open WooCommerce zones`.
 - Repair mode preselects only missing or method-incomplete managed wilayas.
-- Repair mode with no missing setup says `No repair needed` and offers `Open Shipping Zones`.
+- Repair mode with no missing setup says `No repair needed` and offers `Open Shipping Editor`.
 - `Preview only` is a small secondary support option and stops at Preview.
 - No-op Preview says `Setup already matches this selection`.
 - No-op Generate says `No setup changes needed` and does not show a Generate button.
@@ -84,10 +84,10 @@ Expected:
 
 Expected:
 
-- Shipping Zones shows `No shipping setup yet` when the managed registry is empty, no active managed rows exist, and most or all wilayas are missing.
+- Shipping Editor shows `No shipping setup yet` when the managed registry is empty, no active managed rows exist, and most or all wilayas are missing.
 - The full wilaya table is hidden until `View all wilayas` is clicked.
 - `Generate shipping zones` opens Generator in the create setup flow.
-- If protected manual WooCommerce zones exist, Shipping Zones shows protected manual-zone copy.
+- If protected manual WooCommerce zones exist, Shipping Editor shows protected manual-zone copy.
 - If no manual WooCommerce zones exist, no manual-zone warning is shown.
 - Settings `Advanced tools` says `No Yaxii setup found.` when no Yaxii-managed setup exists.
 - When Yaxii-managed setup exists, `Remove Yaxii setup` opens a confirmation modal.
@@ -140,10 +140,10 @@ Expected result:
 - `Refresh diagnostics` reloads diagnostics without writing to WooCommerce.
 - `Advanced details for support` is collapsed by default.
 - Opening advanced details shows full wilaya coverage, WooCommerce zone data, zone IDs, ownership hints, raw warnings, generated timestamp, and method counts.
-- `Open Shipping Zones` navigates to the Shipping Zones tab.
+- `Open Shipping Editor` navigates to the Shipping Editor tab.
 - `Open Generator` navigates to the Generator tab.
 - `Open WooCommerce zones` opens WooCommerce shipping settings in a new tab.
-- Issue cards with warnings/failures show direct actions such as `Open Shipping Zones` or `Open WooCommerce zones`.
+- Issue cards with warnings/failures show direct actions such as `Open Shipping Editor` or `Open WooCommerce zones`.
 
 TASK-011B local smoke result:
 
@@ -153,7 +153,7 @@ TASK-011B local smoke result:
 - The recommended next action used frontend-derived, merchant-facing text from real diagnostics state: `Review the warning, then use Generator preview before applying changes.`
 - `Refresh diagnostics` completed and remained on the health-check view.
 - `Advanced details for support` was collapsed by default and opened to show the full wilaya coverage/support table.
-- `Open Shipping Zones` navigated to the Shipping Zones tab.
+- `Open Shipping Editor` navigated to the Shipping Editor tab.
 - `Open Generator` required keyboard activation in agent-browser and navigated to the Generator tab.
 - `Open WooCommerce zones` opened `admin.php?page=wc-settings&tab=shipping` in a new tab.
 - In-process REST smoke for `GET /wp-json/yaxii-shipping-manager/v1/diagnostics` returned `woocommerceActive=true`, `configuredWilayas=69`, `missingWilayas=0`, `duplicateConflictCount=0`, `zonesWithoutMethods=0`, and `checkoutFallbackRisk=low`.
@@ -188,11 +188,11 @@ TASK-011C feedback-pass local smoke result:
 - The `Generate setup` button was not pressed in browser smoke because it calls the real backend write path.
 - No WooCommerce write action was performed during the feedback-pass smoke.
 
-## Shipping Zones Table Smoke
+## Shipping Editor Table Smoke
 
 Expected result:
 
-- The table-centered Shipping Zones page shows active managed rows when diagnostics are low-risk and Yaxii-managed zones/methods are present.
+- The table-centered Shipping Editor page shows active managed rows when diagnostics are low-risk and Yaxii-managed zones/methods are present.
 - Each row shows live WooCommerce status from diagnostics, not only local draft state.
 - Technical zone and ownership details are hidden until row details are opened.
 - Home and office price inputs show the live WooCommerce cost when the method is registry-owned.
@@ -273,7 +273,7 @@ Use a disposable LocalWP store where a Yaxii-managed wilaya zone or required man
 
 Expected result:
 
-- Shipping Zones shows the affected wilaya as `Missing setup`.
+- Shipping Editor shows the affected wilaya as `Missing setup`.
 - Price inputs stay disabled for that row.
 - `Repair setup` or `Repair selected` opens a repair dialog.
 - The repair dialog says manual zones will not be touched.
@@ -299,7 +299,7 @@ TASK-010C local smoke result:
 TASK-010D local smoke result:
 
 - Browser automation authenticated into `wp-admin` with a temporary administrator user that was deleted after smoke.
-- Shipping Zones rendered the reference-aligned page with the compact status card, filters, selected-row quick tools, inline free-shipping switches, read-only enable-state switches, row action menus, hidden details, and sticky pending bar.
+- Shipping Editor rendered the reference-aligned page with the compact status card, filters, selected-row quick tools, inline free-shipping switches, read-only enable-state switches, row action menus, hidden details, and sticky pending bar.
 - Selected-row quick tools appeared only after selecting rows and supported Home, Office, Both, Set price, Make free, Clear selection, and Review changes.
 - A bulk pending price action created pending changes without writing to WooCommerce; the pending changes were discarded successfully.
 - Chlef Home delivery was changed from `700` to `701` through the review dialog and existing preview/apply flow.
@@ -309,7 +309,7 @@ TASK-010D local smoke result:
 TASK-010E local smoke result:
 
 - Browser automation authenticated into `wp-admin` with a temporary administrator user that was deleted after smoke.
-- Shipping Zones rendered without per-cell free-shipping toggles.
+- Shipping Editor rendered without per-cell free-shipping toggles.
 - Selected-row quick tools appeared after selecting Adrar and included Home, Office, Both, Set price, Change by %, Add / subtract, Round to, Make free, Copy Home -> Office, Copy Office -> Home, Discard pending, disabled Enable, and disabled Disable.
 - Keyboard activation was required for quick-tool buttons in `agent-browser`; pointer clicks did not reliably activate toolbar buttons in this smoke session.
 - `Make free` created a pending price `0` change through the selected-row quick tools.
@@ -320,7 +320,7 @@ TASK-010E local smoke result:
 TASK-010G local smoke result:
 
 - Browser automation authenticated into `wp-admin` with a temporary administrator user that was deleted after smoke.
-- Shipping Zones rendered method-level Home/Office enabled switches and row-level wilaya enabled switches.
+- Shipping Editor rendered method-level Home/Office enabled switches and row-level wilaya enabled switches.
 - The 3-dot row action menu was absent from the visible row action area.
 - Adrar rendered live Home delivery `700` and Office delivery `400`.
 - Keyboard activation selected Adrar and revealed the selected-row quick tools, including Home, Office, Both, Set price, Make free, Copy Home -> Office, Copy Office -> Home, Discard pending, Enable, Disable, and Review changes.
@@ -336,7 +336,7 @@ TASK-010G local smoke result:
 TASK-011E local smoke result:
 
 - Browser automation authenticated into `wp-admin` as the local `dev` administrator.
-- Shipping Zones rendered the table with Home delivery, Office delivery, and `Custom method 1` price inputs for managed wilayas.
+- Shipping Editor rendered the table with Home delivery, Office delivery, and `Custom method 1` price inputs for managed wilayas.
 - Chlef rendered Home delivery `700`, Office delivery `400`, and `Custom method 1` `450`.
 - The persisted plugin settings still had `custom_1` and `custom_2` disabled, which reproduced the original display gap.
 - A read-only WP-CLI settings check found 68 WooCommerce flat-rate option rows titled `Custom method 1`.
@@ -370,4 +370,10 @@ TASK-009B local smoke result:
 - CSV import/export backend is not implemented.
 - Commune-specific pricing is not implemented.
 - Provider import and YSF sync are not implemented.
-- Shipping Zones price/free edits are pending changes; WooCommerce writes go through preview/apply only.
+- Shipping Editor price/free edits are pending changes; WooCommerce writes go through preview/apply only.
+
+## Generator Return Refresh Smoke
+
+- Generate a supported setup from Generator.
+- Click `Return to shipping editor`.
+- Confirm Shipping Editor reloads diagnostics and shows the generated managed setup without a browser refresh.

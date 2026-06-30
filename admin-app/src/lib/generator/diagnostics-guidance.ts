@@ -58,7 +58,7 @@ export function generatorStartGuidance(diagnostics?: DiagnosticsResponse): Gener
       state: "setup_active",
       title: "Your shipping setup is already active",
       message:
-        "Yaxii-managed zones and methods already exist. Use Shipping Zones to change prices or enable/disable methods.",
+        "Yaxii-managed zones and methods already exist. Use Shipping Editor to change prices or enable/disable methods.",
       manualProtectedZoneCount,
     };
   }

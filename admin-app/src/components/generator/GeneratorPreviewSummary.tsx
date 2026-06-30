@@ -47,7 +47,7 @@ export function GeneratorPreviewSummary({
           <CheckCircle2 className="h-4 w-4 text-emerald-700" />
           <AlertTitle className="text-emerald-900">Setup already matches this selection</AlertTitle>
           <AlertDescription className="text-emerald-800/90">
-            No setup changes are needed. Use Shipping Zones for daily price changes.
+            No setup changes are needed. Use Shipping Editor for daily price changes.
           </AlertDescription>
         </Alert>
       )}

@@ -4,7 +4,7 @@
 
 The Generator is a setup and repair assistant for WooCommerce shipping zones. It prepares a draft, runs the real preview planner, and calls the safe apply endpoint only from the Generate step when the preview supports work.
 
-Shipping Zones remains the daily management center for live price and method-status changes.
+Shipping Editor remains the daily management center for live price and method-status changes.
 
 ## Current MVP Flow
 
@@ -41,7 +41,7 @@ State actions:
 - Fresh setup shows `Start setup` and defaults to all wilayas in the selected dataset.
 - After Yaxii-managed setup removal, an empty managed registry plus mostly missing wilayas shows `Create a new Yaxii setup`, even if protected manual WooCommerce zones remain.
 - Repair setup shows `Repair setup` and preselects only missing or method-incomplete managed wilayas.
-- Fully active setup shows `Open Shipping Zones` as the primary action and `Modify setup anyway` as the secondary action.
+- Fully active setup shows `Open Shipping Editor` as the primary action and `Modify setup anyway` as the secondary action.
 - Manual conflicts show `Review Diagnostics` and `Open WooCommerce zones`.
 - `Preview only` is a small advanced/support option with the copy `Review a plan without applying changes.`
 
@@ -55,7 +55,7 @@ When setup is already active, Start shows:
 
 ```text
 Your shipping setup is already active
-Yaxii-managed zones and methods already exist. Use Shipping Zones to change prices or enable/disable methods.
+Yaxii-managed zones and methods already exist. Use Shipping Editor to change prices or enable/disable methods.
 ```
 
 `Preview only` is for support or agency review. It stops at Preview with a `Done reviewing` action and does not show Generate/apply controls.
@@ -71,7 +71,7 @@ Manual WooCommerce zones exist and will be protected.
 
 The primary action remains `Start setup`. `Review manual zones` opens Diagnostics. Manual conflicts can still be skipped or blocked by Preview/Apply for selected wilayas, but a protected manual zone does not make the whole generator start screen unusable.
 
-When Shipping Zones is in the empty setup state, its `Generate shipping zones` action opens this same create setup path.
+When Shipping Editor is in the empty setup state, its `Generate shipping zones` action opens this same create setup path.
 
 ## Coverage
 
@@ -86,7 +86,7 @@ Legacy mode is generated from the current normalized dataset by filtering wilaya
 
 When `Repair existing setup` is selected, diagnostics preselects missing wilayas and managed zones with method gaps when that information is available. Manual/conflict rows are not selected for repair.
 
-If repair has no missing or incomplete managed setup, the wizard shows `No repair needed` and points merchants back to Shipping Zones.
+If repair has no missing or incomplete managed setup, the wizard shows `No repair needed` and points merchants back to Shipping Editor.
 
 When `Create new setup` is used while Yaxii-managed setup already exists, the wizard warns:
 
@@ -183,18 +183,20 @@ Generate is hidden or replaced with a no-op action when:
 - Conflicts block apply
 - Readiness is blocked
 
-If no work is needed, the wizard says `Setup already matches this selection` and offers `Open Shipping Zones`.
+If no work is needed, the wizard says `Setup already matches this selection` and offers `Open Shipping Editor`.
 
 The Generate step does not show a normal Generate button when the preview has no supported work. It shows:
 
 ```text
 No setup changes needed
-WooCommerce already matches this setup. Use Shipping Zones for daily price changes.
+WooCommerce already matches this setup. Use Shipping Editor for daily price changes.
 ```
 
 Actions:
 
-- `Open Shipping Zones`
+- `Open Shipping Editor`
+
+After a successful generate action, `Return to shipping editor` closes the wizard, opens Shipping Editor, and requests fresh diagnostics so the generated setup is visible without reloading the browser.
 - `Back to edit setup`
 
 If the preview contains only unsupported work such as existing zone-name updates, the Generate step says:

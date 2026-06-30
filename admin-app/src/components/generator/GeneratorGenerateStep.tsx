@@ -234,7 +234,7 @@ function BlockedActions({
     return (
       <div className="mt-6 flex flex-col items-center gap-2">
         <Button type="button" size="lg" onClick={onOpenShippingZones}>
-          Open Shipping Zones
+          Open Shipping Editor
         </Button>
         <Button type="button" variant="outline" size="lg" onClick={onBackToEditor}>
           Back to edit setup
@@ -361,7 +361,7 @@ function generateMessage(
 
   if (!canGenerate) {
     if (finalStatus === "setup_already_matches") {
-      return "WooCommerce already matches this setup. Use Shipping Zones for daily price changes.";
+      return "WooCommerce already matches this setup. Use Shipping Editor for daily price changes.";
     }
 
     return finalStatusMessage(response, finalStatus);

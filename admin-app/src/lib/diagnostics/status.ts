@@ -79,7 +79,7 @@ export function diagnosticsRecommendedAction(
     return "Review the warning, then use Generator preview before applying changes.";
   }
 
-  return "No blocking setup issue was found. Use Shipping Zones for managed prices or Generator for setup previews.";
+  return "No blocking setup issue was found. Use Shipping Editor for managed prices or Generator for setup previews.";
 }
 
 export function protectedManualZoneCount(zones: ZoneDiagnostic[]): number {
@@ -130,7 +130,7 @@ function missingSetupHealthCheck(response: DiagnosticsResponse): DiagnosticsHeal
         : `${missingCount} records need setup review or repair.`,
     status: missingCount === 0 ? "ok" : "warn",
     action: missingCount === 0 ? undefined : "shipping_zones",
-    actionLabel: missingCount === 0 ? undefined : "Open Shipping Zones",
+    actionLabel: missingCount === 0 ? undefined : "Open Shipping Editor",
   };
 }
 
@@ -174,7 +174,7 @@ function methodIssuesHealthCheck(methodIssueCount: number): DiagnosticsHealthChe
         : `${methodIssueCount} zones have missing, disabled, or incomplete method signals.`,
     status: methodIssueCount === 0 ? "ok" : "warn",
     action: methodIssueCount === 0 ? undefined : "shipping_zones",
-    actionLabel: methodIssueCount === 0 ? undefined : "Open Shipping Zones",
+    actionLabel: methodIssueCount === 0 ? undefined : "Open Shipping Editor",
   };
 }
 

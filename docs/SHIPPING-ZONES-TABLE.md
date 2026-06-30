@@ -1,6 +1,6 @@
-# Shipping Zones Management Center
+# Shipping Editor Management Center
 
-The Shipping Zones tab is a live status and supported-change management center.
+The Shipping Editor tab is a live status and supported-change management center.
 
 It is not a direct WooCommerce write surface. Supported writes still go through preview/apply and the existing `SafeApplyEngine`.
 
@@ -35,6 +35,8 @@ Generate Yaxii-managed WooCommerce shipping zones, then manage prices and method
 ```
 
 The primary action is `Generate shipping zones`. It opens Generator in the normal create setup flow.
+
+After Generator successfully applies a setup and the merchant returns to Shipping Editor, the app refreshes diagnostics so newly generated WooCommerce zones appear without requiring a browser refresh.
 
 The secondary action is `View all wilayas`. It reveals the full table for inspection and partial repair work.
 

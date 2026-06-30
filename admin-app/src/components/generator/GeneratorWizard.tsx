@@ -854,11 +854,11 @@ function StepCoverage({
           <AlertTitle className="text-emerald-900">No repair needed</AlertTitle>
           <AlertDescription className="text-emerald-800/90">
             Diagnostics did not find missing managed zones or method gaps for this dataset. Use
-            Shipping Zones for daily price changes.
+            Shipping Editor for daily price changes.
           </AlertDescription>
           <div className="mt-3">
             <Button type="button" size="sm" onClick={onOpenShippingZones}>
-              Open Shipping Zones
+              Open Shipping Editor
             </Button>
           </div>
         </Alert>

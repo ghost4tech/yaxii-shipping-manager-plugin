@@ -82,7 +82,7 @@ Successful saves show:
 Defaults saved. Existing WooCommerce shipping zones were not changed.
 ```
 
-Method labels and default prices are future setup defaults. The UI directs merchants to Shipping Zones for live WooCommerce price updates. Naming controls also state that existing WooCommerce zone names are not changed by saving settings.
+Method labels and default prices are future setup defaults. The UI directs merchants to Shipping Editor for live WooCommerce price updates. Naming controls also state that existing WooCommerce zone names are not changed by saving settings.
 
 ## Advanced Tools
 

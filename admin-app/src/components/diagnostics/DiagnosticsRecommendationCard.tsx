@@ -30,7 +30,7 @@ export function DiagnosticsRecommendationCard({
       <CardContent className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={onOpenShippingZones}>
           <Package className="h-4 w-4" />
-          Open Shipping Zones
+          Open Shipping Editor
         </Button>
         <Button type="button" variant="outline" onClick={onOpenGenerator}>
           <Wand2 className="h-4 w-4" />

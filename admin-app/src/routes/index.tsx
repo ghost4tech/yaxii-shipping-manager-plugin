@@ -79,7 +79,7 @@ import { cn } from "@/lib/utils";
 const DEFAULT_METHOD_DEFS: MethodDef[] = enabledMethodDefs(DEFAULT_SHIPPING_METHOD_TEMPLATES);
 
 const TABS = [
-  { id: "zones", label: "Shipping Zones", icon: Package },
+  { id: "zones", label: "Shipping Editor", icon: Package },
   { id: "generator", label: "Generator", icon: Wand2 },
   { id: "diagnostics", label: "Diagnostics", icon: Activity },
   { id: "settings", label: "Settings", icon: SettingsIcon },
@@ -344,6 +344,7 @@ export default function AdminApp({
           onComplete={(next, defs) => {
             setWilayas(next);
             setMethodDefs(defs);
+            setDiagnosticsReloadKey((current) => current + 1);
             setWizardOpen(false);
             setTab("zones");
           }}
@@ -860,7 +861,7 @@ function SettingsForm({
           <Separator />
           <SettingRow
             label="Office method wording"
-            desc="Default label for future setup previews. Use Shipping Zones to update live WooCommerce prices."
+            desc="Default label for future setup previews. Use Shipping Editor to update live WooCommerce prices."
           >
             <Select
               value={draft.officeWordingMode}
@@ -893,7 +894,7 @@ function SettingsForm({
           </div>
           <Separator />
           <div className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-sm text-muted-foreground">
-            Use Shipping Zones to update live WooCommerce prices. These labels and default prices
+            Use Shipping Editor to update live WooCommerce prices. These labels and default prices
             are used for future setup previews.
           </div>
           <Separator />

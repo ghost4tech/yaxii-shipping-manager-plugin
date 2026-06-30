@@ -39,7 +39,7 @@ export function GeneratorStartStep({
       </div>
       <h3 className="text-2xl font-semibold tracking-tight">How would you like to start?</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Generator is for setup and repair. Use Shipping Zones for daily price changes.
+        Generator is for setup and repair. Use Shipping Editor for daily price changes.
       </p>
       <Card className="mt-5 border-primary/30 bg-primary/5">
         <CardContent className="p-4">
@@ -47,7 +47,7 @@ export function GeneratorStartStep({
             <div className="text-[11px] font-medium uppercase text-primary">Current setup</div>
             {guidance.state === "setup_active" && (
               <Badge variant="secondary" className="text-[10px]">
-                Daily changes live in Shipping Zones
+                Daily changes live in Shipping Editor
               </Badge>
             )}
           </div>
@@ -131,7 +131,7 @@ function StartActions({
     return (
       <div className="mt-4 flex flex-wrap gap-2">
         <Button type="button" onClick={onOpenShippingZones}>
-          Open Shipping Zones
+          Open Shipping Editor
         </Button>
         <Button type="button" variant="outline" onClick={() => startMode("fresh")}>
           Modify setup anyway
