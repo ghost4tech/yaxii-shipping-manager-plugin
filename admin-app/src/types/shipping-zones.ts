@@ -13,6 +13,8 @@ export type DiagnosticsLoadState =
 
 export type ShippingZoneStatus =
   | "active"
+  | "disabled"
+  | "partially_active"
   | "needs_update"
   | "updating"
   | "missing"

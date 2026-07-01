@@ -5,6 +5,7 @@ import type {
   LiveZoneSummary,
   PendingPriceMap,
   PendingStatusMap,
+  PostApplyMethodExpectation,
   PostApplyVerificationMap,
   ShippingZoneFilter,
   ShippingZoneMethodView,
@@ -13,6 +14,9 @@ import type {
   ShippingZoneStatus,
 } from "@/types/shipping-zones";
 import type { ZoneDiagnostic } from "@/types/diagnostics";
+
+type ExpectedMethodMap = Partial<Record<ShippingMethodKey, PostApplyMethodExpectation>>;
+type PostApplyStatusPhase = "verifying" | "verified" | "failed" | "mismatch";
 
 export const SHIPPING_ZONE_FILTERS: Array<{ key: ShippingZoneFilter; label: string }> = [
   { key: "all", label: "All" },
@@ -25,6 +29,8 @@ export const SHIPPING_ZONE_FILTERS: Array<{ key: ShippingZoneFilter; label: stri
 
 const STATUS_LABELS: Record<ShippingZoneStatus, string> = {
   active: "Active",
+  disabled: "Methods disabled",
+  partially_active: "Partially active",
   needs_update: "Needs update",
   updating: "Updating...",
   missing: "Missing setup",
@@ -49,22 +55,40 @@ export function buildShippingZoneRows(
   pendingPrices: PendingPriceMap,
   pendingStatuses: PendingStatusMap,
   postApplyVerification: PostApplyVerificationMap = {},
+  postApplyPhase?: PostApplyStatusPhase,
 ): ShippingZoneRowView[] {
   const displayMethodDefs = shippingZoneMethodDefs(methodDefs, diagnosticsState);
 
   return wilayas.map((wilaya) => {
+    const expectedMethods =
+      postApplyPhase === "mismatch" ? {} : (postApplyVerification[wilaya.code] ?? {});
     const liveZone = statusWithPostApplyVerification(
       wilaya.code,
       liveStatusForWilaya(wilaya, diagnosticsState, displayMethodDefs),
       postApplyVerification,
+      postApplyPhase,
     );
     const methods = displayMethodDefs.map((methodDef) =>
-      methodViewForRow(wilaya, methodDef, liveZone, pendingPrices, pendingStatuses),
+      methodViewForRow(
+        wilaya,
+        methodDef,
+        liveZone,
+        pendingPrices,
+        pendingStatuses,
+        expectedMethods,
+      ),
     );
     const home =
       methodByKey(methods, "home_delivery") ??
       methods[0] ??
-      methodViewForRow(wilaya, FALLBACK_HOME_METHOD, liveZone, pendingPrices, pendingStatuses);
+      methodViewForRow(
+        wilaya,
+        FALLBACK_HOME_METHOD,
+        liveZone,
+        pendingPrices,
+        pendingStatuses,
+        expectedMethods,
+      );
     const office = methodByKey(methods, "office_delivery") ?? methods[1] ?? home;
     const pendingMethodCount =
       Object.keys(pendingPrices[wilaya.code] ?? {}).length +
@@ -125,8 +149,12 @@ export function shippingZoneMethodDefs(
 
 export function shippingZoneStats(rows: ShippingZoneRowView[]): ShippingZoneStats {
   return {
-    activeWilayas: rows.filter((row) => row.status === "active" || row.status === "needs_update")
-      .length,
+    activeWilayas: rows.filter(
+      (row) =>
+        row.status === "active" ||
+        row.status === "partially_active" ||
+        row.status === "needs_update",
+    ).length,
     managedMethods: rows.reduce(
       (total, row) => total + row.methods.filter((method) => method.canEdit).length,
       0,
@@ -146,7 +174,9 @@ export function rowMatchesFilter(row: ShippingZoneRowView, filter: ShippingZoneF
   }
 
   if (filter === "active") {
-    return row.status === "active" || row.status === "needs_update";
+    return (
+      row.status === "active" || row.status === "partially_active" || row.status === "needs_update"
+    );
   }
 
   if (filter === "pending") {
@@ -252,10 +282,16 @@ function methodViewForRow(
   liveZone: LiveZoneSummary,
   pendingPrices: PendingPriceMap,
   pendingStatuses: PendingStatusMap,
+  expectedMethods: ExpectedMethodMap,
 ): ShippingZoneMethodView {
   const key = methodDef && isShippingMethodKey(methodDef.key) ? methodDef.key : "home_delivery";
-  const livePrice = livePriceForKey(liveZone, key);
-  const enabled = liveMethodEnabledForKey(liveZone, key);
+  const expected = expectedMethods[key];
+  const livePrice = hasExpectedField(expected, "price")
+    ? (expected.price ?? null)
+    : livePriceForKey(liveZone, key);
+  const enabled = hasExpectedField(expected, "enabled")
+    ? (expected.enabled ?? null)
+    : liveMethodEnabledForKey(liveZone, key);
   const canEdit = canEditManagedMethod(liveZone, key);
   const canToggleStatus = canToggleManagedMethod(liveZone, key);
 
@@ -278,6 +314,14 @@ function methodViewForRow(
 }
 
 function disabledReasonForStatus(status: ShippingZoneStatus): string {
+  if (status === "disabled") {
+    return "Disabled";
+  }
+
+  if (status === "partially_active") {
+    return "Partially active";
+  }
+
   if (status === "protected") {
     return "Manual zone";
   }
@@ -306,7 +350,7 @@ function disabledReasonForStatus(status: ShippingZoneStatus): string {
 }
 
 function canEditManagedMethod(liveZone: LiveZoneSummary, methodKey: ShippingMethodKey): boolean {
-  if (liveZone.status !== "active" && liveZone.status !== "needs_update") {
+  if (!managedMethodStatusAllowsEdits(liveZone.status)) {
     return false;
   }
 
@@ -318,7 +362,7 @@ function canEditManagedMethod(liveZone: LiveZoneSummary, methodKey: ShippingMeth
 }
 
 function canToggleManagedMethod(liveZone: LiveZoneSummary, methodKey: ShippingMethodKey): boolean {
-  if (liveZone.status !== "active" && liveZone.status !== "needs_update") {
+  if (!managedMethodStatusAllowsEdits(liveZone.status)) {
     return false;
   }
 
@@ -393,8 +437,17 @@ function liveStatusForWilaya(
     return { status: "missing", message: "Missing managed methods", zones };
   }
 
-  if (hasDraftPriceDifference(wilaya, zone, methodDefs)) {
-    return { status: "needs_update", message: "Saved defaults differ from WooCommerce", zones };
+  const enabledStates = managedMethodEnabledStates(zone, methodDefs);
+  const allMethodsDisabled =
+    enabledStates.length > 0 && enabledStates.every((enabled) => enabled === false);
+  const someMethodsDisabled = enabledStates.some((enabled) => enabled === false);
+
+  if (allMethodsDisabled) {
+    return { status: "disabled", message: "Managed methods are disabled", zones };
+  }
+
+  if (someMethodsDisabled) {
+    return { status: "partially_active", message: "Some managed methods are disabled", zones };
   }
 
   return { status: "active", message: "Managed by Yaxii", zones };
@@ -404,8 +457,21 @@ function statusWithPostApplyVerification(
   wilayaCode: string,
   liveZone: LiveZoneSummary,
   postApplyVerification: PostApplyVerificationMap,
+  postApplyPhase: PostApplyStatusPhase | undefined,
 ): LiveZoneSummary {
   if (!postApplyVerification[wilayaCode]) {
+    return liveZone;
+  }
+
+  if (postApplyPhase === "mismatch" && managedMethodStatusAllowsEdits(liveZone.status)) {
+    return {
+      status: "needs_update",
+      message: "WooCommerce still differs from the requested update.",
+      zones: liveZone.zones,
+    };
+  }
+
+  if (postApplyPhase !== "verifying") {
     return liveZone;
   }
 
@@ -416,24 +482,31 @@ function statusWithPostApplyVerification(
   };
 }
 
-function hasDraftPriceDifference(
-  wilaya: Wilaya,
-  zone: ZoneDiagnostic,
-  methodDefs: MethodDef[],
-): boolean {
-  return methodDefs.some((methodDef) => {
+function hasExpectedField<Key extends keyof PostApplyMethodExpectation>(
+  expected: PostApplyMethodExpectation | undefined,
+  key: Key,
+): expected is PostApplyMethodExpectation & Required<Pick<PostApplyMethodExpectation, Key>> {
+  return Boolean(expected) && Object.prototype.hasOwnProperty.call(expected, key);
+}
+
+function managedMethodEnabledStates(zone: ZoneDiagnostic, methodDefs: MethodDef[]): boolean[] {
+  return methodDefs.flatMap((methodDef) => {
     if (!isShippingMethodKey(methodDef.key)) {
-      return false;
+      return [];
     }
 
-    const draftMethod = wilaya.methods[methodDef.key];
     const liveMethod = liveMethodForKey(zone, methodDef.key);
-    if (!draftMethod || !liveMethod || !draftMethod.enabled) {
-      return false;
-    }
-
-    return normalizedPrice(draftMethod.price) !== normalizedPrice(liveMethod.cost);
+    return liveMethod ? [liveMethod.enabled] : [];
   });
+}
+
+function managedMethodStatusAllowsEdits(status: ShippingZoneStatus): boolean {
+  return (
+    status === "active" ||
+    status === "partially_active" ||
+    status === "disabled" ||
+    status === "needs_update"
+  );
 }
 
 function priceNumberFromCost(cost: string | null): number | null {
@@ -443,15 +516,6 @@ function priceNumberFromCost(cost: string | null): number | null {
 
   const price = Number(cost);
   return Number.isFinite(price) ? price : null;
-}
-
-function normalizedPrice(value: number | string | null | undefined): string {
-  if (value === null || value === undefined || value === "") {
-    return "";
-  }
-
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? String(numeric) : String(value);
 }
 
 function hasRequiredManagedMethods(zone: ZoneDiagnostic, methodDefs: MethodDef[]): boolean {

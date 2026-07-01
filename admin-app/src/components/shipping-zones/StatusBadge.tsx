@@ -8,6 +8,14 @@ const STATUS_STYLES: Record<ShippingZoneStatus, { label: string; className: stri
     label: "Active",
     className: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
+  disabled: {
+    label: "Methods disabled",
+    className: "border-slate-200 bg-slate-50 text-slate-700",
+  },
+  partially_active: {
+    label: "Partially active",
+    className: "border-sky-200 bg-sky-50 text-sky-700",
+  },
   needs_update: {
     label: "Needs update",
     className: "border-amber-200 bg-amber-50 text-amber-700",
@@ -58,6 +66,8 @@ export function StatusBadge({ status }: { status: ShippingZoneStatus }) {
       {(status === "checking" || status === "updating") && (
         <RefreshCw className="h-3 w-3 animate-spin" />
       )}
+      {status === "partially_active" && <Check className="h-3 w-3" />}
+      {status === "disabled" && <Lock className="h-3 w-3" />}
       {style.label}
     </span>
   );

@@ -287,5 +287,5 @@ function actionForRow(
 }
 
 function rowHasDisabledManagedMethod(row: ShippingZoneRowView): boolean {
-  return row.methods.some((method) => method.enabled === false);
+  return row.status === "disabled" || row.methods.some((method) => method.enabled === false);
 }

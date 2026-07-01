@@ -77,6 +77,7 @@ import { parseOptionalPrice } from "@/lib/generator/pricing";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_METHOD_DEFS: MethodDef[] = enabledMethodDefs(DEFAULT_SHIPPING_METHOD_TEMPLATES);
+const APP_CONTAINER_CLASS = "mx-auto w-full max-w-[1240px] px-4 sm:px-6";
 
 const TABS = [
   { id: "zones", label: "Shipping Editor", icon: Package },
@@ -280,7 +281,7 @@ export default function AdminApp({
         launchDisabled={!datasetReady || !settingsReady}
       />
       <TopNav tab={tab} setTab={setTab} />
-      <main className="mx-auto w-full max-w-[1240px] px-6 pb-32 pt-8">
+      <main className={cn(APP_CONTAINER_CLASS, "pb-32 pt-8")}>
         <RuntimeNotices
           bootstrap={bootstrap}
           datasetState={datasetState}
@@ -329,7 +330,9 @@ export default function AdminApp({
           />
         )}
       </main>
-      <footer className="mx-auto max-w-5xl px-6 pb-10 text-center text-xs text-muted-foreground">
+      <footer
+        className={cn(APP_CONTAINER_CLASS, "pb-10 text-center text-xs text-muted-foreground")}
+      >
         Yaxii Shipping Manager - Preview first - Manual zones are protected
       </footer>
       <div id="yaxii-shipping-manager-admin-portal" />
@@ -483,7 +486,7 @@ function Header({
 }) {
   return (
     <header className="border-b border-border bg-card">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-6 py-8">
+      <div className={cn(APP_CONTAINER_CLASS, "flex flex-wrap items-center gap-4 py-8")}>
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <Package className="h-6 w-6" />
         </div>
@@ -505,7 +508,7 @@ function Header({
 function TopNav({ tab, setTab }: { tab: TabId; setTab: (tab: TabId) => void }) {
   return (
     <nav className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4">
+      <div className={cn(APP_CONTAINER_CLASS, "flex gap-1 overflow-x-auto")}>
         {TABS.map((item) => {
           const Icon = item.icon;
           const active = tab === item.id;

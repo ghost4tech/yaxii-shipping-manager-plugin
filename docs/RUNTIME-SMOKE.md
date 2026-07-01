@@ -11,25 +11,27 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 5. Confirm Shipping Editor shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices and method enabled status.
 6. Confirm Shipping Editor no longer shows bare `Protected`; manual/unknown rows use `Manual zone` or `Not managed by Yaxii`.
 7. Confirm a successful price or status apply shows `Updating...` for affected rows while diagnostics refreshes, not stale `Needs update`.
-8. Open the generator.
-9. Confirm the wizard uses seven steps: Start, Coverage, Methods, Prices, Names, Preview, Generate.
-10. Confirm Start shows a diagnostics-guided recommended path.
-11. Confirm setup modes are distinct:
+8. Confirm the app header, top navigation, and active page content share the same left and right container edges on Shipping Editor, Generator, Diagnostics, and Settings.
+9. Confirm the shared container remains full-width without horizontal overflow on mobile widths.
+10. Open the generator.
+11. Confirm the wizard uses seven steps: Start, Coverage, Methods, Prices, Names, Preview, Generate.
+12. Confirm Start shows a diagnostics-guided recommended path.
+13. Confirm setup modes are distinct:
    - Create new setup: selects all wilayas for the chosen dataset.
    - Repair existing setup: preselects missing managed zones or method gaps when diagnostics are available.
    - Preview only: runs preview but hides generate/apply.
-12. Confirm Coverage is second and does not show setup mode cards.
-13. Confirm the dataset selector offers `Current Algeria dataset` and `Legacy 58-compatible dataset`.
-14. Select legacy mode and confirm the selection count is based on the loaded legacy dataset.
-15. Confirm commune coverage is not a main step and is available only as collapsed reference information.
-16. Confirm Methods and Prices are separate steps.
-17. Confirm Methods controls enabled delivery methods and labels.
-18. Confirm Prices controls defaults and per-wilaya overrides, allows `0` for free shipping, and blocks invalid or negative prices.
-19. Confirm Names says existing WooCommerce zone names are not changed in this release.
-20. Confirm final preview auto-runs and shows safety copy inline.
-21. Confirm Preview-only mode stops at Preview with no Generate/apply controls.
-22. Confirm no-op previews show `Setup already matches this selection` and offer `Open Shipping Editor`.
-23. Confirm Settings is titled `Defaults for future setup`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
+14. Confirm Coverage is second and does not show setup mode cards.
+15. Confirm the dataset selector offers `Current Algeria dataset` and `Legacy 58-compatible dataset`.
+16. Select legacy mode and confirm the selection count is based on the loaded legacy dataset.
+17. Confirm commune coverage is not a main step and is available only as collapsed reference information.
+18. Confirm Methods and Prices are separate steps.
+19. Confirm Methods controls enabled delivery methods and labels.
+20. Confirm Prices controls defaults and per-wilaya overrides, allows `0` for free shipping, and blocks invalid or negative prices.
+21. Confirm Names says existing WooCommerce zone names are not changed in this release.
+22. Confirm final preview auto-runs and shows safety copy inline.
+23. Confirm Preview-only mode stops at Preview with no Generate/apply controls.
+24. Confirm no-op previews show `Setup already matches this selection` and offer `Open Shipping Editor`.
+25. Confirm Settings is titled `Defaults for future setup`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
 
 ### TASK-012E Generator State and No-op Smoke
 
@@ -200,6 +202,8 @@ Expected result:
 - The selected-row `Make free` quick tool sets managed pending prices to `0`; method cells display `Free` without a permanent per-cell free toggle.
 - Method cells do not show active enable/disable switches.
 - Disabled methods keep their price visible in a muted state with a `Disabled` badge.
+- A wilaya with all registry-owned managed methods disabled shows `Methods disabled`, not `Active`.
+- A wilaya with mixed enabled and disabled registry-owned managed methods shows `Partially active`, not fully active.
 - The row-level switch disables or enables all existing Yaxii-managed methods for that wilaya; it does not delete the WooCommerce zone.
 - Selected-row quick tools can bulk-enable or bulk-disable selected registry-owned methods.
 - `Save changes` or `Review` opens the focused review dialog for price and status changes.

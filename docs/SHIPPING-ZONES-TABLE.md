@@ -18,7 +18,7 @@ The page shows:
 - filters for all, active, pending changes, needs update, missing setup, and manual/not-managed rows
 - whether a direct WooCommerce zone exists for the wilaya
 - whether the zone is recorded in the Yaxii managed registry
-- simple row status such as `Active`, `Missing setup`, `Needs update`, `Updating...`, `Conflict detected`, `Manual zone`, or `Not managed by Yaxii`
+- simple row status such as `Active`, `Partially active`, `Methods disabled`, `Missing setup`, `Needs update`, `Updating...`, `Conflict detected`, `Manual zone`, or `Not managed by Yaxii`
 - home and office live flat-rate method prices when the methods are registry-owned
 - technical zone and ownership details only after the merchant opens row details
 - a `Repair setup` action when a row is missing its Yaxii-managed WooCommerce setup
@@ -82,7 +82,7 @@ After a successful apply, affected wilaya/method rows show `Updating...` while d
 Update sent, but verification failed. Refresh diagnostics.
 ```
 
-If refreshed diagnostics still differs from the requested change, the row returns to `Needs update` and the merchant can review the change again.
+If refreshed diagnostics confirms the requested value, the row returns to its current managed status without falling back to a stale default-vs-live `Needs update` label for that applied method. If refreshed diagnostics still differs from the requested change, the row returns to `Needs update` and the merchant can review the change again.
 
 The review dialog shows only:
 
@@ -97,6 +97,14 @@ It does not show preview hashes, contract versions, zone IDs, method instance ID
 Free shipping is represented as price `0`. Method cells display `Free` and old price -> `Free` when pending, but they do not show a permanent per-cell free toggle. Merchants use the selected-row quick tools for bulk free-shipping changes.
 
 Enable/disable changes are represented as method status changes, not deletes. Method cells do not show active enable/disable switches; disabled methods keep their price visible in a muted state with a `Disabled` badge. Merchants enable or disable methods from the selected-row quick tools, or disable the whole wilaya with the row-level active control. A disabled method instance remains in WooCommerce with its stored price and registry record intact. Pending method status changes display as `Enabled -> Disabled` or `Disabled -> Enabled` and are written only after preview/apply revalidates the managed zone and method.
+
+Row status follows the managed method state:
+
+- all registry-owned managed methods enabled and prices aligned: `Active`
+- all registry-owned managed methods disabled: `Methods disabled`
+- mixed enabled and disabled registry-owned managed methods: `Partially active`
+
+Disabled methods are not treated as missing setup and do not imply a price update unless a supported pending or verified saved price difference is present on an enabled managed method.
 
 ## Missing Setup Repair
 

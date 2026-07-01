@@ -47,6 +47,7 @@ type BulkTarget = ShippingMethodKey | "all";
 type PostApplyVerificationState = {
   expected: PostApplyVerificationMap;
   refreshStarted: boolean;
+  phase: "verifying" | "verified" | "failed" | "mismatch";
 };
 
 export function ShippingZonesPage({
@@ -88,6 +89,7 @@ export function ShippingZonesPage({
         pendingPrices,
         pendingStatuses,
         postApplyVerification?.expected,
+        postApplyVerification?.phase,
       ),
     [
       diagnosticsState,
@@ -135,7 +137,7 @@ export function ShippingZonesPage({
   const repairContext = repairContextFromRows(repairRows, displayMethodDefs);
 
   useEffect(() => {
-    if (!postApplyVerification) {
+    if (!postApplyVerification || postApplyVerification.phase !== "verifying") {
       return;
     }
 
@@ -154,18 +156,27 @@ export function ShippingZonesPage({
     }
 
     if (diagnosticsState.status === "error") {
-      setPostApplyVerification(null);
+      setPostApplyVerification({
+        ...postApplyVerification,
+        phase: "failed",
+      });
       setVerificationWarning("Update sent, but verification failed. Refresh diagnostics.");
       return;
     }
 
     if (postApplyMatchesDiagnostics(postApplyVerification.expected, diagnosticsState)) {
-      setPostApplyVerification(null);
+      setPostApplyVerification({
+        ...postApplyVerification,
+        phase: "verified",
+      });
       setVerificationWarning(null);
       return;
     }
 
-    setPostApplyVerification(null);
+    setPostApplyVerification({
+      ...postApplyVerification,
+      phase: "mismatch",
+    });
     setVerificationWarning("Update sent, but WooCommerce still differs. Review changes.");
   }, [diagnosticsState, postApplyVerification]);
 
@@ -349,7 +360,9 @@ export function ShippingZonesPage({
   const handleChangesApplied = () => {
     const expected = postApplyVerificationFromChanges(changes);
     setPostApplyVerification(
-      Object.keys(expected).length > 0 ? { expected, refreshStarted: false } : null,
+      Object.keys(expected).length > 0
+        ? { expected, refreshStarted: false, phase: "verifying" }
+        : null,
     );
     setVerificationWarning(null);
     setPendingPrices({});
@@ -552,7 +565,7 @@ function emptySetupViewState(
     Math.ceil(summary.totalWilayas * 0.8),
   );
   const activeManagedRows = rows.filter((row) =>
-    ["active", "needs_update", "updating"].includes(row.status),
+    ["active", "partially_active", "disabled", "needs_update", "updating"].includes(row.status),
   ).length;
   const mostWilayasMissing = summary.missingWilayas >= missingThreshold;
   const onlyManualRowsConfigured =
