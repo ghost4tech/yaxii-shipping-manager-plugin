@@ -761,7 +761,6 @@ function StepCoverage({
   existingManagedSetup: boolean;
   onOpenShippingZones: () => void;
 }) {
-  const allSelected = selectedCodes.length === baseList.length;
   const toggle = (code: string) => {
     setSelectedCodes(
       selectedCodeSet.has(code)
@@ -800,12 +799,13 @@ function StepCoverage({
               )}
             >
               <RadioGroupItem value={option.mode} className="sr-only" />
-              {option.mode === "current"
-                ? `Current dataset (${baseList.length} wilayas)`
-                : `${option.label} (${baseList.length} wilayas)`}
+              {option.mode === "current" ? "Current dataset" : option.label}
             </label>
           ))}
         </RadioGroup>
+        <Badge variant="secondary" className="text-[11px]">
+          {baseList.length} wilayas available
+        </Badge>
         <Badge variant="outline" className="text-[11px]">
           {selectedCodes.length}/{baseList.length} selected
         </Badge>
@@ -832,8 +832,7 @@ function StepCoverage({
           <Info className="h-4 w-4 text-primary" />
           <AlertTitle>Legacy 58-compatible dataset</AlertTitle>
           <AlertDescription>
-            Derived from the user-verified first 58 records of the current normalized dataset.
-            Additional current dataset wilayas are not included in this mode.
+            Use this if your store still works with the older 58-wilaya setup.
           </AlertDescription>
         </Alert>
       )}
@@ -869,7 +868,7 @@ function StepCoverage({
           <Info className="h-4 w-4 text-primary" />
           <AlertTitle>Repair existing setup</AlertTitle>
           <AlertDescription>
-            Yaxii will repair missing managed zones or methods. Manual zones are not touched.
+            Recreate missing Yaxii zones or methods. Manual zones stay protected.
           </AlertDescription>
         </Alert>
       )}
@@ -894,15 +893,6 @@ function StepCoverage({
         <Button variant="outline" size="sm" onClick={() => setSelectedCodes([])}>
           Clear all
         </Button>
-        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-          <Checkbox
-            checked={allSelected}
-            onCheckedChange={(value) =>
-              setSelectedCodes(value ? baseList.map((wilaya) => wilaya.code) : [])
-            }
-          />
-          All wilayas
-        </label>
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -1820,7 +1810,7 @@ function setupModeBadgeLabel(mode: SetupMode): string {
 
 function setupModePreviewCopy(mode: SetupMode): string {
   if (mode === "continue") {
-    return "Yaxii will repair missing managed zones or methods. Manual zones are not touched.";
+    return "Recreate missing Yaxii zones or methods. Manual zones stay protected.";
   }
 
   if (mode === "preview") {

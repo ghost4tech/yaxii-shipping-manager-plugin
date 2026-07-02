@@ -25,7 +25,7 @@ export const DATASET_MODE_OPTIONS: DatasetModeOption[] = [
     mode: "legacy_58",
     label: "Legacy 58-compatible dataset",
     available: true,
-    reason: "Derived from the user-verified first 58 records of the current normalized dataset.",
+    reason: "Use this if your store still works with the older 58-wilaya setup.",
   },
 ];
 

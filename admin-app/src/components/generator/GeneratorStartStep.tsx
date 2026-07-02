@@ -86,7 +86,7 @@ export function GeneratorStartStep({
             onClick={() => setMode("continue")}
             icon={<FileEdit className="h-5 w-5" />}
             title="Repair existing setup"
-            desc="Fix missing Yaxii-managed zones or methods. Manual zones are not touched."
+            desc="Recreate missing Yaxii zones or methods. Manual zones stay protected."
           />
         </div>
       )}

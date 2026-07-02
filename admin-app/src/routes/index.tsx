@@ -508,7 +508,7 @@ function Header({
 function TopNav({ tab, setTab }: { tab: TabId; setTab: (tab: TabId) => void }) {
   return (
     <nav className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur">
-      <div className={cn(APP_CONTAINER_CLASS, "flex gap-1 overflow-x-auto")}>
+      <div className={cn(APP_CONTAINER_CLASS, "flex gap-1 overflow-x-auto overflow-y-hidden py-1")}>
         {TABS.map((item) => {
           const Icon = item.icon;
           const active = tab === item.id;
@@ -518,14 +518,14 @@ function TopNav({ tab, setTab }: { tab: TabId; setTab: (tab: TabId) => void }) {
               type="button"
               onClick={() => setTab(item.id)}
               className={cn(
-                "relative flex items-center gap-2 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors",
+                "relative flex items-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Icon className="h-4 w-4" />
               {item.label}
               {active && (
-                <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />
+                <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" />
               )}
             </button>
           );
@@ -1153,13 +1153,9 @@ function RemovalConfirmationDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <Alert className="border-amber-200 bg-amber-50 text-amber-950">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>This cannot be undone from Yaxii.</AlertTitle>
-            <AlertDescription>
-              Use this only for testing, cleanup, or starting over.
-            </AlertDescription>
-          </Alert>
+          <p className="text-sm text-muted-foreground">
+            You can generate a new Yaxii setup again later.
+          </p>
           {(previewState.status === "idle" || previewState.status === "loading") && (
             <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
               <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1201,7 +1197,7 @@ function RemovalConfirmationDialog({
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Yaxii setup cannot be safely removed yet.</AlertTitle>
                   <AlertDescription>
-                    Review the details before trying this cleanup again.
+                    Open technical details for the exact blockers.
                   </AlertDescription>
                 </Alert>
               ) : (

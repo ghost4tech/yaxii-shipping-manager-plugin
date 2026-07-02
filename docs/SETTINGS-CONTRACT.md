@@ -125,8 +125,7 @@ The modal copy is:
 ```text
 Remove Yaxii setup?
 This removes only Yaxii-managed WooCommerce shipping zones and methods. Manual WooCommerce zones will not be touched.
-This cannot be undone from Yaxii.
-Use this only for testing, cleanup, or starting over.
+You can generate a new Yaxii setup again later.
 ```
 
 When the preview has removable Yaxii-managed candidates and no blockers, the user must type `REMOVE`. The client maps that visible confirmation to the backend-required `REMOVE YAXII SETUP` value when sending the request.
@@ -143,8 +142,7 @@ The UI copy must say:
 
 - `This removes only Yaxii-managed WooCommerce zones and methods.`
 - `Manual WooCommerce zones will not be touched.`
-- `This cannot be undone from Yaxii.`
-- `Use this only for testing, cleanup, or starting over.`
+- `You can generate a new Yaxii setup again later.`
 - `Yaxii setup removed. Manual WooCommerce zones were not touched.`
 
 If blockers exist, no confirm removal button is shown. The UI says `Yaxii setup cannot be safely removed yet.` and exposes blocker data only inside `View technical details`. Manual zones remain protected and are never candidates.

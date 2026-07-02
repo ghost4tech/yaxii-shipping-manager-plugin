@@ -48,7 +48,7 @@ State actions:
 Choice copy:
 
 - `Create new setup`: `Create a new shipping setup for selected wilayas.`
-- `Repair existing setup`: `Fix missing Yaxii-managed zones or methods. Manual zones are not touched.`
+- `Repair existing setup`: `Recreate missing Yaxii zones or methods. Manual zones stay protected.`
 - `Preview only`: `Review a plan without applying changes.`
 
 When setup is already active, Start shows:
@@ -79,10 +79,12 @@ Coverage lets the merchant choose the dataset mode and selected wilayas.
 
 Supported dataset modes:
 
-- `Current Algeria dataset`
+- `Current dataset`
 - `Legacy 58-compatible dataset`
 
-Legacy mode is generated from the current normalized dataset by filtering wilaya codes `01` through `58`. Counts are derived from the loaded dataset response.
+Dataset option labels do not include counts. The selected dataset summary shows the loaded count, for example `69 wilayas available` or `58 wilayas available`.
+
+Legacy mode is generated from the current normalized dataset by filtering wilaya codes `01` through `58`. The UI may describe it as useful when a store still works with the older 58-wilaya setup.
 
 When `Repair existing setup` is selected, diagnostics preselects missing wilayas and managed zones with method gaps when that information is available. Manual/conflict rows are not selected for repair.
 

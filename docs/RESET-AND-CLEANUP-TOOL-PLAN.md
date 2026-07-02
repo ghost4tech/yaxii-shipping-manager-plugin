@@ -103,8 +103,7 @@ The visible UI repeats:
 
 - `This removes only Yaxii-managed WooCommerce zones and methods.`
 - `Manual WooCommerce zones will not be touched.`
-- `This cannot be undone from Yaxii.`
-- `Use this only for testing, cleanup, or starting over.`
+- `You can generate a new Yaxii setup again later.`
 
 ## Safety Rules
 

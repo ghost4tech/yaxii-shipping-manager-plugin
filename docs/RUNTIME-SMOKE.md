@@ -21,8 +21,8 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
    - Repair existing setup: preselects missing managed zones or method gaps when diagnostics are available.
    - Preview only: runs preview but hides generate/apply.
 14. Confirm Coverage is second and does not show setup mode cards.
-15. Confirm the dataset selector offers `Current Algeria dataset` and `Legacy 58-compatible dataset`.
-16. Select legacy mode and confirm the selection count is based on the loaded legacy dataset.
+15. Confirm the dataset selector offers `Current dataset` and `Legacy 58-compatible dataset` with no counts in the option labels.
+16. Select current and legacy modes and confirm only the selected dataset summary shows the loaded count.
 17. Confirm commune coverage is not a main step and is available only as collapsed reference information.
 18. Confirm Methods and Prices are separate steps.
 19. Confirm Methods controls enabled delivery methods and labels.
@@ -93,6 +93,7 @@ Expected:
 - If no manual WooCommerce zones exist, no manual-zone warning is shown.
 - Settings `Advanced tools` says `No Yaxii setup found.` when no Yaxii-managed setup exists.
 - When Yaxii-managed setup exists, `Remove Yaxii setup` opens a confirmation modal.
+- The confirmation modal says `This removes only Yaxii-managed WooCommerce shipping zones and methods.`, `Manual WooCommerce zones will not be touched.`, and `You can generate a new Yaxii setup again later.`
 - The confirmation modal asks the user to type `REMOVE`, not the backend confirmation string.
 - The modal shows only Yaxii-managed zones to remove, manual zones protected, and warnings/blockers counts by default.
 - `View technical details` contains candidate, blocker, warning, and protected manual-zone records.
