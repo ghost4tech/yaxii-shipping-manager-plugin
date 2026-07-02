@@ -13,6 +13,7 @@ build/
 assets/dist/
 app/.output/
 app/.vinxi/
+release/
 
 # Local environment files.
 .env
