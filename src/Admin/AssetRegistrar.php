@@ -104,7 +104,7 @@ final class AssetRegistrar {
 	 * @return array{file:string, css?:array<int,string>}|null
 	 */
 	private function manifest_entry(): ?array {
-		$manifest_path = YAXII_SHIPPING_MANAGER_PATH . 'assets/admin/.vite/manifest.json';
+		$manifest_path = YAXII_SHIPPING_MANAGER_PATH . 'assets/admin/manifest.json';
 
 		if ( ! file_exists( $manifest_path ) ) {
 			return null;

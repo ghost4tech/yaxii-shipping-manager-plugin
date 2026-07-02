@@ -40,7 +40,7 @@ export default defineConfig({
   build: {
     outDir: "../assets/admin",
     emptyOutDir: true,
-    manifest: true,
+    manifest: "manifest.json",
     sourcemap: false,
     rollupOptions: {
       input: "src/main.tsx",

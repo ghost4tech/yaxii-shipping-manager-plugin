@@ -16,6 +16,8 @@ Use `.distignore` when creating the release archive. The package must exclude de
 - local logs, temporary files, screenshots, coverage, and source maps
 - hidden Prettier and Git ignore files under `admin-app/`
 
+Keep exclusions root-scoped when they share names with runtime namespaces. In particular, the development-only root `tools/` folder is excluded as `/tools/`; do not exclude every directory named `tools`, because `src/Tools/` contains runtime PHP classes required during plugin activation.
+
 The runtime package should include:
 
 - `yaxii-shipping-manager.php`
@@ -32,9 +34,10 @@ The runtime package should include:
 
 1. From `admin-app/`, run `npm run build` when admin source or runtime assets changed.
 2. Confirm `assets/admin/` contains no source maps unless intentionally approved.
-3. From the plugin root, create the archive with a tool that honors `.distignore`.
-4. Extract the archive into a clean temporary folder.
-5. Run Plugin Check against the extracted package folder.
+3. Confirm `assets/admin/manifest.json` exists. The admin build manifest is intentionally non-hidden so the release package can exclude hidden files without breaking wp-admin asset loading.
+4. From the plugin root, create the archive with a tool that honors `.distignore`.
+5. Extract the archive into a clean temporary folder.
+6. Run Plugin Check against the extracted package folder.
 
 ## Package Smoke
 
@@ -48,6 +51,9 @@ Before release, scan the extracted package for:
 - no reference apps
 - no `node_modules`
 - no hidden Prettier files
+- `src/Tools/ManagedSetupRemovalPreview.php` exists
+- `src/Tools/ManagedSetupRemovalExecutor.php` exists
+- `assets/admin/manifest.json` exists
 - `readme.txt` exists
 - `languages/` exists
 - no source maps under `assets/admin`
