@@ -60,8 +60,6 @@ final class Plugin {
 		$apply                  = new ApplyController( $woocommerce_active, new ApplyRequestSanitizer(), $safe_apply_engine );
 		$managed_setup          = new ManagedSetupController( $woocommerce_active, $removal_preview, $removal_executor );
 
-		add_action( 'init', array( $this, 'load_textdomain' ) );
-
 		if ( is_admin() ) {
 			$admin_page = new AdminPage( $woocommerce_active );
 			$admin_page->register();
@@ -74,17 +72,6 @@ final class Plugin {
 
 		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller, $apply_controller, $apply, $managed_setup );
 		$routes->register();
-	}
-
-	/**
-	 * Load plugin translations.
-	 */
-	public function load_textdomain(): void {
-		load_plugin_textdomain(
-			'yaxii-shipping-manager',
-			false,
-			dirname( plugin_basename( YAXII_SHIPPING_MANAGER_FILE ) ) . '/languages'
-		);
 	}
 
 	/**

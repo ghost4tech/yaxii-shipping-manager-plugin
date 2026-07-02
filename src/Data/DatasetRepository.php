@@ -170,12 +170,12 @@ final class DatasetRepository {
 	 */
 	private function read_json_list( string $file_path, string $label ): array {
 		if ( ! file_exists( $file_path ) ) {
-			throw new DatasetReadException( 'Dataset ' . $label . ' file is missing.' );
+			throw new DatasetReadException( 'Dataset ' . esc_html( $label ) . ' file is missing.' );
 		}
 
 		$decoded = json_decode( (string) file_get_contents( $file_path ), true );
 		if ( ! is_array( $decoded ) || ! $this->is_list( $decoded ) ) {
-			throw new DatasetReadException( 'Dataset ' . $label . ' file must contain a JSON array.' );
+			throw new DatasetReadException( 'Dataset ' . esc_html( $label ) . ' file must contain a JSON array.' );
 		}
 
 		return $decoded;

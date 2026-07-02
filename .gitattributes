@@ -1,1 +1,5 @@
+*.php text eol=lf
+*.txt text eol=lf
+*.pot text eol=lf
+*.md text eol=lf
 assets/admin/assets/*.js -whitespace

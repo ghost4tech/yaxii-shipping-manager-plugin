@@ -601,6 +601,7 @@ final class SafeApplyEngine {
 	private function save_zone_method_status( int $zone_id, int $instance_id, bool $enabled ): bool {
 		global $wpdb;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- WooCommerce exposes this status toggle as a direct zone-method table update.
 		$updated = $wpdb->update(
 			$wpdb->prefix . 'woocommerce_shipping_zone_methods',
 			array( 'is_enabled' => $enabled ? 1 : 0 ),

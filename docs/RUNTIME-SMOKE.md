@@ -385,3 +385,14 @@ TASK-009B local smoke result:
 - Generate a supported setup from Generator.
 - Click `Return to shipping editor`.
 - Confirm Shipping Editor reloads diagnostics and shows the generated managed setup without a browser refresh.
+
+## Release Package Smoke
+
+Use this smoke after creating a clean package with `.distignore`.
+
+Expected result:
+
+- Package root contains `readme.txt`.
+- Package root contains `languages/`.
+- Package root does not contain `.agents`, `.git`, `.github`, `.gitignore`, `.gitattributes`, `AGENTS.md`, `CLAUDE.md`, local Plugin Check report markdown files, reference apps, `node_modules`, hidden Prettier files, or source maps under `assets/admin`.
+- Official WordPress Plugin Check is run against the clean package folder, not the development folder.
