@@ -642,3 +642,14 @@ TASK-014B should implement only the low-risk release blockers:
 4. Add unit or focused frontend checks where the repo supports them.
 
 TASK-014C should then add read-only compatibility detection for Yaxii COD Theme zones and mixed 58/69 setups, without changing any WooCommerce write path.
+
+## TASK-014B Implementation Note
+
+TASK-014B implemented the Wave 1 release UX fixes only:
+
+- Missing first-run `yaxii_shipping_manager_settings` now returns default settings with no warning.
+- Malformed stored settings still flow through the sanitizer and can produce repair warnings.
+- Settings repair warnings no longer render as a global `Settings normalized` notice; they render inside Settings as `Settings were repaired` and can be dismissed for the current admin session.
+- The shared switch component uses an LTR internal direction and a bounded checked thumb translation so the knob stays inside the track.
+
+TASK-014B did not implement Yaxii COD Theme detection, `DZ:DZ-01` normalization, duplicate 69/58 diagnostics, checkout compatibility warnings, generator blocking, adoption/conversion tooling, or any `yaxii_zone_map` read/write behavior.

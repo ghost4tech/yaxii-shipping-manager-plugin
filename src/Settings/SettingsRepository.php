@@ -24,7 +24,18 @@ final class SettingsRepository {
 	 * @return array{settings:array<string,mixed>,defaults:array<string,mixed>,options:array<string,mixed>,warnings:array<int,string>}
 	 */
 	public function read(): array {
-		$stored_settings = get_option( self::OPTION_NAME, null );
+		$missing_option  = new \stdClass();
+		$stored_settings = get_option( self::OPTION_NAME, $missing_option );
+
+		if ( $missing_option === $stored_settings ) {
+			return $this->response_payload(
+				array(
+					'settings' => SettingsDefaults::settings(),
+					'warnings' => array(),
+				)
+			);
+		}
+
 		$sanitized       = $this->sanitizer->sanitize_stored( $stored_settings );
 
 		return $this->response_payload( $sanitized );

@@ -36,6 +36,38 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 27. Save Settings and confirm the success message says `Settings saved. Existing WooCommerce shipping zones and prices were not changed.`
 28. Confirm Settings does not show `Dataset mode`, `Zone name format`, `Zone prefix`, `Office method wording`, method label/default-price rows, custom method slots, disabled safety toggles, or `Reset defaults`.
 
+### TASK-014B Release UX Smoke
+
+Expected:
+
+- A missing `yaxii_shipping_manager_settings` option uses defaults without showing `Settings normalized`.
+- Existing valid settings do not show a repair warning.
+- Malformed stored settings still return a repair warning from the settings response.
+- Settings repair warnings render only inside Settings as `Settings were repaired`.
+- The Settings repair warning is non-blocking and dismissible for the current admin session.
+- Shared switch thumbs stay inside the track in checked and unchecked states.
+
+TASK-014B local smoke result:
+
+- WP-CLI `eval-file` simulated a missing settings option through an in-memory `pre_option_yaxii_shipping_manager_settings` filter and returned `missing_warnings=0`.
+- WP-CLI checked the current local stored settings and returned `current_warnings=0`.
+- WP-CLI simulated malformed stored settings and returned `malformed_warnings=1` with `Stored settings were invalid and defaults were used.`
+- Browser smoke opened `http://yaxii-ysz.local/wp-admin/admin.php?page=yaxii-shipping-manager` with a temporary local administrator that was deleted after the check.
+- The admin snapshot did not show a global `Settings normalized` notice.
+- Checked switch geometry stayed inside the track: root `1088-1132`, thumb `1109-1129`.
+- Unchecked switch geometry stayed inside the track after keyboard activation: root `1054-1098`, thumb `1057-1077`.
+- The switch was toggled back to checked before the temporary user was deleted.
+
+TASK-014B remote deploy smoke result:
+
+- Runtime files were deployed to `/home/u538716307/domains/demo.yaxii.dev/public_html/wp-content/plugins/yaxii-shipping-manager`.
+- Backup was created at `/home/u538716307/backups/yaxii-shipping-manager/task-014b-20260702-220752`.
+- Remote `assets/admin` contains no source maps.
+- Remote `assets/admin/manifest.json` points to `assets/main-CEtUW-6T.js` and `assets/main-Bek0twC3.css`.
+- Remote WP-CLI reports `yaxii-shipping-manager` active.
+- Remote manual browser verification is still required because no remote wp-admin credentials were used in this task.
+- Remote plain `php -l` could not be used because `/usr/bin/php` segfaulted when linting the changed PHP file; local PHP lint passed before deployment.
+
 ### TASK-012E Generator State and No-op Smoke
 
 Expected:

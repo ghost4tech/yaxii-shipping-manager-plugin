@@ -63,6 +63,8 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_METHOD_DEFS: MethodDef[] = enabledMethodDefs(DEFAULT_SHIPPING_METHOD_TEMPLATES);
 const APP_CONTAINER_CLASS = "mx-auto w-full max-w-[1240px] px-4 sm:px-6";
+const SETTINGS_REPAIR_WARNING_DISMISSAL_KEY =
+  "yaxii-shipping-manager-settings-repair-warning-dismissed";
 
 const TABS = [
   { id: "zones", label: "Shipping Editor", icon: Package },
@@ -362,6 +364,18 @@ function getInitialTab(): TabId {
   return isTabId(fromHash) ? fromHash : "zones";
 }
 
+function readDismissedRepairWarningKey(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.sessionStorage.getItem(SETTINGS_REPAIR_WARNING_DISMISSAL_KEY) ?? "";
+}
+
+function rememberDismissedRepairWarningKey(warningKey: string): void {
+  window.sessionStorage.setItem(SETTINGS_REPAIR_WARNING_DISMISSAL_KEY, warningKey);
+}
+
 function isTabId(value: string): value is TabId {
   return TABS.some((tab) => tab.id === value);
 }
@@ -447,13 +461,6 @@ function RuntimeNotices({
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Settings unavailable</AlertTitle>
           <AlertDescription>{settingsState.message}</AlertDescription>
-        </Alert>
-      )}
-      {settingsState.status === "ready" && settingsState.response.warnings.length > 0 && (
-        <Alert className="border-amber-200 bg-amber-50 text-amber-950">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Settings normalized</AlertTitle>
-          <AlertDescription>{settingsState.response.warnings.join(" ")}</AlertDescription>
         </Alert>
       )}
     </div>
@@ -667,6 +674,12 @@ function SettingsForm({
   const [draft, setDraft] = useState<PersistedSettings>(response.settings);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveMessage, setSaveMessage] = useState("");
+  const [dismissedRepairWarningKey, setDismissedRepairWarningKey] = useState(
+    readDismissedRepairWarningKey,
+  );
+  const repairWarningKey = response.warnings.join("\n");
+  const showRepairWarning =
+    response.warnings.length > 0 && dismissedRepairWarningKey !== repairWarningKey;
 
   useEffect(() => {
     setDraft(response.settings);
@@ -717,6 +730,33 @@ function SettingsForm({
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Save failed</AlertTitle>
           <AlertDescription>{saveMessage}</AlertDescription>
+        </Alert>
+      )}
+      {showRepairWarning && (
+        <Alert className="mb-4 border-amber-200 bg-amber-50 text-amber-950">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Settings were repaired</AlertTitle>
+          <AlertDescription>
+            <div className="space-y-3">
+              <p>Some saved settings were invalid and safe defaults were used.</p>
+              <ul className="list-disc space-y-1 pl-5">
+                {response.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  rememberDismissedRepairWarningKey(repairWarningKey);
+                  setDismissedRepairWarningKey(repairWarningKey);
+                }}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </AlertDescription>
         </Alert>
       )}
       <div className="grid gap-4">
