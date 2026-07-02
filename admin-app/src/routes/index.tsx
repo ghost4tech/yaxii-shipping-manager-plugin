@@ -419,6 +419,15 @@ function RuntimeNotices({
   datasetState: DatasetLoadState;
   settingsState: SettingsLoadState;
 }) {
+  const hasRuntimeNotice =
+    !bootstrap.woocommerceActive ||
+    datasetState.status === "error" ||
+    settingsState.status === "error";
+
+  if (!hasRuntimeNotice) {
+    return null;
+  }
+
   return (
     <div className="mb-6 space-y-3">
       {!bootstrap.woocommerceActive && (
@@ -431,29 +440,11 @@ function RuntimeNotices({
           </AlertDescription>
         </Alert>
       )}
-      {datasetState.status === "loading" && (
-        <Alert className="border-primary/20 bg-primary/5">
-          <RefreshCw className="h-4 w-4" />
-          <AlertTitle>Loading normalized dataset</AlertTitle>
-          <AlertDescription>
-            Fetching wilayas from the selected local REST dataset.
-          </AlertDescription>
-        </Alert>
-      )}
       {datasetState.status === "error" && (
         <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Dataset unavailable</AlertTitle>
           <AlertDescription>{datasetState.message}</AlertDescription>
-        </Alert>
-      )}
-      {settingsState.status === "loading" && (
-        <Alert className="border-primary/20 bg-primary/5">
-          <RefreshCw className="h-4 w-4" />
-          <AlertTitle>Loading saved settings</AlertTitle>
-          <AlertDescription>
-            Fetching the persisted plugin settings from WordPress.
-          </AlertDescription>
         </Alert>
       )}
       {settingsState.status === "error" && (

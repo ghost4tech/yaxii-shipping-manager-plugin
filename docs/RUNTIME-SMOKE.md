@@ -68,6 +68,23 @@ TASK-014B remote deploy smoke result:
 - Remote manual browser verification is still required because no remote wp-admin credentials were used in this task.
 - Remote plain `php -l` could not be used because `/usr/bin/php` segfaulted when linting the changed PHP file; local PHP lint passed before deployment.
 
+### TASK-014B2 Settings Notice Flash Smoke
+
+Expected:
+
+- Settings refresh does not show transient `Loading normalized dataset` or `Loading saved settings` runtime notices.
+- Valid settings do not show `Settings normalized` or `Settings were repaired`.
+- Missing settings stay quiet.
+- Malformed stored settings still return one repair warning from the loaded settings response.
+
+TASK-014B2 local smoke result:
+
+- The rebuilt admin bundle no longer contains `Loading normalized dataset`, `Loading saved settings`, or `Settings normalized`.
+- Browser smoke hard-refreshed `http://yaxii-ysz.local/wp-admin/admin.php?page=yaxii-shipping-manager#/settings` with a temporary local administrator that was deleted after the check.
+- After hard refresh, the Settings DOM had no `role="alert"` elements and did not contain `Settings normalized`, `Loading saved settings`, `Loading normalized dataset`, or `Settings were repaired`.
+- Navigating from Settings to Diagnostics and back to Settings still showed no notices for valid settings.
+- WP-CLI `eval-file` used in-memory option filters and returned `missing_warnings=0`, `current_warnings=0`, and `malformed_warnings=1` with `Stored settings were invalid and defaults were used.`
+
 ### TASK-012E Generator State and No-op Smoke
 
 Expected:
