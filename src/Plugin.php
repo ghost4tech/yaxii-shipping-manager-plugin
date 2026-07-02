@@ -31,6 +31,7 @@ use Yaxii\ShippingManager\Tools\ManagedSetupRemovalPreview;
 use Yaxii\ShippingManager\WooCommerce\AlgeriaStatesRegistrar;
 use Yaxii\ShippingManager\WooCommerce\ShippingDiagnosticsService;
 use Yaxii\ShippingManager\WooCommerce\ShippingZoneReader;
+use Yaxii\ShippingManager\WooCommerce\YaxiiCodCompatibilityDetector;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -45,7 +46,15 @@ final class Plugin {
 		$managed_registry       = new ManagedZoneRegistry();
 		$algeria_states         = new AlgeriaStatesRegistrar( $woocommerce_active, $datasets, $settings );
 		$zone_reader            = new ShippingZoneReader( $woocommerce_active );
-		$diagnostics            = new ShippingDiagnosticsService( $woocommerce_active, $datasets, $settings, $zone_reader, $managed_registry );
+		$compatibility_detector = new YaxiiCodCompatibilityDetector( $woocommerce_active, $datasets, $managed_registry );
+		$diagnostics            = new ShippingDiagnosticsService(
+			$woocommerce_active,
+			$datasets,
+			$settings,
+			$zone_reader,
+			$managed_registry,
+			$compatibility_detector
+		);
 		$preview_planner        = new PreviewPlanner( $datasets, $settings, $diagnostics, $managed_registry );
 		$safe_apply_engine      = new SafeApplyEngine( $woocommerce_active, $preview_planner, $managed_registry );
 		$apply_contract         = new ApplyContract( $settings, $managed_registry );

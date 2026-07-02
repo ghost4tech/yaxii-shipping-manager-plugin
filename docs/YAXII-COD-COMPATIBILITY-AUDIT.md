@@ -653,3 +653,17 @@ TASK-014B implemented the Wave 1 release UX fixes only:
 - The shared switch component uses an LTR internal direction and a bounded checked thumb translation so the knob stays inside the track.
 
 TASK-014B did not implement Yaxii COD Theme detection, `DZ:DZ-01` normalization, duplicate 69/58 diagnostics, checkout compatibility warnings, generator blocking, adoption/conversion tooling, or any `yaxii_zone_map` read/write behavior.
+
+## TASK-014C Implementation Note
+
+TASK-014C implemented the first read-only compatibility diagnostics wave:
+
+- Diagnostics now includes a `compatibility` object for Yaxii COD Theme and mixed Algeria shipping setup detection.
+- The detector reads WooCommerce shipping zones, `yaxii_shipping_manager_managed_zones`, the Yaxii COD Theme `yaxii_zone_map` option, active theme metadata, and current/legacy dataset counts.
+- It normalizes `DZ:NN`, `DZ:DZ-NN`, raw `DZ-NN`, and `yaxii_zone_map` keys to the same two-digit wilaya code for diagnostics only.
+- Diagnostics can report theme setup detection, `yaxii_zone_map` counts, Yaxii COD/theme-format zone counts, YSM managed zone counts, duplicate normalized wilayas, legacy-only coverage, state-format mismatch, and checkout compatibility risk.
+- The Diagnostics page shows read-only cards for existing Yaxii COD setup, duplicate shipping zones, state code format mismatch, and checkout compatibility warning only when those findings exist.
+- Advanced details include active theme info, map/managed counts, duplicate normalized wilayas with zone IDs and location formats, source classification, checkout risk, and recommendations.
+- Shipping Editor shows a non-blocking info hint when a Yaxii COD setup is detected.
+
+TASK-014C did not adopt, repair, convert, delete, merge, or write WooCommerce zones. It did not write to `yaxii_zone_map`, change `SafeApplyEngine`, block Generator, edit Yaxii COD Theme source, or claim checkout compatibility is fixed.

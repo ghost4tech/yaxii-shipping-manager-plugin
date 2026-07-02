@@ -44,6 +44,14 @@ The full table and row-level `Repair setup` buttons are hidden until the merchan
 
 Manual WooCommerce zones do not block this empty setup state. If manual zones exist, the state shows protected manual-zone copy. If no manual zones exist, no manual-zone warning is shown.
 
+If Diagnostics detects an existing Yaxii COD Theme shipping setup, Shipping Editor shows a non-blocking read-only hint:
+
+```text
+Existing Yaxii COD shipping setup detected. Review Diagnostics before generating new zones.
+```
+
+The hint does not change row statuses, does not block Generator, does not adopt theme zones, and does not edit theme-owned WooCommerce zones.
+
 Partial setup is different: when some Yaxii-managed rows exist and some rows are missing, the table remains the primary workspace and the row-level `Repair setup` plus selected-row `Repair selected` actions remain visible.
 
 ## Supported Pending Changes

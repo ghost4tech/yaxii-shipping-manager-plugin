@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, ShieldCheck, Wand2 } from "lucide-react";
+import { Eye, Info, ShieldCheck, Wand2 } from "lucide-react";
 
 import {
   pendingChangeCount,
@@ -377,6 +377,25 @@ export function ShippingZonesPage({
         woocommerceSettingsUrl={woocommerceSettingsUrl}
         onOpenDiagnostics={onOpenDiagnostics}
       />
+      {diagnosticsState.status === "ready" &&
+        diagnosticsState.response.compatibility.yaxiiCodThemeDetected && (
+          <div className="mt-4 flex items-start gap-3 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
+            <div className="min-w-0 flex-1">
+              <div className="font-medium">Existing Yaxii COD shipping setup detected.</div>
+              <div className="text-xs text-sky-900/80">
+                Review Diagnostics before generating new zones.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenDiagnostics}
+              className="shrink-0 text-xs font-medium text-sky-800 hover:text-sky-950"
+            >
+              Diagnostics
+            </button>
+          </div>
+        )}
       {emptySetupState.show && (
         <EmptySetupPanel
           manualZoneCount={emptySetupState.manualZoneCount}

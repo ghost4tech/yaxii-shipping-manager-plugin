@@ -20,19 +20,22 @@ final class ShippingDiagnosticsService {
 	private SettingsRepository $settings;
 	private ShippingZoneReader $zone_reader;
 	private ManagedZoneRegistry $managed_registry;
+	private YaxiiCodCompatibilityDetector $compatibility_detector;
 
 	public function __construct(
 		bool $woocommerce_active,
 		DatasetRepository $datasets,
 		SettingsRepository $settings,
 		ShippingZoneReader $zone_reader,
-		ManagedZoneRegistry $managed_registry
+		ManagedZoneRegistry $managed_registry,
+		YaxiiCodCompatibilityDetector $compatibility_detector
 	) {
-		$this->woocommerce_active = $woocommerce_active;
-		$this->datasets           = $datasets;
-		$this->settings           = $settings;
-		$this->zone_reader        = $zone_reader;
-		$this->managed_registry   = $managed_registry;
+		$this->woocommerce_active       = $woocommerce_active;
+		$this->datasets                 = $datasets;
+		$this->settings                 = $settings;
+		$this->zone_reader              = $zone_reader;
+		$this->managed_registry         = $managed_registry;
+		$this->compatibility_detector   = $compatibility_detector;
 	}
 
 	/**
@@ -51,12 +54,14 @@ final class ShippingDiagnosticsService {
 		$zone_results        = $this->zone_results( $zones, $wilayas );
 		$wilaya_results      = $this->wilaya_results( $wilayas, $zone_results );
 		$summary             = $this->summary( $wilaya_results, $zone_results, $rest_of_world_zone );
+		$compatibility       = $this->compatibility_detector->detect( $zones );
 
 		return array(
 			'woocommerceActive' => true,
 			'summary'           => $summary,
 			'wilayaResults'     => $wilaya_results,
 			'zoneResults'       => $zone_results,
+			'compatibility'     => $compatibility,
 			'warnings'          => $this->warnings( $summary ),
 			'generatedAt'       => gmdate( 'c' ),
 		);
@@ -87,6 +92,7 @@ final class ShippingDiagnosticsService {
 			),
 			'wilayaResults'     => array(),
 			'zoneResults'       => array(),
+			'compatibility'     => $this->compatibility_detector->detect( array() ),
 			'warnings'          => array( __( 'WooCommerce is inactive, so shipping zones could not be inspected.', 'yaxii-shipping-manager' ) ),
 			'generatedAt'       => gmdate( 'c' ),
 		);

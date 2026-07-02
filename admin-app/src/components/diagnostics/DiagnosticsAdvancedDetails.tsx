@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type {
+  CompatibilityWilayaGroup,
   DiagnosticsResponse,
   WilayaDiagnosticStatus,
   ZoneDiagnostic,
@@ -22,7 +23,7 @@ import type {
 
 export function DiagnosticsAdvancedDetails({ response }: { response: DiagnosticsResponse }) {
   return (
-    <Card className="px-4">
+    <Card id="ysm-compatibility-details" className="px-4">
       <Accordion type="single" collapsible>
         <AccordionItem value="advanced" className="border-b-0">
           <AccordionTrigger>Advanced details for support</AccordionTrigger>
@@ -40,12 +41,119 @@ export function DiagnosticsAdvancedDetails({ response }: { response: Diagnostics
                 </ul>
               )}
             </div>
+            <CompatibilityDetails response={response} />
             <WilayaCoverageTable response={response} />
             <ZoneDiagnosticsPanel zones={response.zoneResults} />
           </AccordionContent>
         </AccordionItem>
       </Accordion>
     </Card>
+  );
+}
+
+function CompatibilityDetails({ response }: { response: DiagnosticsResponse }) {
+  const compatibility = response.compatibility;
+  const duplicateGroups = compatibility.zonesByNormalizedWilaya.filter((group) => group.duplicate);
+
+  return (
+    <div>
+      <div className="mb-3">
+        <div className="text-sm font-medium">Yaxii COD compatibility</div>
+        <div className="text-xs text-muted-foreground">
+          Read-only signals for mixed Algeria shipping setups. No zones are changed from here.
+        </div>
+      </div>
+      <div className="grid gap-3 text-sm md:grid-cols-2">
+        <div className="rounded-lg border border-border p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">Active theme</div>
+          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+            <div>Name: {compatibility.activeTheme.name || "Unknown"}</div>
+            <div>Stylesheet: {compatibility.activeTheme.stylesheet || "Unknown"}</div>
+            <div>Template: {compatibility.activeTheme.template || "Unknown"}</div>
+            <div>
+              Looks like Yaxii COD Theme:{" "}
+              {compatibility.activeTheme.looksLikeYaxiiCodTheme ? "Yes" : "No"}
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-border p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">Compatibility</div>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <div>Theme map exists: {compatibility.yaxiiCodZoneMapDetected ? "Yes" : "No"}</div>
+            <div>Theme mapped zones: {compatibility.yaxiiCodZoneMapCount}</div>
+            <div>YSM managed zones: {compatibility.ysmManagedZoneCount}</div>
+            <div>Theme-format zones: {compatibility.yaxiiCodZoneCount}</div>
+            <div>Duplicate wilayas: {compatibility.normalizedDuplicateWilayaCount}</div>
+            <div>Checkout risk: {compatibility.checkoutCompatibilityRisk}</div>
+          </div>
+        </div>
+      </div>
+      <DuplicateWilayaDetails groups={duplicateGroups} />
+      {compatibility.recommendations.length > 0 && (
+        <div className="mt-3 rounded-lg border border-border p-4">
+          <div className="text-xs font-medium uppercase text-muted-foreground">Recommendations</div>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+            {compatibility.recommendations.map((recommendation) => (
+              <li key={recommendation}>{recommendation}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DuplicateWilayaDetails({ groups }: { groups: CompatibilityWilayaGroup[] }) {
+  return (
+    <div className="mt-3 rounded-lg border border-border p-4">
+      <div className="text-xs font-medium uppercase text-muted-foreground">
+        Duplicate normalized wilayas
+      </div>
+      {groups.length === 0 && (
+        <div className="mt-2 text-xs text-muted-foreground">No duplicate normalized wilayas.</div>
+      )}
+      {groups.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {groups.map((group) => (
+            <div key={group.normalizedWilayaCode} className="rounded-md bg-muted/30 p-3">
+              <div className="mb-2 text-xs font-medium">Wilaya {group.normalizedWilayaCode}</div>
+              <div className="overflow-hidden rounded-md border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Zone</TableHead>
+                      <TableHead>Location format</TableHead>
+                      <TableHead>Source</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {group.entries.map((entry) => (
+                      <TableRow key={`${entry.zoneId}-${entry.sourceFormat}-${entry.locationCode}`}>
+                        <TableCell>
+                          <div className="text-xs font-medium">{entry.zoneName || "Unknown"}</div>
+                          <div className="font-mono text-xs text-muted-foreground">
+                            ID {entry.zoneId}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-mono text-xs">{entry.locationCode}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {entry.locationFormat}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {entry.sourceClassification}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

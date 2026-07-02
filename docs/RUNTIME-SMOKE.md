@@ -85,6 +85,22 @@ TASK-014B2 local smoke result:
 - Navigating from Settings to Diagnostics and back to Settings still showed no notices for valid settings.
 - WP-CLI `eval-file` used in-memory option filters and returned `missing_warnings=0`, `current_warnings=0`, and `malformed_warnings=1` with `Stored settings were invalid and defaults were used.`
 
+### TASK-014C Yaxii COD Compatibility Diagnostics Smoke
+
+Expected:
+
+- `GET /wp-json/yaxii-shipping-manager/v1/diagnostics` includes a read-only `compatibility` object.
+- WooCommerce inactive returns a safe empty compatibility object.
+- A clean store with no Yaxii COD Theme setup, no `yaxii_zone_map`, and no theme-format zones returns no compatibility warnings.
+- `DZ:01` normalizes to wilaya code `01` with source format `ysm_current`.
+- `DZ:DZ-01` normalizes to wilaya code `01` with source format `yaxii_cod_theme`.
+- `DZ-01` normalizes to wilaya code `01` with source format `theme_state_key`; `yaxii_zone_map` keys use `theme_zone_map`.
+- Theme-format zones and YSM-format zones for the same normalized wilaya are reported as duplicate compatibility findings only.
+- Diagnostics compatibility cards appear only when compatibility findings exist.
+- Advanced details remain collapsed by default and show active theme info, map counts, managed counts, duplicate normalized wilayas, source classification, checkout risk, and recommendations when opened.
+- Shipping Editor shows only a non-blocking info hint when a Yaxii COD setup is detected.
+- No Generator apply, managed setup removal, WooCommerce zone write, WooCommerce zone delete, `yaxii_zone_map` write, or Yaxii COD Theme file change is performed.
+
 ### TASK-012E Generator State and No-op Smoke
 
 Expected:

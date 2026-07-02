@@ -1,4 +1,4 @@
-export type CheckoutFallbackRisk = "low" | "medium" | "high";
+export type CheckoutFallbackRisk = "none" | "low" | "medium" | "high";
 
 export type WilayaDiagnosticStatus = "configured" | "missing" | "conflict";
 
@@ -47,6 +47,49 @@ export type WilayaDiagnostic = {
   zoneNames: string[];
 };
 
+export type CompatibilityZoneEntry = {
+  normalizedWilayaCode: string;
+  zoneId: number;
+  zoneName: string;
+  locationCode: string;
+  locationFormat: string;
+  sourceFormat: string;
+  sourceClassification:
+    | "Yaxii Shipping Manager"
+    | "Yaxii COD Theme"
+    | "External Yaxii zone"
+    | "Manual WooCommerce zone";
+};
+
+export type CompatibilityWilayaGroup = {
+  normalizedWilayaCode: string;
+  duplicate: boolean;
+  entries: CompatibilityZoneEntry[];
+};
+
+export type YaxiiCodCompatibility = {
+  yaxiiCodThemeDetected: boolean;
+  yaxiiCodThemeActive: boolean;
+  yaxiiCodZoneMapDetected: boolean;
+  yaxiiCodZoneMapCount: number;
+  yaxiiCodZoneCount: number;
+  ysmManagedZoneCount: number;
+  normalizedDuplicateWilayaCount: number;
+  legacyOnlyCoverageDetected: boolean;
+  stateFormatMismatchDetected: boolean;
+  checkoutCompatibilityRisk: CheckoutFallbackRisk;
+  activeTheme: {
+    name: string;
+    stylesheet: string;
+    template: string;
+    looksLikeYaxiiCodTheme: boolean;
+  };
+  zonesByNormalizedWilaya: CompatibilityWilayaGroup[];
+  duplicateNormalizedWilayas: string[];
+  warnings: string[];
+  recommendations: string[];
+};
+
 export type DiagnosticsSummary = {
   totalWilayas: number;
   configuredWilayas: number;
@@ -64,6 +107,7 @@ export type DiagnosticsResponse = {
   summary: DiagnosticsSummary;
   wilayaResults: WilayaDiagnostic[];
   zoneResults: ZoneDiagnostic[];
+  compatibility: YaxiiCodCompatibility;
   warnings: string[];
   generatedAt: string;
 };

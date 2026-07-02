@@ -1,6 +1,9 @@
 import type { AdminBootstrapConfig } from "../bootstrap";
 import type {
   DiagnosticsResponse,
+  YaxiiCodCompatibility,
+  CompatibilityWilayaGroup,
+  CompatibilityZoneEntry,
   ManagedMethodDiagnostic,
   DiagnosticsSummary,
   ShippingMethodDiagnostic,
@@ -52,6 +55,9 @@ function parseDiagnosticsResponse(payload: unknown): DiagnosticsResponse {
     summary: payload.summary,
     wilayaResults,
     zoneResults,
+    compatibility: isYaxiiCodCompatibility(payload.compatibility)
+      ? payload.compatibility
+      : emptyCompatibility(),
     warnings: Array.isArray(payload.warnings)
       ? payload.warnings.filter((warning): warning is string => typeof warning === "string")
       : [],
@@ -108,6 +114,67 @@ function isZoneDiagnostic(value: unknown): value is ZoneDiagnostic {
   );
 }
 
+function isYaxiiCodCompatibility(value: unknown): value is YaxiiCodCompatibility {
+  return (
+    isObject(value) &&
+    typeof value.yaxiiCodThemeDetected === "boolean" &&
+    typeof value.yaxiiCodThemeActive === "boolean" &&
+    typeof value.yaxiiCodZoneMapDetected === "boolean" &&
+    typeof value.yaxiiCodZoneMapCount === "number" &&
+    typeof value.yaxiiCodZoneCount === "number" &&
+    typeof value.ysmManagedZoneCount === "number" &&
+    typeof value.normalizedDuplicateWilayaCount === "number" &&
+    typeof value.legacyOnlyCoverageDetected === "boolean" &&
+    typeof value.stateFormatMismatchDetected === "boolean" &&
+    isFallbackRisk(value.checkoutCompatibilityRisk) &&
+    isActiveThemeInfo(value.activeTheme) &&
+    Array.isArray(value.zonesByNormalizedWilaya) &&
+    value.zonesByNormalizedWilaya.every(isCompatibilityWilayaGroup) &&
+    Array.isArray(value.duplicateNormalizedWilayas) &&
+    value.duplicateNormalizedWilayas.every((code) => typeof code === "string") &&
+    Array.isArray(value.warnings) &&
+    value.warnings.every((warning) => typeof warning === "string") &&
+    Array.isArray(value.recommendations) &&
+    value.recommendations.every((recommendation) => typeof recommendation === "string")
+  );
+}
+
+function isActiveThemeInfo(value: unknown): value is YaxiiCodCompatibility["activeTheme"] {
+  return (
+    isObject(value) &&
+    typeof value.name === "string" &&
+    typeof value.stylesheet === "string" &&
+    typeof value.template === "string" &&
+    typeof value.looksLikeYaxiiCodTheme === "boolean"
+  );
+}
+
+function isCompatibilityWilayaGroup(value: unknown): value is CompatibilityWilayaGroup {
+  return (
+    isObject(value) &&
+    typeof value.normalizedWilayaCode === "string" &&
+    typeof value.duplicate === "boolean" &&
+    Array.isArray(value.entries) &&
+    value.entries.every(isCompatibilityZoneEntry)
+  );
+}
+
+function isCompatibilityZoneEntry(value: unknown): value is CompatibilityZoneEntry {
+  return (
+    isObject(value) &&
+    typeof value.normalizedWilayaCode === "string" &&
+    typeof value.zoneId === "number" &&
+    typeof value.zoneName === "string" &&
+    typeof value.locationCode === "string" &&
+    typeof value.locationFormat === "string" &&
+    typeof value.sourceFormat === "string" &&
+    (value.sourceClassification === "Yaxii Shipping Manager" ||
+      value.sourceClassification === "Yaxii COD Theme" ||
+      value.sourceClassification === "External Yaxii zone" ||
+      value.sourceClassification === "Manual WooCommerce zone")
+  );
+}
+
 function isShippingMethodDiagnostic(value: unknown): value is ShippingMethodDiagnostic {
   return (
     isObject(value) &&
@@ -132,7 +199,7 @@ function isManagedMethodDiagnostic(value: unknown): value is ManagedMethodDiagno
 }
 
 function isFallbackRisk(value: unknown): value is DiagnosticsSummary["checkoutFallbackRisk"] {
-  return value === "low" || value === "medium" || value === "high";
+  return value === "none" || value === "low" || value === "medium" || value === "high";
 }
 
 function isWilayaStatus(value: unknown): value is WilayaDiagnostic["status"] {
@@ -153,4 +220,29 @@ function ensureTrailingSlash(value: string): string {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function emptyCompatibility(): YaxiiCodCompatibility {
+  return {
+    yaxiiCodThemeDetected: false,
+    yaxiiCodThemeActive: false,
+    yaxiiCodZoneMapDetected: false,
+    yaxiiCodZoneMapCount: 0,
+    yaxiiCodZoneCount: 0,
+    ysmManagedZoneCount: 0,
+    normalizedDuplicateWilayaCount: 0,
+    legacyOnlyCoverageDetected: false,
+    stateFormatMismatchDetected: false,
+    checkoutCompatibilityRisk: "none",
+    activeTheme: {
+      name: "",
+      stylesheet: "",
+      template: "",
+      looksLikeYaxiiCodTheme: false,
+    },
+    zonesByNormalizedWilaya: [],
+    duplicateNormalizedWilayas: [],
+    warnings: [],
+    recommendations: [],
+  };
 }
