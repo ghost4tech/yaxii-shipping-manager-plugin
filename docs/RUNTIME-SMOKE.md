@@ -203,7 +203,7 @@ Expected result:
 - The selected-row `Make free` quick tool sets managed pending prices to `0`; method cells display `Free` without a permanent per-cell free toggle.
 - Method cells do not show active enable/disable switches.
 - Disabled methods keep their price visible in a muted state with a `Disabled` badge.
-- A wilaya with all registry-owned managed methods disabled shows `Methods disabled`, not `Active`.
+- A wilaya with all registry-owned managed methods disabled shows `Disabled`, not `Active`.
 - A wilaya with mixed enabled and disabled registry-owned managed methods shows `Partially active`, not fully active.
 - The row-level switch disables or enables all existing Yaxii-managed methods for that wilaya; it does not delete the WooCommerce zone.
 - Selected-row quick tools can bulk-enable or bulk-disable selected registry-owned methods.

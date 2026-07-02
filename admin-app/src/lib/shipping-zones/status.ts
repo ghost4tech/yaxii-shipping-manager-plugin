@@ -29,7 +29,7 @@ export const SHIPPING_ZONE_FILTERS: Array<{ key: ShippingZoneFilter; label: stri
 
 const STATUS_LABELS: Record<ShippingZoneStatus, string> = {
   active: "Active",
-  disabled: "Methods disabled",
+  disabled: "Disabled",
   partially_active: "Partially active",
   needs_update: "Needs update",
   updating: "Updating...",
