@@ -31,7 +31,7 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 22. Confirm final preview auto-runs and shows safety copy inline.
 23. Confirm Preview-only mode stops at Preview with no Generate/apply controls.
 24. Confirm no-op previews show `Setup already matches this selection` and offer `Open Shipping Editor`.
-25. Confirm Settings is titled `Defaults for future setup`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
+25. Confirm Settings is titled `Settings`, the description says `Save defaults for future setup.`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
 
 ### TASK-012E Generator State and No-op Smoke
 

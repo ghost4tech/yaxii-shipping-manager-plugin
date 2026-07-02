@@ -547,7 +547,7 @@ function SectionHeader({
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
       {action}
@@ -568,7 +568,7 @@ function GeneratorHub({
     <>
       <SectionHeader
         title="Generator"
-        description="Prepare a local draft, then generate a read-only WooCommerce preview."
+        description="Create or repair Yaxii-managed shipping setup safely."
       />
       <Card className="overflow-hidden border-primary/30">
         <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8">
@@ -631,10 +631,7 @@ function SettingsScreen({
   if (settingsState.status === "loading") {
     return (
       <>
-        <SectionHeader
-          title="Defaults for future setup"
-          description="Loading saved plugin settings from WordPress."
-        />
+        <SectionHeader title="Settings" description="Loading saved defaults from WordPress." />
         <Card>
           <CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4" />
@@ -648,10 +645,7 @@ function SettingsScreen({
   if (settingsState.status === "error") {
     return (
       <>
-        <SectionHeader
-          title="Defaults for future setup"
-          description="Saved defaults could not be loaded."
-        />
+        <SectionHeader title="Settings" description="Saved defaults could not be loaded." />
         <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Settings unavailable</AlertTitle>
@@ -752,8 +746,8 @@ function SettingsForm({
   return (
     <>
       <SectionHeader
-        title="Defaults for future setup"
-        description="Save labels, prices, and naming defaults for future Generator previews. Existing WooCommerce shipping zones are not changed here."
+        title="Settings"
+        description="Save defaults for future setup."
         action={
           <div className="flex flex-wrap gap-2">
             <Button

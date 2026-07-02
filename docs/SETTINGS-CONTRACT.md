@@ -64,10 +64,16 @@ Currency is not user-editable and is not persisted. The UI displays:
 Currency comes from WooCommerce. Fallback: DZD.
 ```
 
-The Settings page is labeled:
+The Settings page title is:
 
 ```text
-Defaults for future setup
+Settings
+```
+
+The Settings page description is:
+
+```text
+Save defaults for future setup.
 ```
 
 The primary save action is:

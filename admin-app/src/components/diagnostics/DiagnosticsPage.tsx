@@ -1,4 +1,4 @@
-import { Activity, AlertCircle, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { Activity, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { useMemo } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -60,15 +60,10 @@ export function DiagnosticsPage({
 
 function DiagnosticsHeader({ loading, onRefresh }: { loading: boolean; onRefresh: () => void }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[11px] font-medium text-primary">
-          <ShieldCheck className="h-3 w-3" /> Read-only health check
-        </div>
-        <h2 className="text-2xl font-semibold tracking-tight">Checkout Protection</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Review WooCommerce shipping setup, conflicts, protected zones, and checkout fallback risk.
-        </p>
+        <h2 className="text-2xl font-semibold tracking-tight">Diagnostics</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Review shipping setup health.</p>
       </div>
       <Button variant="outline" onClick={onRefresh} disabled={loading}>
         <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
