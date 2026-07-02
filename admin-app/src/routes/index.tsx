@@ -18,26 +18,14 @@ import { fetchDiagnostics } from "../api/diagnostics-api";
 import { fetchManagedSetupRemovalPreview, removeManagedSetup } from "../api/managed-setup-api";
 import { fetchSettings, saveSettings } from "../api/settings-api";
 import {
-  DATASET_MODE_OPTIONS,
   DEFAULT_SETTINGS,
   DEFAULT_SHIPPING_METHOD_TEMPLATES,
-  OFFICE_METHOD_WORDING_OPTIONS,
   REGION_LABEL_FORMAT_OPTIONS,
-  SAFETY_RULES,
-  ZONE_NAMING_OPTIONS,
-  officeLabelForWording,
 } from "../data/default-settings";
 import type { WilayaDatasetRecord } from "../types/dataset";
 import type { DiagnosticsResponse } from "../types/diagnostics";
-import type { ShippingMethodKey, ShippingMethodTemplate } from "../types/generator";
 import type { ManagedSetupRemovalPreview, ManagedSetupRemovalResult } from "../types/managed-setup";
-import type {
-  OfficeMethodWording,
-  PersistedSettings,
-  RegionLabelFormat,
-  SettingsResponse,
-  ZoneNameFormat,
-} from "../types/settings";
+import type { PersistedSettings, RegionLabelFormat, SettingsResponse } from "../types/settings";
 import { GeneratorWizard } from "@/components/generator/GeneratorWizard";
 import { PreviewPlanPanel } from "@/components/generator/PreviewPlanPanel";
 import { ShippingZonesPage } from "@/components/shipping-zones/ShippingZonesPage";
@@ -70,10 +58,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { enabledMethodDefs } from "@/lib/generator/methods";
-import { parseOptionalPrice } from "@/lib/generator/pricing";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_METHOD_DEFS: MethodDef[] = enabledMethodDefs(DEFAULT_SHIPPING_METHOD_TEMPLATES);
@@ -692,42 +677,6 @@ function SettingsForm({
     setSaveState("idle");
   };
 
-  const updateMethod = (
-    key: ShippingMethodKey,
-    patch: Partial<Pick<ShippingMethodTemplate, "enabled" | "label" | "defaultPrice">>,
-  ) => {
-    updateDraft({
-      methods: draft.methods.map((method) =>
-        method.key === key ? { ...method, ...patch } : method,
-      ),
-    });
-  };
-
-  const updateOfficeWording = (wording: OfficeMethodWording) => {
-    updateDraft({ officeWordingMode: wording });
-    updateMethod("office_delivery", {
-      label: officeLabelForWording(wording, draft.officeCustomLabel),
-    });
-  };
-
-  const updateOfficeCustomLabel = (label: string) => {
-    updateDraft({ officeCustomLabel: label });
-    if (draft.officeWordingMode === "custom") {
-      updateMethod("office_delivery", { label: officeLabelForWording("custom", label) });
-    }
-  };
-
-  const updateDefaultPrice = (key: ShippingMethodKey, rawValue: string) => {
-    const nextPrice = parseOptionalPrice(rawValue);
-    if (nextPrice !== undefined) {
-      updateMethod(key, { defaultPrice: nextPrice });
-      return;
-    }
-
-    setSaveState("error");
-    setSaveMessage("Prices must be empty, zero, or higher.");
-  };
-
   const saveDraft = async (settings: PersistedSettings) => {
     setSaveState("saving");
     setSaveMessage("");
@@ -736,7 +685,9 @@ function SettingsForm({
       const savedResponse = await onSave(settings);
       setDraft(savedResponse.settings);
       setSaveState("saved");
-      setSaveMessage("Defaults saved. Existing WooCommerce shipping zones were not changed.");
+      setSaveMessage(
+        "Settings saved. Existing WooCommerce shipping zones and prices were not changed.",
+      );
     } catch (error) {
       setSaveState("error");
       setSaveMessage(error instanceof Error ? error.message : "Settings could not be saved.");
@@ -747,26 +698,17 @@ function SettingsForm({
     <>
       <SectionHeader
         title="Settings"
-        description="Save defaults for future setup."
+        description="Manage global preferences and advanced setup tools."
         action={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={() => saveDraft(response.defaults)}
-              disabled={saveState === "saving"}
-            >
-              Reset defaults
-            </Button>
-            <Button onClick={() => saveDraft(draft)} disabled={saveState === "saving"}>
-              {saveState === "saving" ? "Saving..." : "Save defaults"}
-            </Button>
-          </div>
+          <Button onClick={() => saveDraft(draft)} disabled={saveState === "saving"}>
+            {saveState === "saving" ? "Saving..." : "Save settings"}
+          </Button>
         }
       />
       {saveState === "saved" && (
         <Alert className="mb-4 border-emerald-200 bg-emerald-50 text-emerald-950">
           <CheckCircle2 className="h-4 w-4" />
-          <AlertTitle>Defaults saved</AlertTitle>
+          <AlertTitle>Settings saved</AlertTitle>
           <AlertDescription>{saveMessage}</AlertDescription>
         </Alert>
       )}
@@ -777,170 +719,51 @@ function SettingsForm({
           <AlertDescription>{saveMessage}</AlertDescription>
         </Alert>
       )}
-      <Card>
-        <CardContent className="space-y-6 p-6">
-          <SettingRow
-            label="Dataset mode"
-            desc="Controls future Generator previews and read-only diagnostics coverage."
-          >
-            <Select
-              value={draft.datasetMode}
-              onValueChange={(value) => {
-                const option = DATASET_MODE_OPTIONS.find((entry) => entry.mode === value);
-                if (option?.available) {
-                  updateDraft({ datasetMode: option.mode });
-                }
-              }}
-            >
-              <SelectTrigger className="w-64">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DATASET_MODE_OPTIONS.map((option) => (
-                  <SelectItem key={option.mode} value={option.mode}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingRow>
-          <Separator />
-          <SettingRow label="Region label format" desc="Controls future zone naming previews.">
-            <Select
-              value={draft.regionLabelFormat}
-              onValueChange={(value) =>
-                updateDraft({ regionLabelFormat: value as RegionLabelFormat })
-              }
-            >
-              <SelectTrigger className="w-64">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {REGION_LABEL_FORMAT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingRow>
-          <Separator />
-          <SettingRow
-            label="Zone name format"
-            desc="Existing WooCommerce zone names are not changed by saving settings."
-          >
-            <Select
-              value={draft.zoneNameFormat}
-              onValueChange={(value) => updateDraft({ zoneNameFormat: value as ZoneNameFormat })}
-            >
-              <SelectTrigger className="w-72">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ZONE_NAMING_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingRow>
-          <SettingRow
-            label="Zone prefix"
-            desc="Existing WooCommerce zone names are not changed by saving settings."
-          >
-            <Input
-              value={draft.zonePrefix}
-              onChange={(event) => updateDraft({ zonePrefix: event.target.value })}
-              className="w-44"
-            />
-          </SettingRow>
-          <Separator />
-          <SettingRow
-            label="Office method wording"
-            desc="Default label for future setup previews. Use Shipping Editor to update live WooCommerce prices."
-          >
-            <Select
-              value={draft.officeWordingMode}
-              onValueChange={(value) => updateOfficeWording(value as OfficeMethodWording)}
-            >
-              <SelectTrigger className="w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {OFFICE_METHOD_WORDING_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingRow>
-          {draft.officeWordingMode === "custom" && (
-            <SettingRow label="Office custom label" desc="Future setup default label only.">
-              <Input
-                value={draft.officeCustomLabel}
-                onChange={(event) => updateOfficeCustomLabel(event.target.value)}
-                className="w-56"
-              />
-            </SettingRow>
-          )}
-          <Separator />
-          <div className="text-sm text-muted-foreground">
-            Currency comes from WooCommerce. Fallback: DZD.
-          </div>
-          <Separator />
-          <div className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-sm text-muted-foreground">
-            Use Shipping Editor to update live WooCommerce prices. These labels and default prices
-            are used for future setup previews.
-          </div>
-          <Separator />
-          {draft.methods.map((method) => (
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>General</CardTitle>
+          </CardHeader>
+          <CardContent>
             <SettingRow
-              key={method.key}
-              label={method.label}
-              desc={
-                method.locked
-                  ? "Required flat_rate method default for future setup."
-                  : "Optional flat_rate method default for future setup."
-              }
+              label="Wilaya display language"
+              desc="Used for Algeria wilaya labels in WooCommerce and as the default for new Generator drafts."
             >
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Switch
-                  checked={method.enabled}
-                  disabled={method.locked}
-                  onCheckedChange={(enabled) => updateMethod(method.key, { enabled })}
-                />
-                <Input
-                  value={method.label}
-                  onChange={(event) => updateMethod(method.key, { label: event.target.value })}
-                  className="w-44"
-                />
-                {(method.locked || method.enabled) && (
-                  <Input
-                    type="number"
-                    min={0}
-                    value={method.defaultPrice ?? ""}
-                    placeholder="Unset"
-                    onChange={(event) => updateDefaultPrice(method.key, event.target.value)}
-                    className="w-28"
-                  />
-                )}
-              </div>
+              <Select
+                value={draft.regionLabelFormat}
+                onValueChange={(value) =>
+                  updateDraft({ regionLabelFormat: value as RegionLabelFormat })
+                }
+              >
+                <SelectTrigger className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REGION_LABEL_FORMAT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </SettingRow>
-          ))}
-          <Separator />
-          {SAFETY_RULES.map((rule) => (
-            <ToggleRow
-              key={rule.key}
-              label={rule.label}
-              desc="Required safety rule for the safe apply engine."
-              checked
-              disabled
-            />
-          ))}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Safety rules are always on</CardTitle>
+            <CardDescription>
+              Yaxii protects manual WooCommerce zones, requires preview before apply, skips
+              conflicts by default, and never deletes manual zones.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              These rules cannot be disabled in this release.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
       <AdvancedToolsCard
         config={config}
         onLaunchWizard={onLaunchWizard}
@@ -1035,7 +858,8 @@ function AdvancedToolsCard({
           <div>
             <div className="text-sm font-medium">Remove Yaxii setup</div>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Removes only Yaxii-managed zones. Manual WooCommerce zones are protected.
+              Remove only Yaxii-managed WooCommerce zones and methods. Manual WooCommerce zones will
+              not be touched.
             </p>
           </div>
           <RemovalToolAction
@@ -1399,24 +1223,6 @@ function SettingRow({
       </div>
       {children}
     </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  desc,
-  checked,
-  disabled,
-}: {
-  label: string;
-  desc?: string;
-  checked?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <SettingRow label={label} desc={desc}>
-      <Switch checked={checked} disabled={disabled} />
-    </SettingRow>
   );
 }
 

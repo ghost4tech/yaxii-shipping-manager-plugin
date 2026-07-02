@@ -31,7 +31,10 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 22. Confirm final preview auto-runs and shows safety copy inline.
 23. Confirm Preview-only mode stops at Preview with no Generate/apply controls.
 24. Confirm no-op previews show `Setup already matches this selection` and offer `Open Shipping Editor`.
-25. Confirm Settings is titled `Settings`, the description says `Save defaults for future setup.`, the primary action is `Save defaults`, and the page says existing WooCommerce shipping zones are not changed by saving settings.
+25. Confirm Settings is titled `Settings`, the description says `Manage global preferences and advanced setup tools.`, and the visible sections are `General`, `Safety rules are always on`, and `Advanced tools`.
+26. Confirm General shows only `Wilaya display language` with `French`, `Arabic`, `French - Arabic`, and `Arabic - French` choices, and the primary action is `Save settings`.
+27. Save Settings and confirm the success message says `Settings saved. Existing WooCommerce shipping zones and prices were not changed.`
+28. Confirm Settings does not show `Dataset mode`, `Zone name format`, `Zone prefix`, `Office method wording`, method label/default-price rows, custom method slots, disabled safety toggles, or `Reset defaults`.
 
 ### TASK-012E Generator State and No-op Smoke
 

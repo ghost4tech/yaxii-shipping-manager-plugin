@@ -4,7 +4,7 @@
 
 TASK-003B persists the MVP settings contract in WordPress options and exposes read/write REST endpoints for the admin app.
 
-The settings remain defaults for future setup previews. They do not create, update, delete, or inspect WooCommerce shipping zones.
+The settings option remains the compatibility contract for future setup defaults. The visible MVP Settings page is intentionally smaller: it exposes only a global wilaya display preference, a read-only safety note, and Advanced tools. Saving settings does not create, update, delete, or inspect WooCommerce shipping zones.
 
 ## Option Storage
 
@@ -73,22 +73,44 @@ Settings
 The Settings page description is:
 
 ```text
-Save defaults for future setup.
+Manage global preferences and advanced setup tools.
 ```
 
 The primary save action is:
 
 ```text
-Save defaults
+Save settings
 ```
 
 Successful saves show:
 
 ```text
-Defaults saved. Existing WooCommerce shipping zones were not changed.
+Settings saved. Existing WooCommerce shipping zones and prices were not changed.
 ```
 
-Method labels and default prices are future setup defaults. The UI directs merchants to Shipping Editor for live WooCommerce price updates. Naming controls also state that existing WooCommerce zone names are not changed by saving settings.
+The visible General section exposes only:
+
+- `Wilaya display language`, stored as `regionLabelFormat`.
+
+The help text is:
+
+```text
+Used for Algeria wilaya labels in WooCommerce and as the default for new Generator drafts.
+```
+
+The frontend still submits the complete persisted settings object so hidden fields are preserved. It does not send a partial payload and does not intentionally change `datasetMode`, zone naming defaults, method templates, default prices, or safety policy values from the Settings page.
+
+The following persisted settings are hidden from the visible Settings page and remain backend/API compatibility fields for Generator initialization and existing saved options:
+
+- `datasetMode`
+- `zoneNameFormat`
+- `zonePrefix`
+- `officeWordingMode`
+- `officeCustomLabel`
+- `methods`
+- `safetyPolicy`
+
+Method labels and default prices are no longer editable from Settings. Generator owns setup draft labels/prices, and Shipping Editor owns live WooCommerce managed method prices.
 
 ## Advanced Tools
 
@@ -213,7 +235,13 @@ These safety rules are always locked on in the MVP:
 - `skipConflictsByDefault`
 - `neverDeleteManualZones`
 
-The REST sanitizer forces all safety rules back to `true`. The UI copy says these are required safety rules for the safe apply engine.
+The REST sanitizer forces all safety rules back to `true`. The Settings UI shows one read-only card:
+
+```text
+Safety rules are always on
+Yaxii protects manual WooCommerce zones, requires preview before apply, skips conflicts by default, and never deletes manual zones.
+These rules cannot be disabled in this release.
+```
 
 ## Wizard Contract
 

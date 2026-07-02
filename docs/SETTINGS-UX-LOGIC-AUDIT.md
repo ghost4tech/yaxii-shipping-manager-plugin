@@ -23,6 +23,18 @@ Main direction:
 - Keep backend option keys for compatibility and initial Generator prefill. Do not remove stored keys yet.
 - Do not sync Generator draft changes back to Settings automatically.
 
+## TASK-012N Implementation Note
+
+TASK-012N applies this recommendation to the visible admin UI without changing the backend settings contract.
+
+- Settings now shows only `Wilaya display language`, the read-only `Safety rules are always on` card, and `Advanced tools`.
+- The visible language field saves the existing `regionLabelFormat` setting.
+- The frontend keeps the full fetched settings object in state and submits the full settings payload, so hidden settings are preserved instead of reset to defaults.
+- Dataset mode, zone naming, office wording, method labels/default prices, custom method slots, disabled safety toggles, and reset defaults are hidden from Settings only.
+- Generator still initializes from persisted settings for compatibility, but Generator draft changes do not save back to Settings.
+- Shipping Editor live values still do not sync back into Settings defaults.
+- `Remove Yaxii setup` remains in Settings under Advanced tools and still uses the existing managed setup removal flow.
+
 ## Evidence Summary
 
 Inspected code and docs show:
