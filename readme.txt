@@ -8,7 +8,7 @@ Stable tag: 0.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Configure and manage Algeria shipping zones for WooCommerce with previews, diagnostics, and protected manual zones.
+Configure and manage Algeria shipping zones for WooCommerce with previews, diagnostics, and protected zones.
 
 == Description ==
 
@@ -19,8 +19,9 @@ The plugin focuses on reviewed, local WooCommerce shipping setup:
 * Generate Algeria WooCommerce shipping zones from a reviewed preview.
 * Add and update Yaxii-managed flat rate shipping methods for home and office delivery.
 * Manage prices, labels, and enabled status for Yaxii-managed methods.
-* Protect manual WooCommerce zones from automatic edits.
-* Show read-only diagnostics before changes are applied.
+* Keep manual WooCommerce zones, Yaxii COD Theme zones, external Yaxii-looking zones, and duplicate zones protected and read-only unless they are verified Yaxii-managed.
+* Show read-only diagnostics for WooCommerce readiness, protected zones, and compatibility risks before changes are applied.
+* Detect existing Yaxii COD Theme shipping zones so the generator can avoid duplicate covered wilayas.
 * Remove only verified Yaxii-managed setup when explicitly confirmed.
 
 The plugin does not send store data to remote services and does not load remote scripts, styles, or fonts.
@@ -40,6 +41,10 @@ WooCommerce must be active before the plugin can read or update WooCommerce ship
 
 No. Manual or unknown WooCommerce zones are protected by default. Yaxii Shipping Manager writes only to zones and methods it can verify as Yaxii-managed.
 
+= Does this plugin convert Yaxii COD Theme zones or fix Yaxii COD Theme checkout? =
+
+No. Existing Yaxii COD Theme zones can be detected and shown as protected/read-only. They are not converted, adopted, deleted, or used as proof that Yaxii COD Theme checkout is compatible.
+
 = Does the plugin delete shipping zones? =
 
 The setup removal tool removes only verified Yaxii-managed zones after an explicit confirmation. It does not delete manual WooCommerce zones.
@@ -58,15 +63,17 @@ No. The plugin is local-first and does not send telemetry or analytics data.
 
 == Screenshots ==
 
-1. Yaxii Shipping Manager admin screen for Algeria shipping setup and diagnostics.
-2. Shipping Editor for reviewed Yaxii-managed method prices and statuses.
-3. Generator preview before applying WooCommerce shipping changes.
+1. Shipping Editor with Yaxii-managed zones, live prices, method status controls, and protected-zone labels.
+2. Generator setup flow for selecting Algeria coverage and previewing supported WooCommerce changes.
+3. Diagnostics health cards showing WooCommerce readiness, protected zones, and compatibility risks.
+4. Settings page with simplified preferences, always-on safety rules, and advanced managed setup tools.
+5. Remove Yaxii setup confirmation showing only verified Yaxii-managed removal candidates and protected manual zones.
 
 == Changelog ==
 
 = 0.1.0 =
 * Initial WordPress.org preparation release.
-* Adds Algeria WooCommerce shipping setup, diagnostics, preview, safe apply, managed method editing, and verified managed setup removal.
+* Adds Algeria WooCommerce shipping setup, diagnostics, preview, safe apply, managed method editing, read-only protected-zone detection, and verified managed setup removal.
 
 == Upgrade Notice ==
 
