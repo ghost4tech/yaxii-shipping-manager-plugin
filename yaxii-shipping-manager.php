@@ -3,7 +3,7 @@
  * Plugin Name: Yaxii Shipping Manager
  * Plugin URI: https://github.com/ghost4tech/yaxii-shipping-manager-plugin
  * Description: Algeria shipping setup for WooCommerce.
- * Version: 0.1.0
+ * Version: 1.0.0
  * Requires at least: 6.5
  * Requires PHP: 7.4
  * Author: Yaxii
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'YAXII_SHIPPING_MANAGER_VERSION', '0.1.0' );
+define( 'YAXII_SHIPPING_MANAGER_VERSION', '1.0.0' );
 define( 'YAXII_SHIPPING_MANAGER_FILE', __FILE__ );
 define( 'YAXII_SHIPPING_MANAGER_PATH', plugin_dir_path( __FILE__ ) );
 define( 'YAXII_SHIPPING_MANAGER_URL', plugin_dir_url( __FILE__ ) );

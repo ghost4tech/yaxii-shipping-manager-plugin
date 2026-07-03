@@ -549,7 +549,7 @@ export function GeneratorWizard({
   };
 
   return (
-    <div className="fixed inset-0 z-[100000] flex flex-col bg-background animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[1000] flex flex-col bg-background animate-in fade-in duration-200">
       <div className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">

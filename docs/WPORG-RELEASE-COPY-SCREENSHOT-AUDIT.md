@@ -71,7 +71,7 @@ Safe:
 - It does not claim manual-zone adoption, editing, conversion, or automatic migration.
 - It does not claim zone-name updates are applied.
 - It does not introduce Pro, licensing, paid locks, telemetry, analytics, or remote-service dependency claims.
-- `Stable tag: 0.1.0` matches the plugin header `Version: 0.1.0`.
+- `Stable tag: 1.0.0` matches the plugin header `Version: 1.0.0`.
 - `Requires PHP: 7.4` matches `composer.json` `php >=7.4`.
 - Tags are five or fewer and relevant: WooCommerce, shipping, Algeria, COD, shipping zones.
 - The FAQ now explicitly says Yaxii COD Theme zones are detected only as protected/read-only and are not converted or proof that checkout compatibility is fixed.
@@ -155,7 +155,7 @@ Avoid:
 
 Use an authenticated administrator session.
 
-1. Open `wp-admin/admin.php?page=yaxii-shipping-manager`.
+1. Open `wp-admin/admin.php?page=yaxii-wc-shipping-manager`.
 2. Confirm no `Settings normalized`, loading, or repaired notices appear on normal valid settings.
 3. Open Shipping Editor and confirm aggregate labels use `Protected zones` or `Protected`.
 4. Confirm row labels remain precise when applicable:
@@ -231,3 +231,7 @@ TASK-014H: rebuild the release package from current HEAD, rerun Plugin Check on 
 TASK-014H rebuilt `release/yaxii-shipping-manager` and `release/yaxii-shipping-manager.zip` from current HEAD. The rebuilt package uses the current admin manifest (`assets/main-BxHh_ano.js` and `assets/main-BvJEBEQL.css`), includes `src/WooCommerce/YaxiiCodCompatibilityDetector.php`, excludes root `docs/`, `.agents`, raw `data/sources/`, source maps, `node_modules`, nested release artifacts, and hidden/dev config, and extracts with a single `yaxii-shipping-manager/` zip root.
 
 Plugin Check was attempted against the clean package, but local WP-CLI could not connect to the WordPress database. Run official Plugin Check again once the local WordPress database is available or on a known-good clean test site before WordPress.org submission.
+
+## TASK-014I Final Prep Note
+
+TASK-014I changed only the WordPress admin page/menu slug from `yaxii-shipping-manager` to `yaxii-wc-shipping-manager` after local Yaxii Smart Form source confirmed its Shipping Manager uses `admin.php?page=yaxii-shipping-manager`. The WordPress.org plugin slug, text domain, REST namespace, option names, database keys, and asset handles were not changed. Use `wp-admin/admin.php?page=yaxii-wc-shipping-manager` for final screenshots and manual Plugin Check browser smoke.

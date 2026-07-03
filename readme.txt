@@ -4,7 +4,7 @@ Tags: woocommerce, shipping, algeria, cod, shipping-zones
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 1.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,11 +71,11 @@ No. The plugin is local-first and does not send telemetry or analytics data.
 
 == Changelog ==
 
-= 0.1.0 =
+= 1.0.0 =
 * Initial WordPress.org preparation release.
 * Adds Algeria WooCommerce shipping setup, diagnostics, preview, safe apply, managed method editing, read-only protected-zone detection, and verified managed setup removal.
 
 == Upgrade Notice ==
 
-= 0.1.0 =
+= 1.0.0 =
 Initial release.

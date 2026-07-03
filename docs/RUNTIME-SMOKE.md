@@ -4,7 +4,7 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 
 ## Browser Admin Smoke
 
-1. Open `wp-admin/admin.php?page=yaxii-shipping-manager` as an administrator.
+1. Open `wp-admin/admin.php?page=yaxii-wc-shipping-manager` as an administrator.
 2. Confirm the plugin admin page loads without console errors.
 3. Confirm the main navigation shows only `Shipping Editor`, `Generator`, `Diagnostics`, and `Settings`.
 4. Confirm `Import / Export` and `Smart Form Sync` are not visible in the top navigation.
@@ -52,7 +52,7 @@ TASK-014B local smoke result:
 - WP-CLI `eval-file` simulated a missing settings option through an in-memory `pre_option_yaxii_shipping_manager_settings` filter and returned `missing_warnings=0`.
 - WP-CLI checked the current local stored settings and returned `current_warnings=0`.
 - WP-CLI simulated malformed stored settings and returned `malformed_warnings=1` with `Stored settings were invalid and defaults were used.`
-- Browser smoke opened `http://yaxii-ysz.local/wp-admin/admin.php?page=yaxii-shipping-manager` with a temporary local administrator that was deleted after the check.
+- Browser smoke opened `http://yaxii-ysz.local/wp-admin/admin.php?page=yaxii-wc-shipping-manager` with a temporary local administrator that was deleted after the check.
 - The admin snapshot did not show a global `Settings normalized` notice.
 - Checked switch geometry stayed inside the track: root `1088-1132`, thumb `1109-1129`.
 - Unchecked switch geometry stayed inside the track after keyboard activation: root `1054-1098`, thumb `1057-1077`.
@@ -80,7 +80,7 @@ Expected:
 TASK-014B2 local smoke result:
 
 - The rebuilt admin bundle no longer contains `Loading normalized dataset`, `Loading saved settings`, or `Settings normalized`.
-- Browser smoke hard-refreshed `http://yaxii-ysz.local/wp-admin/admin.php?page=yaxii-shipping-manager#/settings` with a temporary local administrator that was deleted after the check.
+- Browser smoke hard-refreshed `http://yaxii-ysz.local/wp-admin/admin.php?page=yaxii-wc-shipping-manager#/settings` with a temporary local administrator that was deleted after the check.
 - After hard refresh, the Settings DOM had no `role="alert"` elements and did not contain `Settings normalized`, `Loading saved settings`, `Loading normalized dataset`, or `Settings were repaired`.
 - Navigating from Settings to Diagnostics and back to Settings still showed no notices for valid settings.
 - WP-CLI `eval-file` used in-memory option filters and returned `missing_warnings=0`, `current_warnings=0`, and `malformed_warnings=1` with `Stored settings were invalid and defaults were used.`

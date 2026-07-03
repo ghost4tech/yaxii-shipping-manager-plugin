@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
+import { getAdminPortalContainer } from "@/lib/admin-portal";
 import { cn } from "@/lib/utils";
 
 const Drawer = ({
@@ -33,7 +34,7 @@ const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
+  <DrawerPortal container={getAdminPortalContainer()}>
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}

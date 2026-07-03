@@ -39,8 +39,9 @@ Do not include root `docs/` in the final WordPress.org plugin package by default
 2. Confirm `assets/admin/` contains no source maps unless intentionally approved.
 3. Confirm `assets/admin/manifest.json` exists. The admin build manifest is intentionally non-hidden so the release package can exclude hidden files without breaking wp-admin asset loading.
 4. From the plugin root, create the archive with a tool that honors `.distignore`.
-5. Extract the archive into a clean temporary folder.
-6. Run Plugin Check against the extracted package folder.
+5. If `vendor/` is generated locally and ignored by Git, copy the generated runtime `vendor/` directory into the package before zipping and verify `vendor/autoload.php` exists.
+6. Extract the archive into a clean temporary folder.
+7. Run Plugin Check against the extracted package folder.
 
 ## Package Smoke
 
@@ -61,6 +62,7 @@ Before release, scan the extracted package for:
 - `assets/admin/manifest.json` exists
 - `readme.txt` exists
 - `languages/` exists
+- `vendor/autoload.php` exists
 - no source maps under `assets/admin`
 
 Official Plugin Check must be run on the clean package before submission.

@@ -331,8 +331,8 @@ Add read-only cards before expanding write behavior:
 
 - Plugin name: `Yaxii Shipping Manager`
 - Text domain: `yaxii-shipping-manager`
-- Admin page slug: `yaxii-shipping-manager`
-- WooCommerce submenu label: `Yaxii Shipping`
+- Admin page slug: `yaxii-wc-shipping-manager`
+- WooCommerce submenu label: `Shipping Manager`
 - Page title: `Yaxii Shipping Manager`
 - REST namespace: `yaxii-shipping-manager/v1`
 - Admin script/style handle: `yaxii-shipping-manager-admin`
@@ -342,15 +342,15 @@ Add read-only cards before expanding write behavior:
 
 ### Finding
 
-The plugin slug is appropriate for WordPress.org and does not need to change unless there is a proven routing collision. Changing the slug, REST namespace, option names, or asset handles now would create migration and documentation churn without directly fixing the reported compatibility issue.
+The plugin slug is appropriate for WordPress.org and does not need to change. A local Yaxii Smart Form checkout already uses the WordPress admin page slug `yaxii-shipping-manager` for its Shipping Manager, so Yaxii Shipping Manager now uses the admin page slug `yaxii-wc-shipping-manager` while keeping the WordPress.org plugin slug, REST namespace, option names, and asset handles stable.
 
-The visible menu label `Yaxii Shipping` is more likely to cause user confusion because it is shorter and close to other Yaxii shipping features. If a naming change is needed before release, start with user-facing menu/title copy rather than storage or API identifiers.
+The previous visible menu label `Yaxii Shipping` was more ambiguous and close to other Yaxii shipping features. The WooCommerce submenu label is now `Shipping Manager`, and the page title remains `Yaxii Shipping Manager`.
 
 ### Recommendation
 
 - Keep the WordPress.org plugin slug `yaxii-shipping-manager`.
 - Keep REST namespace and option names stable unless a real conflict is proven.
-- Consider changing the visible WooCommerce submenu label to `Shipping Manager` or `Yaxii Shipping Manager`.
+- Use the admin page URL `wp-admin/admin.php?page=yaxii-wc-shipping-manager`.
 - Do not rename internal identifiers as part of the compatibility detection task.
 
 ## I. Compatibility Design Proposal

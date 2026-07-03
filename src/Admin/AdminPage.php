@@ -12,7 +12,7 @@ use Yaxii\ShippingManager\Support\Capabilities;
 defined( 'ABSPATH' ) || exit;
 
 final class AdminPage {
-	public const MENU_SLUG = 'yaxii-shipping-manager';
+	public const MENU_SLUG = 'yaxii-wc-shipping-manager';
 
 	private bool $woocommerce_active;
 
@@ -37,7 +37,7 @@ final class AdminPage {
 			add_submenu_page(
 				'woocommerce',
 				__( 'Yaxii Shipping Manager', 'yaxii-shipping-manager' ),
-				__( 'Yaxii Shipping', 'yaxii-shipping-manager' ),
+				__( 'Shipping Manager', 'yaxii-shipping-manager' ),
 				$capability,
 				self::MENU_SLUG,
 				array( $this, 'render' )
@@ -48,7 +48,7 @@ final class AdminPage {
 
 		add_management_page(
 			__( 'Yaxii Shipping Manager', 'yaxii-shipping-manager' ),
-			__( 'Yaxii Shipping', 'yaxii-shipping-manager' ),
+			__( 'Shipping Manager', 'yaxii-shipping-manager' ),
 			$capability,
 			self::MENU_SLUG,
 			array( $this, 'render' )
