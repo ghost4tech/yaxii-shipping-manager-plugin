@@ -11,10 +11,12 @@ Use `.distignore` when creating the release archive. The package must exclude de
 - `.gitignore` and `.gitattributes`
 - `AGENTS.md` and `CLAUDE.md`
 - Plugin Check report markdown files
+- root `docs/` audit and planning material
+- raw candidate source material under `data/sources/`
 - reference apps under `.agents/references/`
 - `node_modules/`
 - local logs, temporary files, screenshots, coverage, and source maps
-- hidden Prettier and Git ignore files under `admin-app/`
+- hidden Prettier/Git ignore files and lint-only config under `admin-app/`
 
 Keep exclusions root-scoped when they share names with runtime namespaces. In particular, the development-only root `tools/` folder is excluded as `/tools/`; do not exclude every directory named `tools`, because `src/Tools/` contains runtime PHP classes required during plugin activation.
 
@@ -27,8 +29,9 @@ The runtime package should include:
 - `vendor/` when Composer dependencies are installed for release
 - `languages/`
 - `readme.txt`
-- GPL-compatible project docs that describe shipped behavior
-- `admin-app/` source files when source availability for built admin assets is required by the release process, excluding `node_modules` and hidden dev config
+- `admin-app/` source files when source availability for built admin assets is required by the release process, excluding `node_modules`, hidden dev config, and lint-only config
+
+Do not include root `docs/` in the final WordPress.org plugin package by default. Keep release-facing behavior claims in `readme.txt`, and keep audit/progress/source-research material in the development repository unless a specific release requires it. Ship normalized runtime datasets under `data/algeria/`; do not ship raw candidate source folders under `data/sources/` in the final archive.
 
 ## Build Steps
 
@@ -48,9 +51,11 @@ Before release, scan the extracted package for:
 - no `AGENTS.md`
 - no `CLAUDE.md`
 - no Plugin Check report markdown in the package root
+- no root `docs/` folder
+- no `data/sources/` folder
 - no reference apps
 - no `node_modules`
-- no hidden Prettier files
+- no hidden Prettier files or lint-only admin config
 - `src/Tools/ManagedSetupRemovalPreview.php` exists
 - `src/Tools/ManagedSetupRemovalExecutor.php` exists
 - `assets/admin/manifest.json` exists

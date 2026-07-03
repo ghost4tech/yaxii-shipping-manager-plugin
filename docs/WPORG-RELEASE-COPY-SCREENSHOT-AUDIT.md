@@ -225,3 +225,9 @@ Recommended next sequence:
 ## Next Recommended Task
 
 TASK-014H: rebuild the release package from current HEAD, rerun Plugin Check on the clean package, and run final package hygiene scans. After that, capture WordPress.org screenshots from the verified admin UI.
+
+## TASK-014H Package Rebuild Note
+
+TASK-014H rebuilt `release/yaxii-shipping-manager` and `release/yaxii-shipping-manager.zip` from current HEAD. The rebuilt package uses the current admin manifest (`assets/main-BxHh_ano.js` and `assets/main-BvJEBEQL.css`), includes `src/WooCommerce/YaxiiCodCompatibilityDetector.php`, excludes root `docs/`, `.agents`, raw `data/sources/`, source maps, `node_modules`, nested release artifacts, and hidden/dev config, and extracts with a single `yaxii-shipping-manager/` zip root.
+
+Plugin Check was attempted against the clean package, but local WP-CLI could not connect to the WordPress database. Run official Plugin Check again once the local WordPress database is available or on a known-good clean test site before WordPress.org submission.

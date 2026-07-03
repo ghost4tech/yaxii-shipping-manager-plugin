@@ -7,6 +7,8 @@
 /.gitattributes
 /.agents/
 /release/
+/docs/
+/data/sources/
 AGENTS.md
 CLAUDE.md
 prototype-app-history.bundle
@@ -19,6 +21,8 @@ yaxii-shipping-manager-*.md
 *.tar.gz
 node_modules
 admin-app/node_modules
+admin-app/components.json
+admin-app/eslint.config.js
 admin-app/.gitignore
 admin-app/.prettierignore
 admin-app/.prettierrc
