@@ -1,0 +1,16 @@
+{
+  "mode": "legacy_58",
+  "source": "current normalized dataset first 58 wilaya records",
+  "derived_from": "current-candidate-2025",
+  "version": "legacy-58-compatible-candidate-2025",
+  "complete": true,
+  "verified": false,
+  "available": true,
+  "wilaya_count": 58,
+  "commune_count": 1433,
+  "compatibility_note": "Derived from user-verified first 58 records of the current normalized dataset. Not independently verified as official/legal administrative truth.",
+  "warnings": [
+    "Legacy 58-compatible dataset is derived from the current normalized dataset by filtering wilaya codes 01 through 58.",
+    "Do not present this compatibility dataset as independently official/legal verification."
+  ]
+}

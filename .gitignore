@@ -1,0 +1,8 @@
+node_modules/
+admin-app/node_modules/
+release/
+coverage/
+*.log
+*.tmp
+*.map
+.DS_Store
