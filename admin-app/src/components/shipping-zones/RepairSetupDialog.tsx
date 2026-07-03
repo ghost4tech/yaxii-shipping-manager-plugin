@@ -151,7 +151,7 @@ export function RepairSetupDialog({
             <CheckCircle2 className="h-4 w-4" />
             <AlertTitle>Shipping setup repaired</AlertTitle>
             <AlertDescription>
-              {repairCount} wilaya{repairCount === 1 ? " was" : "s were"} repaired. Manual zones
+              {repairCount} wilaya{repairCount === 1 ? " was" : "s were"} repaired. Protected zones
               were not touched.
             </AlertDescription>
           </Alert>

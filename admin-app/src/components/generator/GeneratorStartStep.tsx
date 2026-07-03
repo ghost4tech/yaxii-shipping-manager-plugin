@@ -101,7 +101,7 @@ export function GeneratorStartStep({
             onClick={() => setMode("continue")}
             icon={<FileEdit className="h-5 w-5" />}
             title="Repair existing setup"
-            desc="Recreate missing Yaxii zones or methods. Manual zones stay protected."
+            desc="Recreate missing Yaxii zones or methods. Protected zones stay read-only."
           />
         </div>
       )}
@@ -207,7 +207,7 @@ function StartActions({
       </Button>
       {guidance.manualProtectedZoneCount > 0 && (
         <Button type="button" variant="outline" onClick={onOpenDiagnostics}>
-          Review manual zones
+          Review protected zones
         </Button>
       )}
     </div>

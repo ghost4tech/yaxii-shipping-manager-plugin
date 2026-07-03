@@ -399,7 +399,7 @@ export function ShippingZonesPage({
         )}
       {emptySetupState.show && (
         <EmptySetupPanel
-          manualZoneCount={emptySetupState.manualZoneCount}
+          protectedZoneCount={emptySetupState.protectedZoneCount}
           tableVisible={emptySetupTableVisible}
           onGenerateSetup={onLaunchWizard}
           onViewAllWilayas={() => {
@@ -510,12 +510,12 @@ export function ShippingZonesPage({
 }
 
 function EmptySetupPanel({
-  manualZoneCount,
+  protectedZoneCount,
   tableVisible,
   onGenerateSetup,
   onViewAllWilayas,
 }: {
-  manualZoneCount: number;
+  protectedZoneCount: number;
   tableVisible: boolean;
   onGenerateSetup: () => void;
   onViewAllWilayas: () => void;
@@ -532,12 +532,11 @@ function EmptySetupPanel({
           this page.
         </p>
         <p className="mt-2 text-xs text-muted-foreground">
-          Manual WooCommerce zones, if any, are protected and will not be edited by Yaxii.
+          Manual, theme, and external WooCommerce zones, if any, are protected and will not be
+          edited by Yaxii.
         </p>
-        {manualZoneCount > 0 && (
-          <p className="mt-3 text-xs font-medium text-amber-900">
-            Manual WooCommerce zones are protected.
-          </p>
+        {protectedZoneCount > 0 && (
+          <p className="mt-3 text-xs font-medium text-amber-900">Protected zones are read-only.</p>
         )}
       </div>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -571,14 +570,15 @@ function EmptySetupPanel({
 function emptySetupViewState(
   rows: ShippingZoneRowView[],
   diagnosticsState: DiagnosticsLoadState,
-): { show: boolean; manualZoneCount: number } {
+): { show: boolean; protectedZoneCount: number } {
   if (diagnosticsState.status !== "ready") {
-    return { show: false, manualZoneCount: 0 };
+    return { show: false, protectedZoneCount: 0 };
   }
 
   const manualZoneCount = diagnosticsState.response.zoneResults.filter(
     (zone) => zone.ownershipHint === "manual_unknown",
   ).length;
+  const protectedZoneCount = rows.filter(rowIsProtected).length;
   const summary = diagnosticsState.response.summary;
   const missingThreshold = Math.max(
     summary.totalWilayas - manualZoneCount,
@@ -596,8 +596,17 @@ function emptySetupViewState(
       summary.managedRegistryZoneCount === 0 &&
       (mostWilayasMissing || onlyManualRowsConfigured) &&
       activeManagedRows === 0,
-    manualZoneCount,
+    protectedZoneCount,
   };
+}
+
+function rowIsProtected(row: ShippingZoneRowView): boolean {
+  return (
+    row.status === "protected" ||
+    row.status === "yaxii_cod_theme" ||
+    row.status === "external_yaxii" ||
+    row.status === "duplicate_external"
+  );
 }
 
 function rowIsMissingOrProtected(row: ShippingZoneRowView): boolean {

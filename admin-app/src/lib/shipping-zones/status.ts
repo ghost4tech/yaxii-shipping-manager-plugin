@@ -28,7 +28,7 @@ export const SHIPPING_ZONE_FILTERS: Array<{ key: ShippingZoneFilter; label: stri
   { key: "pending", label: "Pending changes" },
   { key: "needs_update", label: "Needs update" },
   { key: "missing", label: "Missing setup" },
-  { key: "protected", label: "Manual zones" },
+  { key: "protected", label: "Protected" },
 ];
 
 const STATUS_LABELS: Record<ShippingZoneStatus, string> = {
@@ -167,7 +167,7 @@ export function shippingZoneStats(rows: ShippingZoneRowView[]): ShippingZoneStat
       0,
     ),
     pendingChanges: rows.reduce((total, row) => total + row.pendingMethodCount, 0),
-    protectedManualZones: rows.filter((row) => protectedStatus(row.status)).length,
+    protectedZones: rows.filter((row) => protectedStatus(row.status)).length,
   };
 }
 

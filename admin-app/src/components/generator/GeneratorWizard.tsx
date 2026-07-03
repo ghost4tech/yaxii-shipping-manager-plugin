@@ -946,7 +946,7 @@ function StepCoverage({
           <Info className="h-4 w-4 text-primary" />
           <AlertTitle>Repair existing setup</AlertTitle>
           <AlertDescription>
-            Recreate missing Yaxii zones or methods. Manual zones stay protected.
+            Recreate missing Yaxii zones or methods. Protected zones stay read-only.
           </AlertDescription>
         </Alert>
       )}
@@ -1699,8 +1699,8 @@ function StepPreview({
         <ShieldCheck className="h-4 w-4 text-primary" />
         <AlertTitle>Safety rules stay on</AlertTitle>
         <AlertDescription>
-          Manual zones are protected. No deletes will be made. WooCommerce is checked again before
-          applying.
+          Protected zones are read-only. No deletes will be made. WooCommerce is checked again
+          before applying.
         </AlertDescription>
       </Alert>
 
@@ -1910,7 +1910,7 @@ function setupModeBadgeLabel(mode: SetupMode): string {
 
 function setupModePreviewCopy(mode: SetupMode): string {
   if (mode === "continue") {
-    return "Recreate missing Yaxii zones or methods. Manual zones stay protected.";
+    return "Recreate missing Yaxii zones or methods. Protected zones stay read-only.";
   }
 
   if (mode === "preview") {

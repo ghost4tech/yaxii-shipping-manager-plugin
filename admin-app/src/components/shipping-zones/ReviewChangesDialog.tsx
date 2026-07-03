@@ -105,7 +105,7 @@ export function ReviewChangesDialog({
         <DialogHeader>
           <DialogTitle>Review changes</DialogTitle>
           <DialogDescription>
-            WooCommerce will be checked again before updating. Manual zones will not be touched.
+            WooCommerce will be checked again before updating. Protected zones will not be touched.
           </DialogDescription>
         </DialogHeader>
 

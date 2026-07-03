@@ -228,7 +228,7 @@ export function ShippingZonesToolbar({
           {hasRepairableSelection && (
             <p className="mt-2 text-xs text-muted-foreground">
               {repairableSelectionCount} selected row(s) are missing setup. Repair uses
-              preview/apply and manual zones will not be touched.
+              preview/apply and protected zones will not be touched.
             </p>
           )}
           {protectedSelectionCount > 0 && (

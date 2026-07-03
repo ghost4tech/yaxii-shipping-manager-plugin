@@ -250,7 +250,7 @@ Status label:
 
 - Use `Manual WooCommerce zone` for ordinary manual zones.
 - Use `Created by Yaxii COD Theme`, `External Yaxii zone`, or `Duplicate zone` for theme/external coverage.
-- Use the filter label `Manual zones` or consider renaming it to `Protected zones` because the count now includes manual, theme, and external protected rows.
+- Use aggregate labels such as `Protected zones` or `Protected` when the count or filter includes manual, theme, external, or duplicate protected rows.
 
 Row details:
 
@@ -326,7 +326,7 @@ Recommended action:
 Policy:
 
 - Manual zones remain protected.
-- Show manual/protected zone count.
+- Show protected-zone count.
 - Never include manual zones in removal candidates.
 - Never remove a zone with unmanaged methods.
 - Keep typed confirmation only for managed setup removal.
@@ -376,6 +376,7 @@ For the initial WordPress.org release:
 - Manual zones should remain read-only.
 - Adoption should be hidden.
 - Copy may say manual zones are protected now, but should not promise a delivery date for adoption.
+- Aggregate copy should say protected zones when it includes manual, Yaxii COD Theme, external Yaxii, or duplicate protected rows.
 - Screenshots can include manual zones only if they clearly show protected/read-only behavior.
 - Readme can mention that manual WooCommerce zones are protected and not edited by Yaxii Shipping Manager.
 - Plugin Check/readme release notes should not claim manual-zone management, adoption, conversion, or automatic migration.
@@ -416,3 +417,7 @@ Future manual-zone adoption can be useful, but only as a separate preview-first 
 ## Next Recommended Task
 
 TASK-014F: tighten protected-zone release copy and documentation wording, especially replacing ambiguous `Manual zones` counts with `Protected zones` where the UI includes manual, theme, and external protected rows.
+
+## TASK-014F Implementation Note
+
+TASK-014F should keep row-level labels precise while changing aggregate release copy to `Protected zones`, `Protected`, or `Protected zones are read-only` when the group may include manual, Yaxii COD Theme, external Yaxii, or duplicate protected rows.

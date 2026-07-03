@@ -63,9 +63,9 @@ export function generatorStartGuidance(diagnostics?: DiagnosticsResponse): Gener
   if (summary.duplicateConflictCount > 0 || manualProtectedZoneCount > 0) {
     return {
       state: "manual_review",
-      title: "Manual zones need review",
+      title: "Protected zones need review",
       message:
-        "Yaxii found WooCommerce zones it does not manage. These zones are protected and will not be changed.",
+        "Yaxii found WooCommerce zones it does not manage. Protected zones are read-only and will not be changed.",
       manualProtectedZoneCount,
       lockedExternalWilayaCount,
       safeMissingWilayaCount,
@@ -103,7 +103,7 @@ export function generatorStartGuidance(diagnostics?: DiagnosticsResponse): Gener
     state: "repair_needed",
     title: "Repair missing setup",
     message:
-      "Some Yaxii-managed zones or methods are missing. Yaxii can repair them safely without touching manual zones.",
+      "Some Yaxii-managed zones or methods are missing. Yaxii can repair them safely without touching protected zones.",
     manualProtectedZoneCount,
     lockedExternalWilayaCount,
     safeMissingWilayaCount,

@@ -153,7 +153,7 @@ function conflictsHealthCheck(response: DiagnosticsResponse): DiagnosticsHealthC
 function protectedZonesHealthCheck(protectedZoneCount: number): DiagnosticsHealthCheck {
   return {
     id: "protected-zones",
-    label: "Manual zones",
+    label: "Manual zones protected",
     detail:
       protectedZoneCount === 0
         ? "No overlapping manual or unknown Algeria zones were found."

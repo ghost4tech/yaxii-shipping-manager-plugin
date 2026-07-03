@@ -131,7 +131,7 @@ Expected:
 - `Modify setup anyway` allows continuing into Coverage and warns that existing setup was found.
 - Fresh/no setup shows `Create a new shipping setup` with `Start setup`.
 - Missing setup shows `Repair missing setup` with `Repair setup`.
-- Manual conflicts show `Manual zones need review`, `Review Diagnostics`, and `Open WooCommerce zones`.
+- Protected conflicts show `Protected zones need review`, `Review Diagnostics`, and `Open WooCommerce zones`.
 - Repair mode preselects only missing or method-incomplete managed wilayas.
 - Repair mode with no missing setup says `No repair needed` and offers `Open Shipping Editor`.
 - `Preview only` is a small secondary support option and stops at Preview.
@@ -178,19 +178,19 @@ Expected:
 - Shipping Editor shows `No shipping setup yet` when the managed registry is empty, no active managed rows exist, and most or all wilayas are missing.
 - The full wilaya table is hidden until `View all wilayas` is clicked.
 - `Generate shipping zones` opens Generator in the create setup flow.
-- If protected manual WooCommerce zones exist, Shipping Editor shows protected manual-zone copy.
-- If no manual WooCommerce zones exist, no manual-zone warning is shown.
+- If protected WooCommerce zones exist, Shipping Editor shows protected-zone copy.
+- If no protected WooCommerce zones exist, no protected-zone warning is shown.
 - Settings `Advanced tools` says `No Yaxii setup found.` when no Yaxii-managed setup exists.
 - When Yaxii-managed setup exists, `Remove Yaxii setup` opens a confirmation modal.
 - The confirmation modal says `This removes only Yaxii-managed WooCommerce shipping zones and methods.`, `Manual WooCommerce zones will not be touched.`, and `You can generate a new Yaxii setup again later.`
 - The confirmation modal asks the user to type `REMOVE`, not the backend confirmation string.
-- The modal shows only Yaxii-managed zones to remove, manual zones protected, and warnings/blockers counts by default.
+- The modal shows only Yaxii-managed zones to remove, protected zones, and warnings/blockers counts by default.
 - `View technical details` contains candidate, blocker, warning, and protected manual-zone records.
 - If blockers exist, the modal says `Yaxii setup cannot be safely removed yet.` and does not show `Confirm removal`.
 - After successful removal, Settings shows `Yaxii setup removed. Manual WooCommerce zones were not touched.` and offers `Generate shipping zones`.
-- Expanding a manual/protected row shows the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when readable.
-- Manual/protected row details offer only `Open WooCommerce zones` and `Review Diagnostics`.
-- Manual/protected rows do not show editable price inputs, enable/disable controls, `Repair setup`, `Generate`, `Adopt`, `Delete`, or `Convert`.
+- Expanding a protected row shows the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when readable.
+- Protected row details offer only `Open WooCommerce zones` and `Review Diagnostics`.
+- Protected rows do not show editable price inputs, enable/disable controls, `Repair setup`, `Generate`, `Adopt`, `Delete`, or `Convert`.
 - `Repair setup` and `Repair selected` send preview pricing rows with `methodStatuses` as an object, using an empty object when there are no status changes.
 - Generator Start shows `Create a new Yaxii setup` after removal even when protected manual zones remain.
 - Generator Start warns `Manual WooCommerce zones exist and will be protected.`
@@ -371,7 +371,7 @@ Expected result:
 - Shipping Editor shows the affected wilaya as `Missing setup`.
 - Price inputs stay disabled for that row.
 - `Repair setup` or `Repair selected` opens a repair dialog.
-- The repair dialog says manual zones will not be touched.
+- The repair dialog says protected zones will not be touched.
 - Repair calls preview, then apply, through the existing safe backend.
 - Preview reports supported `createZones` or `addMethods` work and no conflicts.
 - Apply recreates the missing managed zone or method and updates the managed registry.

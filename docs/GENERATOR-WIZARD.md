@@ -34,7 +34,7 @@ The Start screen is state-aware and is derived from diagnostics when available:
 - No configured Yaxii-managed setup or many missing wilayas: `Create a new shipping setup`
 - Missing managed zones or method gaps: `Repair missing setup`
 - Fully managed setup: `Your shipping setup is already active`
-- Duplicate/manual conflicts: `Manual zones need review`
+- Protected duplicate/manual conflicts: `Protected zones need review`
 
 State actions:
 
@@ -70,7 +70,7 @@ No safe wilayas to generate
 Choice copy:
 
 - `Create new setup`: `Create a new shipping setup for selected wilayas.`
-- `Repair existing setup`: `Recreate missing Yaxii zones or methods. Manual zones stay protected.`
+- `Repair existing setup`: `Recreate missing Yaxii zones or methods. Protected zones stay read-only.`
 - `Preview only`: `Review a plan without applying changes.`
 
 When setup is already active, Start shows:
@@ -91,7 +91,7 @@ Create a new Yaxii setup
 Manual WooCommerce zones exist and will be protected.
 ```
 
-The primary action remains `Start setup`. `Review manual zones` opens Diagnostics. Manual conflicts can still be skipped or blocked by Preview/Apply for selected wilayas, but a protected manual zone does not make the whole generator start screen unusable.
+The primary action remains `Start setup`. `Review protected zones` opens Diagnostics. Manual conflicts can still be skipped or blocked by Preview/Apply for selected wilayas, but a protected manual zone does not make the whole generator start screen unusable.
 
 When Shipping Editor is in the empty setup state, its `Generate shipping zones` action opens this same create setup path.
 
@@ -198,8 +198,8 @@ The preview request includes:
 
 Preview shows safety copy inline:
 
-- Manual zones are protected.
-- Yaxii COD Theme and external Yaxii zones are protected.
+- Protected zones are read-only.
+- Yaxii COD Theme and external Yaxii zones remain protected.
 - No deletes will be made.
 - WooCommerce is checked again before applying.
 

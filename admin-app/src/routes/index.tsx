@@ -320,7 +320,7 @@ export default function AdminApp({
       <footer
         className={cn(APP_CONTAINER_CLASS, "pb-10 text-center text-xs text-muted-foreground")}
       >
-        Yaxii Shipping Manager - Preview first - Manual zones are protected
+        Yaxii Shipping Manager - Preview first - Protected zones stay read-only
       </footer>
       <div id="yaxii-shipping-manager-admin-portal" />
 
@@ -784,8 +784,8 @@ function SettingsForm({
           <CardHeader>
             <CardTitle>Safety rules are always on</CardTitle>
             <CardDescription>
-              Yaxii protects manual WooCommerce zones, requires preview before apply, skips
-              conflicts by default, and never deletes manual zones.
+              Yaxii protects manual and external WooCommerce zones, requires preview before apply,
+              skips conflicts by default, and never deletes protected zones.
             </CardDescription>
           </CardHeader>
           <CardContent>

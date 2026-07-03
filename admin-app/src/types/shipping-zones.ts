@@ -98,7 +98,7 @@ export type ShippingZoneStats = {
   activeWilayas: number;
   managedMethods: number;
   pendingChanges: number;
-  protectedManualZones: number;
+  protectedZones: number;
 };
 
 export type PendingChangeItem = {
