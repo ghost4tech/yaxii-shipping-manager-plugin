@@ -47,7 +47,10 @@ export function GeneratorAdvancedDetails({ response }: { response: PreviewRespon
               title="Method status updates"
               items={response.plan.updateMethodStatuses}
             />
-            <SupportPlanGroup title="Manual zones skipped" items={response.plan.skipManualZones} />
+            <SupportPlanGroup
+              title="Protected zones skipped"
+              items={response.plan.skipManualZones}
+            />
             <SupportPlanGroup title="Conflicts" items={response.plan.conflicts} />
             <SupportPlanGroup title="Planner warnings" items={response.plan.warnings} />
             <SupportPlanGroup title="Unchanged" items={response.plan.unchanged} />
@@ -115,6 +118,14 @@ function ownershipSourceLabel(source: PreviewPlanItem["ownershipSource"]): strin
 
   if (source === "yaxii_name_hint") {
     return "Yaxii-looking";
+  }
+
+  if (source === "yaxii_cod_theme") {
+    return "Yaxii COD Theme";
+  }
+
+  if (source === "external_yaxii_zone") {
+    return "External Yaxii";
   }
 
   return "Manual/unknown";

@@ -275,7 +275,14 @@ function actionForRow(
     return "generator";
   }
 
-  if (status === "protected" || status === "conflict" || status === "not_managed") {
+  if (
+    status === "protected" ||
+    status === "conflict" ||
+    status === "not_managed" ||
+    status === "yaxii_cod_theme" ||
+    status === "external_yaxii" ||
+    status === "duplicate_external"
+  ) {
     return "diagnostics";
   }
 
@@ -287,5 +294,11 @@ function actionForRow(
 }
 
 function rowHasDisabledManagedMethod(row: ShippingZoneRowView): boolean {
-  return row.status === "disabled" || row.methods.some((method) => method.enabled === false);
+  return (
+    row.status === "disabled" ||
+    row.status === "yaxii_cod_theme" ||
+    row.status === "external_yaxii" ||
+    row.status === "duplicate_external" ||
+    row.methods.some((method) => method.enabled === false)
+  );
 }

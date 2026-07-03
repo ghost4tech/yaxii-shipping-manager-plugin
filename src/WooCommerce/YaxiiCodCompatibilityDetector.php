@@ -266,6 +266,7 @@ final class YaxiiCodCompatibilityDetector {
 			'zoneName'             => (string) ( $zone['name'] ?? '' ),
 			'locationCode'         => (string) ( $location['code'] ?? '' ),
 			'locationFormat'       => $source_format,
+			'methodCount'          => count( $zone['methods'] ?? array() ),
 			'sourceFormat'         => $source_format,
 			'sourceClassification' => $this->source_classification( $zone, $source_format, $theme_zone_ids ),
 		);
@@ -285,6 +286,7 @@ final class YaxiiCodCompatibilityDetector {
 			'zoneName'             => null === $zone ? '' : (string) ( $zone['name'] ?? '' ),
 			'locationCode'         => $state_key,
 			'locationFormat'       => 'theme_zone_map',
+			'methodCount'          => null === $zone ? 0 : count( $zone['methods'] ?? array() ),
 			'sourceFormat'         => 'theme_zone_map',
 			'sourceClassification' => 'Yaxii COD Theme',
 		);

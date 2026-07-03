@@ -45,6 +45,28 @@ State actions:
 - Manual conflicts show `Review Diagnostics` and `Open WooCommerce zones`.
 - `Preview only` is a small advanced/support option with the copy `Review a plan without applying changes.`
 
+When Diagnostics detects Yaxii COD Theme coverage with normalized duplicates or state-format mismatch, Start shows:
+
+```text
+Existing Yaxii COD setup detected
+This store already has shipping zones created by Yaxii COD Theme. Yaxii Shipping Manager will not create duplicate zones for those wilayas.
+```
+
+Actions:
+
+- `Review Diagnostics`
+- `Continue with safe missing wilayas` when non-overlapping missing wilayas exist
+- `Open WooCommerce zones`
+- `Preview only`
+
+If no non-overlapping missing wilayas exist, the setup path is review-only and Start shows:
+
+```text
+No safe wilayas to generate
+```
+
+`Preview only` remains available for support review and does not expose Generate/apply controls.
+
 Choice copy:
 
 - `Create new setup`: `Create a new shipping setup for selected wilayas.`
@@ -95,6 +117,20 @@ When `Create new setup` is used while Yaxii-managed setup already exists, the wi
 ```text
 Existing Yaxii-managed setup found. This mode will only preview supported missing or changed work.
 ```
+
+When Yaxii COD Theme or external Yaxii coverage exists, Coverage locks those wilayas out of create/repair selection. Locked row copy:
+
+```text
+Already covered by Yaxii COD Theme
+```
+
+The normal create path preselects only truly missing non-overlapping wilayas. If the current dataset has additional missing wilayas outside the Yaxii COD Theme 58-wilaya coverage, Generator may preview only those non-overlapping wilayas and shows:
+
+```text
+Yaxii COD Theme checkout may not use these new zones until a compatibility bridge exists.
+```
+
+This warning does not claim checkout compatibility.
 
 ## Communes
 
@@ -163,8 +199,11 @@ The preview request includes:
 Preview shows safety copy inline:
 
 - Manual zones are protected.
+- Yaxii COD Theme and external Yaxii zones are protected.
 - No deletes will be made.
 - WooCommerce is checked again before applying.
+
+If a preview request includes Yaxii COD Theme or external Yaxii-covered wilayas, the preview planner classifies them as protected skips instead of `createZones`.
 
 If the preview has no creates, method additions, method updates, or method status changes, the preview says:
 
@@ -228,5 +267,7 @@ Still not implemented:
 - Provider imports
 - YSF sync
 - Manual-zone adoption
+- Yaxii COD Theme adoption or conversion
 - Zone-name apply
 - Reset/delete/wipe tooling
+- `yaxii_zone_map` writes

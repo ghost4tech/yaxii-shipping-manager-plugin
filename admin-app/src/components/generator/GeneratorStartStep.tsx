@@ -14,6 +14,7 @@ export function GeneratorStartStep({
   setMode,
   diagnostics,
   onAdvance,
+  onContinueSafeMissing,
   onOpenShippingZones,
   onOpenDiagnostics,
   onOpenWooCommerceZones,
@@ -22,6 +23,7 @@ export function GeneratorStartStep({
   setMode: (mode: SetupMode) => void;
   diagnostics?: DiagnosticsResponse;
   onAdvance: () => void;
+  onContinueSafeMissing: () => void;
   onOpenShippingZones: () => void;
   onOpenDiagnostics: () => void;
   onOpenWooCommerceZones: () => void;
@@ -57,6 +59,7 @@ export function GeneratorStartStep({
             guidance={guidance}
             setMode={setMode}
             onAdvance={onAdvance}
+            onContinueSafeMissing={onContinueSafeMissing}
             onOpenShippingZones={onOpenShippingZones}
             onOpenDiagnostics={onOpenDiagnostics}
             onOpenWooCommerceZones={onOpenWooCommerceZones}
@@ -64,6 +67,18 @@ export function GeneratorStartStep({
           {guidance.manualProtectedZoneCount > 0 && guidance.state === "fresh_setup" && (
             <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
               Manual WooCommerce zones exist and will be protected.
+            </div>
+          )}
+          {guidance.state === "external_review" && guidance.safeMissingWilayaCount === 0 && (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              No safe wilayas to generate. Review Diagnostics or WooCommerce zones before applying
+              any setup changes.
+            </div>
+          )}
+          {guidance.state === "external_review" && guidance.safeMissingWilayaCount > 0 && (
+            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Yaxii COD Theme checkout may not use these new zones until a compatibility bridge
+              exists.
             </div>
           )}
         </CardContent>
@@ -110,6 +125,7 @@ function StartActions({
   guidance,
   setMode,
   onAdvance,
+  onContinueSafeMissing,
   onOpenShippingZones,
   onOpenDiagnostics,
   onOpenWooCommerceZones,
@@ -117,6 +133,7 @@ function StartActions({
   guidance: ReturnType<typeof generatorStartGuidance>;
   setMode: (mode: SetupMode) => void;
   onAdvance: () => void;
+  onContinueSafeMissing: () => void;
   onOpenShippingZones: () => void;
   onOpenDiagnostics: () => void;
   onOpenWooCommerceZones: () => void;
@@ -135,6 +152,25 @@ function StartActions({
         </Button>
         <Button type="button" variant="outline" onClick={() => startMode("fresh")}>
           Modify setup anyway
+        </Button>
+      </div>
+    );
+  }
+
+  if (state === "external_review") {
+    return (
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button type="button" onClick={onOpenDiagnostics}>
+          Review Diagnostics
+        </Button>
+        {guidance.safeMissingWilayaCount > 0 && (
+          <Button type="button" variant="outline" onClick={onContinueSafeMissing}>
+            Continue with safe missing wilayas
+          </Button>
+        )}
+        <Button type="button" variant="outline" onClick={onOpenWooCommerceZones}>
+          <ExternalLink className="h-4 w-4" />
+          Open WooCommerce zones
         </Button>
       </div>
     );

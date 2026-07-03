@@ -107,7 +107,7 @@ export function GeneratorGenerateStep({
           />
         </div>
         <CardContent className="grid gap-2 p-5 text-xs text-muted-foreground sm:grid-cols-2">
-          <SafetyLine>Manual zones are skipped</SafetyLine>
+          <SafetyLine>Protected zones are skipped</SafetyLine>
           <SafetyLine>Conflicts are blocked</SafetyLine>
           <SafetyLine>No deletes are planned</SafetyLine>
           <SafetyLine>Preview checked before generate</SafetyLine>

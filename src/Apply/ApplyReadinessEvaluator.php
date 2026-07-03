@@ -169,9 +169,9 @@ final class ApplyReadinessEvaluator {
 				'recommendedAction' => __( 'Review existing coverage and missing wilayas before applying.', 'yaxii-shipping-manager' ),
 			),
 			'manual_zones_detected'  => array(
-				'title'             => __( 'Manual zones are protected and will be skipped', 'yaxii-shipping-manager' ),
-				'message'           => __( 'Manual or unknown WooCommerce zones overlap selected wilayas. Yaxii will not overwrite them by default.', 'yaxii-shipping-manager' ),
-				'recommendedAction' => __( 'Review skipped manual zones before applying.', 'yaxii-shipping-manager' ),
+				'title'             => __( 'Protected zones will be skipped', 'yaxii-shipping-manager' ),
+				'message'           => __( 'Manual, theme, or external WooCommerce zones overlap selected wilayas. Yaxii will not overwrite them by default.', 'yaxii-shipping-manager' ),
+				'recommendedAction' => __( 'Review skipped protected zones before applying.', 'yaxii-shipping-manager' ),
 			),
 			'conflicts_detected'     => array(
 				'title'             => __( 'Resolve conflicts before applying', 'yaxii-shipping-manager' ),

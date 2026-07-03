@@ -47,10 +47,31 @@ Manual WooCommerce zones do not block this empty setup state. If manual zones ex
 If Diagnostics detects an existing Yaxii COD Theme shipping setup, Shipping Editor shows a non-blocking read-only hint:
 
 ```text
-Existing Yaxii COD shipping setup detected. Review Diagnostics before generating new zones.
+Existing Yaxii COD shipping setup detected. Some wilayas are read-only to prevent duplicate zones. Review Diagnostics before generating new zones.
 ```
 
-The hint does not change row statuses, does not block Generator, does not adopt theme zones, and does not edit theme-owned WooCommerce zones.
+The hint does not adopt theme zones and does not edit theme-owned WooCommerce zones.
+
+When compatibility findings map to the current wilaya dataset, rows use read-only external status labels:
+
+- `Created by Yaxii COD Theme`: the normalized wilaya is covered by Yaxii COD Theme and no Yaxii Shipping Manager managed zone covers it.
+- `Duplicate zone`: the normalized wilaya is covered by both Yaxii Shipping Manager and Yaxii COD Theme.
+- `External Yaxii zone`: the normalized wilaya has external Yaxii-looking coverage but no Yaxii Shipping Manager registry record.
+
+These rows:
+
+- are not treated as plain `Missing setup`;
+- do not show editable price inputs;
+- do not allow status toggles or bulk actions;
+- do not show `Repair setup`;
+- show read-only source details when available: source, zone ID, zone name, location format, and method count;
+- route actions to `Review in Diagnostics` and `Open WooCommerce zones`.
+
+Duplicate rows show this warning copy:
+
+```text
+This wilaya is covered by both Yaxii Shipping Manager and Yaxii COD Theme.
+```
 
 Partial setup is different: when some Yaxii-managed rows exist and some rows are missing, the table remains the primary workspace and the row-level `Repair setup` plus selected-row `Repair selected` actions remain visible.
 
@@ -160,6 +181,8 @@ This zone is not managed by Yaxii. Yaxii will not edit it.
 ```
 
 Manual/protected row details are read-only. They show the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when WooCommerce returns that data. The only actions are `Open WooCommerce zones` and `Review in Diagnostics`.
+
+Yaxii COD Theme, external Yaxii, and duplicate rows follow the same read-only protection boundary as manual rows. They are not adopted, converted, repaired, deleted, or edited from Shipping Editor.
 
 ## Supported Actions
 

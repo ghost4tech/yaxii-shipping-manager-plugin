@@ -2,7 +2,12 @@ import type { DatasetMode } from "./dataset";
 import type { ShippingMethodKey, ShippingMethodTemplate } from "./generator";
 import type { RegionLabelFormat, ZoneNameFormat } from "./settings";
 
-export type PreviewOwnershipSource = "managed_registry" | "yaxii_name_hint" | "manual_unknown";
+export type PreviewOwnershipSource =
+  | "managed_registry"
+  | "yaxii_name_hint"
+  | "manual_unknown"
+  | "yaxii_cod_theme"
+  | "external_yaxii_zone";
 
 export type PreviewRequest = {
   datasetMode?: DatasetMode;

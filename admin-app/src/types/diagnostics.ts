@@ -53,6 +53,7 @@ export type CompatibilityZoneEntry = {
   zoneName: string;
   locationCode: string;
   locationFormat: string;
+  methodCount?: number;
   sourceFormat: string;
   sourceClassification:
     | "Yaxii Shipping Manager"

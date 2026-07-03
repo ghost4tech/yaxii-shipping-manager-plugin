@@ -32,6 +32,18 @@ const STATUS_STYLES: Record<ShippingZoneStatus, { label: string; className: stri
     label: "Manual zone",
     className: "border-slate-200 bg-slate-50 text-slate-700",
   },
+  yaxii_cod_theme: {
+    label: "Created by Yaxii COD Theme",
+    className: "border-sky-200 bg-sky-50 text-sky-700",
+  },
+  external_yaxii: {
+    label: "External Yaxii zone",
+    className: "border-slate-200 bg-slate-50 text-slate-700",
+  },
+  duplicate_external: {
+    label: "Duplicate zone",
+    className: "border-red-200 bg-red-50 text-red-700",
+  },
   conflict: {
     label: "Conflict detected",
     className: "border-red-200 bg-red-50 text-red-700",
@@ -61,8 +73,13 @@ export function StatusBadge({ status }: { status: ShippingZoneStatus }) {
       )}
     >
       {status === "active" && <Check className="h-3 w-3" />}
-      {(status === "missing" || status === "conflict") && <AlertTriangle className="h-3 w-3" />}
-      {(status === "protected" || status === "not_managed") && <Lock className="h-3 w-3" />}
+      {(status === "missing" || status === "conflict" || status === "duplicate_external") && (
+        <AlertTriangle className="h-3 w-3" />
+      )}
+      {(status === "protected" ||
+        status === "not_managed" ||
+        status === "yaxii_cod_theme" ||
+        status === "external_yaxii") && <Lock className="h-3 w-3" />}
       {(status === "checking" || status === "updating") && (
         <RefreshCw className="h-3 w-3 animate-spin" />
       )}

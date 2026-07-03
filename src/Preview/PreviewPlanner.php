@@ -186,6 +186,7 @@ final class PreviewPlanner {
 			'pricingRows'    => $this->pricing_rows_by_code( $overrides['pricingRows'] ?? array() ),
 			'methods'        => $this->flat_rate_methods( $settings['methods'] ?? array() ),
 			'zoneResults'    => $diagnostics['zoneResults'] ?? array(),
+			'externalCoverage' => $this->external_coverage_by_code( $diagnostics['compatibility']['zonesByNormalizedWilaya'] ?? array() ),
 		);
 	}
 
@@ -218,6 +219,11 @@ final class PreviewPlanner {
 		}
 
 		$zones = $this->direct_zones_for_wilaya( $code, $context['zoneResults'] );
+		if ( isset( $context['externalCoverage'][ $code ] ) ) {
+			$plan_groups['skipManualZones'][] = $this->external_skip_item( $wilaya, $context['externalCoverage'][ $code ] );
+			return;
+		}
+
 		if ( count( $zones ) > 1 ) {
 			$plan_groups['conflicts'][] = $this->conflict_item( $wilaya, $zones );
 			return;
@@ -530,6 +536,28 @@ final class PreviewPlanner {
 
 	/**
 	 * @param array<string,mixed> $wilaya Dataset wilaya.
+	 * @param array<string,mixed> $entry Compatibility entry.
+	 */
+	private function external_skip_item( array $wilaya, array $entry ): array {
+		$classification = (string) ( $entry['sourceClassification'] ?? 'External Yaxii zone' );
+		$ownership      = 'Yaxii COD Theme' === $classification ? 'yaxii_cod_theme' : 'external_yaxii_zone';
+
+		return array(
+			'type'            => 'skip_external_yaxii_zone',
+			'wilayaCode'      => (string) $wilaya['code'],
+			'wilayaName'      => (string) $wilaya['name_fr'],
+			'zoneId'          => (int) ( $entry['zoneId'] ?? 0 ),
+			'zoneName'        => (string) ( $entry['zoneName'] ?? '' ),
+			'location'        => (string) ( $entry['locationCode'] ?? '' ),
+			'ownershipSource' => $ownership,
+			'reason'          => 'Yaxii COD Theme' === $classification
+				? __( 'Already covered by Yaxii COD Theme. Yaxii Shipping Manager will not create a duplicate zone.', 'yaxii-shipping-manager' )
+				: __( 'Already covered by an external Yaxii-looking zone. Yaxii Shipping Manager will not edit it.', 'yaxii-shipping-manager' ),
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $wilaya Dataset wilaya.
 	 * @param array<string,mixed> $zone Zone diagnostics.
 	 */
 	private function unchanged_item( array $wilaya, array $zone ): array {
@@ -566,6 +594,57 @@ final class PreviewPlanner {
 		}
 
 		return array_keys( $known_codes );
+	}
+
+	/**
+	 * @param mixed $compatibility_groups Compatibility groups from diagnostics.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	private function external_coverage_by_code( $compatibility_groups ): array {
+		$coverage = array();
+		if ( ! is_array( $compatibility_groups ) ) {
+			return $coverage;
+		}
+
+		foreach ( $compatibility_groups as $group ) {
+			if ( ! is_array( $group ) ) {
+				continue;
+			}
+
+			$code  = (string) ( $group['normalizedWilayaCode'] ?? '' );
+			$entry = $this->first_external_coverage_entry( $group['entries'] ?? array() );
+			if ( '' === $code || null === $entry ) {
+				continue;
+			}
+
+			$coverage[ $code ] = $entry;
+		}
+
+		return $coverage;
+	}
+
+	/**
+	 * @param mixed $entries Compatibility group entries.
+	 *
+	 * @return array<string,mixed>|null
+	 */
+	private function first_external_coverage_entry( $entries ): ?array {
+		if ( ! is_array( $entries ) ) {
+			return null;
+		}
+
+		foreach ( $entries as $entry ) {
+			if ( ! is_array( $entry ) ) {
+				continue;
+			}
+
+			if ( in_array( (string) ( $entry['sourceClassification'] ?? '' ), array( 'Yaxii COD Theme', 'External Yaxii zone' ), true ) ) {
+				return $entry;
+			}
+		}
+
+		return null;
 	}
 
 	/**
@@ -778,7 +857,7 @@ final class PreviewPlanner {
 		}
 
 		if ( count( $plan_groups['skipManualZones'] ) > 0 ) {
-			$warnings[] = __( 'Manual or unknown zones are skipped by default.', 'yaxii-shipping-manager' );
+			$warnings[] = __( 'Manual, theme, or external zones are skipped by default.', 'yaxii-shipping-manager' );
 		}
 
 		return array_values( array_unique( $warnings ) );

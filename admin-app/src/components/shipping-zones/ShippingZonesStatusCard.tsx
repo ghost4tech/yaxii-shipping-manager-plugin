@@ -16,7 +16,7 @@ export function ShippingZonesStatusCard({
     { label: "Active wilayas", value: stats.activeWilayas, icon: Activity },
     { label: "Managed methods", value: stats.managedMethods, icon: Zap },
     { label: "Pending changes", value: stats.pendingChanges, icon: ChevronRight },
-    { label: "Manual zones", value: stats.protectedManualZones, icon: Lock },
+    { label: "Protected zones", value: stats.protectedManualZones, icon: Lock },
   ];
 
   return (
@@ -35,7 +35,8 @@ export function ShippingZonesStatusCard({
       <div className="flex flex-col items-start gap-3 border-t border-border bg-muted/30 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
           <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 -translate-y-px" />
-          WooCommerce will be checked again before updating. Manual zones will not be touched.
+          WooCommerce will be checked again before updating. Manual, theme, and external zones will
+          not be touched.
         </p>
         <div className="flex items-center gap-1">
           <Button

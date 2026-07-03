@@ -384,7 +384,8 @@ export function ShippingZonesPage({
             <div className="min-w-0 flex-1">
               <div className="font-medium">Existing Yaxii COD shipping setup detected.</div>
               <div className="text-xs text-sky-900/80">
-                Review Diagnostics before generating new zones.
+                Some wilayas are read-only to prevent duplicate zones. Review Diagnostics before
+                generating new zones.
               </div>
             </div>
             <button
@@ -600,7 +601,14 @@ function emptySetupViewState(
 }
 
 function rowIsMissingOrProtected(row: ShippingZoneRowView): boolean {
-  return row.status === "missing" || row.status === "protected" || row.status === "not_managed";
+  return (
+    row.status === "missing" ||
+    row.status === "protected" ||
+    row.status === "not_managed" ||
+    row.status === "yaxii_cod_theme" ||
+    row.status === "external_yaxii" ||
+    row.status === "duplicate_external"
+  );
 }
 
 function postApplyVerificationFromChanges(

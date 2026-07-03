@@ -820,8 +820,8 @@ final class SafeApplyEngine {
 
 		if ( ( $created_zone_count > 0 || $created_method_count > 0 ) && $updated_method_count > 0 ) {
 			return sprintf(
-				/* translators: 1: created zone count, 2: created method count, 3: updated method count, 4: skipped manual zone count. */
-				__( 'Created %1$d Yaxii-managed zones, added %2$d shipping methods, and updated %3$d Yaxii-managed methods. Manual zones skipped: %4$d.', 'yaxii-shipping-manager' ),
+				/* translators: 1: created zone count, 2: created method count, 3: updated method count, 4: skipped protected zone count. */
+				__( 'Created %1$d Yaxii-managed zones, added %2$d shipping methods, and updated %3$d Yaxii-managed methods. Protected zones skipped: %4$d.', 'yaxii-shipping-manager' ),
 				$created_zone_count,
 				$created_method_count,
 				$updated_method_count,
@@ -831,8 +831,8 @@ final class SafeApplyEngine {
 
 		if ( $created_zone_count > 0 && $created_method_count > 0 ) {
 			return sprintf(
-				/* translators: 1: created zone count, 2: created method count, 3: skipped manual zone count. */
-				__( 'Created %1$d Yaxii-managed zones and added %2$d shipping methods. Manual zones skipped: %3$d.', 'yaxii-shipping-manager' ),
+				/* translators: 1: created zone count, 2: created method count, 3: skipped protected zone count. */
+				__( 'Created %1$d Yaxii-managed zones and added %2$d shipping methods. Protected zones skipped: %3$d.', 'yaxii-shipping-manager' ),
 				$created_zone_count,
 				$created_method_count,
 				$manual_skip_count
@@ -858,8 +858,8 @@ final class SafeApplyEngine {
 
 		if ( $created_method_count > 0 ) {
 			return sprintf(
-				/* translators: 1: created method count, 2: skipped manual zone count. */
-				__( 'Added %1$d shipping methods to Yaxii-managed zones. Manual zones skipped: %2$d.', 'yaxii-shipping-manager' ),
+				/* translators: 1: created method count, 2: skipped protected zone count. */
+				__( 'Added %1$d shipping methods to Yaxii-managed zones. Protected zones skipped: %2$d.', 'yaxii-shipping-manager' ),
 				$created_method_count,
 				$manual_skip_count
 			);
@@ -867,8 +867,8 @@ final class SafeApplyEngine {
 
 		if ( $created_zone_count > 0 ) {
 			return sprintf(
-				/* translators: 1: created zone count, 2: skipped manual zone count. */
-				__( 'Created %1$d Yaxii-managed zones. Manual zones skipped: %2$d.', 'yaxii-shipping-manager' ),
+				/* translators: 1: created zone count, 2: skipped protected zone count. */
+				__( 'Created %1$d Yaxii-managed zones. Protected zones skipped: %2$d.', 'yaxii-shipping-manager' ),
 				$created_zone_count,
 				$manual_skip_count
 			);

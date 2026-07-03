@@ -140,12 +140,12 @@ export function previewGroupSummaries(response: PreviewResponse): PreviewGroupSu
     },
     {
       id: "skipManualZones",
-      title: "Manual zones skipped",
+      title: "Protected zones skipped",
       count: response.summary.skipManualZones,
       description:
         response.summary.skipManualZones > 0
-          ? "Protected by safety rules."
-          : "No manual-zone skips.",
+          ? "Manual, theme, or external zones are protected."
+          : "No protected-zone skips.",
       tone: response.summary.skipManualZones > 0 ? "warn" : "ok",
     },
     {

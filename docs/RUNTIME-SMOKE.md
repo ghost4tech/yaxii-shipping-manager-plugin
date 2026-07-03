@@ -101,6 +101,27 @@ Expected:
 - Shipping Editor shows only a non-blocking info hint when a Yaxii COD setup is detected.
 - No Generator apply, managed setup removal, WooCommerce zone write, WooCommerce zone delete, `yaxii_zone_map` write, or Yaxii COD Theme file change is performed.
 
+### TASK-014D External Zone Prevention Smoke
+
+Expected:
+
+- Shipping Editor keeps the TASK-014C non-blocking Yaxii COD setup hint.
+- Wilayas covered by Yaxii COD Theme do not appear as plain `Missing setup`.
+- Wilayas covered only by Yaxii COD Theme show `Created by Yaxii COD Theme`.
+- Wilayas covered by both Yaxii Shipping Manager and Yaxii COD Theme show `Duplicate zone`.
+- External Yaxii-looking coverage shows `External Yaxii zone`.
+- External/theme/duplicate rows are read-only: no editable price inputs, no row status toggle, no bulk price/status changes, and no `Repair setup`.
+- External/theme/duplicate row details show source, zone ID, zone name, location format, and method count when Diagnostics provides those fields.
+- External/theme/duplicate row actions are only `Review in Diagnostics` and `Open WooCommerce zones`.
+- Generator Start shows `Existing Yaxii COD setup detected` when compatibility findings include Yaxii COD coverage plus duplicates or state-format mismatch.
+- Generator's normal create path preselects only truly missing non-overlapping wilayas.
+- Theme-covered duplicate wilayas are locked out of create/repair Coverage selection with `Already covered by Yaxii COD Theme`.
+- If no non-overlapping missing wilayas exist, Generator shows `No safe wilayas to generate` and stays review-only.
+- Preview-only mode may review protected external/theme coverage but does not expose Generate/apply controls.
+- Preview planner returns protected skips, not `createZones`, for selected external/theme-covered wilayas.
+- Apply is not run for this smoke unless a separate destructive/write smoke is explicitly approved.
+- No WooCommerce zones/methods, no `yaxii_zone_map`, and no Yaxii COD Theme files are changed during read-only smoke.
+
 ### TASK-012E Generator State and No-op Smoke
 
 Expected:

@@ -87,9 +87,10 @@ export function GeneratorPreviewSummary({
       {response.summary.conflicts === 0 && response.summary.skipManualZones > 0 && (
         <Alert className="border-amber-200 bg-amber-50/60">
           <ShieldAlert className="h-4 w-4 text-amber-700" />
-          <AlertTitle className="text-amber-900">Manual zones detected</AlertTitle>
+          <AlertTitle className="text-amber-900">Protected zones detected</AlertTitle>
           <AlertDescription className="text-amber-800/90">
-            {response.summary.skipManualZones} manual zone(s) are protected and will be skipped.
+            {response.summary.skipManualZones} manual, theme, or external zone(s) are protected and
+            will be skipped.
           </AlertDescription>
         </Alert>
       )}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import {
   Activity,
   AlertCircle,
+  AlertTriangle,
   Building2,
   CheckCircle2,
   ChevronLeft,
@@ -10,6 +11,7 @@ import {
   Eye,
   Home,
   Info,
+  Lock,
   MapPin,
   Package,
   Plus,
@@ -71,7 +73,13 @@ import {
 } from "@/data/default-settings";
 import { formatRegionLabel } from "@/domain/format-region-label";
 import { zoneNamePreview } from "@/domain/zone-name-preview";
-import { hasExistingManagedSetup, repairWilayaCodes } from "@/lib/generator/diagnostics-guidance";
+import {
+  externalCoveredWilayaCodes,
+  hasExistingManagedSetup,
+  hasExternalCompatibilityRisk,
+  repairWilayaCodes,
+  safeMissingWilayaCodes,
+} from "@/lib/generator/diagnostics-guidance";
 import { enabledMethodDefs } from "@/lib/generator/methods";
 import { formatDraftPrice, parseOptionalPrice } from "@/lib/generator/pricing";
 import type { SetupMode } from "@/lib/generator/preview-summary";
@@ -180,6 +188,15 @@ export function GeneratorWizard({
   const [autoPreviewSignature, setAutoPreviewSignature] = useState<string | null>(null);
 
   const activeBaseList = datasetListState.wilayas;
+  const externalCompatibilityRisk = hasExternalCompatibilityRisk(diagnostics);
+  const lockedExternalCodes = useMemo(
+    () => new Set(externalCoveredWilayaCodes(diagnostics)),
+    [diagnostics],
+  );
+  const safeMissingCodes = useMemo(
+    () => safeMissingWilayaCodes(diagnostics, activeBaseList),
+    [activeBaseList, diagnostics],
+  );
   const selectedCodeSet = useMemo(() => new Set(selectedCodes), [selectedCodes]);
   const filteredWilayas = useMemo(() => {
     const query = wilayaSearch.trim().toLowerCase();
@@ -204,6 +221,14 @@ export function GeneratorWizard({
   const existingManagedSetup = hasExistingManagedSetup(diagnostics);
 
   useEffect(() => {
+    if (setupMode === "preview" || !externalCompatibilityRisk || lockedExternalCodes.size === 0) {
+      return;
+    }
+
+    setSelectedCodes((current) => current.filter((code) => !lockedExternalCodes.has(code)));
+  }, [externalCompatibilityRisk, lockedExternalCodes, setupMode]);
+
+  useEffect(() => {
     let cancelled = false;
 
     setDatasetListState((previous) => ({
@@ -223,11 +248,15 @@ export function GeneratorWizard({
 
         if (!cancelled) {
           setDatasetListState({ status: "ready", wilayas: nextWilayas, mode: dataset });
-          setSelectedCodes(
-            setupMode === "continue"
-              ? repairWilayaCodes(diagnostics, nextWilayas)
-              : nextWilayas.map((wilaya) => wilaya.code),
-          );
+          if (setupMode === "preview") {
+            setSelectedCodes(nextWilayas.map((wilaya) => wilaya.code));
+          } else if (setupMode === "continue") {
+            setSelectedCodes(repairWilayaCodes(diagnostics, nextWilayas));
+          } else if (hasExternalCompatibilityRisk(diagnostics)) {
+            setSelectedCodes(safeMissingWilayaCodes(diagnostics, nextWilayas));
+          } else {
+            setSelectedCodes(nextWilayas.map((wilaya) => wilaya.code));
+          }
           setCommunesByWilaya({});
           setOpenCommuneWilaya(null);
           setAutoPreviewSignature(null);
@@ -255,12 +284,25 @@ export function GeneratorWizard({
   const setSetupMode = (nextMode: SetupMode) => {
     setSetupModeState(nextMode);
     if (nextMode === "fresh") {
-      setSelectedCodes(activeBaseList.map((wilaya) => wilaya.code));
+      setSelectedCodes(
+        externalCompatibilityRisk
+          ? safeMissingWilayaCodes(diagnostics, activeBaseList)
+          : activeBaseList.map((wilaya) => wilaya.code),
+      );
     }
     if (nextMode === "continue") {
       const codes = repairWilayaCodes(diagnostics, activeBaseList);
       setSelectedCodes(codes.length > 0 ? codes : []);
     }
+    if (nextMode === "preview") {
+      setSelectedCodes(activeBaseList.map((wilaya) => wilaya.code));
+    }
+  };
+
+  const continueWithSafeMissingWilayas = () => {
+    setSetupModeState("fresh");
+    setSelectedCodes(safeMissingCodes);
+    setStep(1);
   };
 
   const loadCommunes = async (wilayaCode: string) => {
@@ -578,6 +620,7 @@ export function GeneratorWizard({
                 setMode={setSetupMode}
                 diagnostics={diagnostics}
                 onAdvance={() => setStep(1)}
+                onContinueSafeMissing={continueWithSafeMissingWilayas}
                 onOpenShippingZones={onOpenShippingZones}
                 onOpenDiagnostics={onOpenDiagnostics}
                 onOpenWooCommerceZones={onOpenWooCommerceZones}
@@ -594,6 +637,9 @@ export function GeneratorWizard({
                 selectedCodes={selectedCodes}
                 setSelectedCodes={setSelectedCodes}
                 selectedCodeSet={selectedCodeSet}
+                lockedExternalCodes={lockedExternalCodes}
+                externalCompatibilityRisk={externalCompatibilityRisk}
+                safeMissingCodes={safeMissingCodes}
                 search={wilayaSearch}
                 setSearch={setWilayaSearch}
                 mode={communeMode}
@@ -724,6 +770,9 @@ function StepCoverage({
   selectedCodes,
   setSelectedCodes,
   selectedCodeSet,
+  lockedExternalCodes,
+  externalCompatibilityRisk,
+  safeMissingCodes,
   search,
   setSearch,
   mode,
@@ -747,6 +796,9 @@ function StepCoverage({
   selectedCodes: string[];
   setSelectedCodes: (selectedCodes: string[]) => void;
   selectedCodeSet: Set<string>;
+  lockedExternalCodes: Set<string>;
+  externalCompatibilityRisk: boolean;
+  safeMissingCodes: string[];
   search: string;
   setSearch: (search: string) => void;
   mode: CommuneMode;
@@ -762,6 +814,10 @@ function StepCoverage({
   onOpenShippingZones: () => void;
 }) {
   const toggle = (code: string) => {
+    if (setupMode !== "preview" && lockedExternalCodes.has(code)) {
+      return;
+    }
+
     setSelectedCodes(
       selectedCodeSet.has(code)
         ? selectedCodes.filter((selectedCode) => selectedCode !== code)
@@ -847,6 +903,28 @@ function StepCoverage({
         </Alert>
       )}
 
+      {externalCompatibilityRisk && safeMissingCodes.length > 0 && (
+        <Alert className="mt-4 border-amber-200 bg-amber-50/60">
+          <AlertTriangle className="h-4 w-4 text-amber-700" />
+          <AlertTitle className="text-amber-900">Existing Yaxii COD setup detected</AlertTitle>
+          <AlertDescription className="text-amber-800/90">
+            Yaxii COD Theme checkout may not use these new zones until a compatibility bridge
+            exists.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {externalCompatibilityRisk && safeMissingCodes.length === 0 && (
+        <Alert className="mt-4 border-amber-200 bg-amber-50/60">
+          <AlertTriangle className="h-4 w-4 text-amber-700" />
+          <AlertTitle className="text-amber-900">No safe wilayas to generate</AlertTitle>
+          <AlertDescription className="text-amber-800/90">
+            All available wilayas are already covered by Yaxii COD Theme or external Yaxii zones.
+            Review Diagnostics before making setup changes.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {setupMode === "continue" && selectedCodes.length === 0 && (
         <Alert className="mt-4 border-emerald-200 bg-emerald-50/60">
           <CheckCircle2 className="h-4 w-4 text-emerald-700" />
@@ -886,7 +964,15 @@ function StepCoverage({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setSelectedCodes(baseList.map((w) => w.code))}
+          onClick={() =>
+            setSelectedCodes(
+              baseList
+                .map((wilaya) => wilaya.code)
+                .filter(
+                  (wilayaCode) => setupMode === "preview" || !lockedExternalCodes.has(wilayaCode),
+                ),
+            )
+          }
         >
           Select all
         </Button>
@@ -898,25 +984,32 @@ function StepCoverage({
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {filteredWilayas.map((wilaya) => {
           const active = selectedCodeSet.has(wilaya.code);
+          const locked = lockedExternalCodes.has(wilaya.code);
+          const disabled = setupMode !== "preview" && locked;
           return (
             <button
               key={wilaya.code}
               type="button"
               onClick={() => toggle(wilaya.code)}
+              disabled={disabled}
               className={cn(
                 "flex items-start gap-3 rounded-xl border bg-card p-3 text-left transition-all",
-                active
-                  ? "border-primary bg-primary/[0.03] ring-1 ring-primary/30"
-                  : "border-border hover:border-primary/40",
+                disabled
+                  ? "cursor-not-allowed border-sky-200 bg-sky-50/60 text-sky-950"
+                  : active
+                    ? "border-primary bg-primary/[0.03] ring-1 ring-primary/30"
+                    : "border-border hover:border-primary/40",
               )}
             >
               <div
                 className={cn(
                   "mt-0.5 flex h-5 w-5 items-center justify-center rounded border transition-colors",
                   active ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                  locked && "border-sky-300 bg-sky-100 text-sky-700",
                 )}
               >
                 {active && <CheckCircle2 className="h-3.5 w-3.5" />}
+                {locked && !active && <Lock className="h-3.5 w-3.5" />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -928,6 +1021,13 @@ function StepCoverage({
                 <div className="mt-0.5 text-xs text-muted-foreground" dir="rtl">
                   {wilaya.ar}
                 </div>
+                {locked && (
+                  <div className="mt-1 text-[11px] font-medium text-sky-800">
+                    {setupMode === "preview"
+                      ? "Already covered by Yaxii COD Theme; preview only"
+                      : "Already covered by Yaxii COD Theme"}
+                  </div>
+                )}
               </div>
             </button>
           );

@@ -1,5 +1,9 @@
 import type { AdminBootstrapConfig } from "@/bootstrap";
-import type { DiagnosticsResponse, ZoneDiagnostic } from "@/types/diagnostics";
+import type {
+  CompatibilityZoneEntry,
+  DiagnosticsResponse,
+  ZoneDiagnostic,
+} from "@/types/diagnostics";
 import type { ShippingMethodKey } from "@/types/generator";
 import type { PreviewRequest, PreviewResponse } from "@/types/preview";
 
@@ -19,6 +23,9 @@ export type ShippingZoneStatus =
   | "updating"
   | "missing"
   | "protected"
+  | "yaxii_cod_theme"
+  | "external_yaxii"
+  | "duplicate_external"
   | "conflict"
   | "checking"
   | "unavailable"
@@ -57,6 +64,7 @@ export type LiveZoneSummary = {
   status: ShippingZoneStatus;
   message: string;
   zones: ZoneDiagnostic[];
+  externalEntries?: CompatibilityZoneEntry[];
 };
 
 export type ShippingZoneMethodView = {

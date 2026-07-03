@@ -13,7 +13,11 @@ import type {
   ShippingZoneStats,
   ShippingZoneStatus,
 } from "@/types/shipping-zones";
-import type { ZoneDiagnostic } from "@/types/diagnostics";
+import type {
+  CompatibilityWilayaGroup,
+  CompatibilityZoneEntry,
+  ZoneDiagnostic,
+} from "@/types/diagnostics";
 
 type ExpectedMethodMap = Partial<Record<ShippingMethodKey, PostApplyMethodExpectation>>;
 type PostApplyStatusPhase = "verifying" | "verified" | "failed" | "mismatch";
@@ -35,6 +39,9 @@ const STATUS_LABELS: Record<ShippingZoneStatus, string> = {
   updating: "Updating...",
   missing: "Missing setup",
   protected: "Manual zone",
+  yaxii_cod_theme: "Created by Yaxii COD Theme",
+  external_yaxii: "External Yaxii zone",
+  duplicate_external: "Duplicate zone",
   conflict: "Conflict detected",
   checking: "Checking",
   unavailable: "Unavailable",
@@ -160,7 +167,7 @@ export function shippingZoneStats(rows: ShippingZoneRowView[]): ShippingZoneStat
       0,
     ),
     pendingChanges: rows.reduce((total, row) => total + row.pendingMethodCount, 0),
-    protectedManualZones: rows.filter((row) => row.status === "protected").length,
+    protectedManualZones: rows.filter((row) => protectedStatus(row.status)).length,
   };
 }
 
@@ -191,7 +198,7 @@ export function rowMatchesFilter(row: ShippingZoneRowView, filter: ShippingZoneF
     return row.status === "missing" || row.status === "unavailable";
   }
 
-  return row.status === "protected" || row.status === "conflict" || row.status === "not_managed";
+  return protectedStatus(row.status) || row.status === "conflict" || row.status === "not_managed";
 }
 
 export function rowMatchesSearch(row: ShippingZoneRowView, search: string): boolean {
@@ -326,6 +333,18 @@ function disabledReasonForStatus(status: ShippingZoneStatus): string {
     return "Manual zone";
   }
 
+  if (status === "yaxii_cod_theme") {
+    return "Created by Yaxii COD Theme";
+  }
+
+  if (status === "external_yaxii") {
+    return "External Yaxii zone";
+  }
+
+  if (status === "duplicate_external") {
+    return "Duplicate zone";
+  }
+
   if (status === "not_managed") {
     return "Not managed by Yaxii";
   }
@@ -393,10 +412,38 @@ function liveStatusForWilaya(
     return { status: "unavailable", message: "WooCommerce inactive", zones: [] };
   }
 
+  const compatibilityGroup = compatibilityGroupForWilaya(wilaya.code, diagnosticsState.response);
+  const externalEntries = externalCompatibilityEntries(compatibilityGroup);
+  const ysmEntries = ysmCompatibilityEntries(compatibilityGroup);
   const result = diagnosticsState.response.wilayaResults.find((item) => item.code === wilaya.code);
   const zones = result
     ? diagnosticsState.response.zoneResults.filter((zone) => result.zoneIds.includes(zone.zoneId))
     : [];
+
+  if (externalEntries.length > 0 && ysmEntries.length > 0) {
+    return {
+      status: "duplicate_external",
+      message: "This wilaya is covered by both Yaxii Shipping Manager and Yaxii COD Theme.",
+      zones,
+      externalEntries,
+    };
+  }
+
+  if (externalEntries.length > 0) {
+    const status = externalEntries.some((entry) => entry.sourceClassification === "Yaxii COD Theme")
+      ? "yaxii_cod_theme"
+      : "external_yaxii";
+
+    return {
+      status,
+      message:
+        status === "yaxii_cod_theme"
+          ? "Already covered by Yaxii COD Theme."
+          : "Already covered by an external Yaxii-looking zone.",
+      zones,
+      externalEntries,
+    };
+  }
 
   if (!result || result.status === "missing") {
     return { status: "missing", message: "Missing setup", zones };
@@ -506,6 +553,40 @@ function managedMethodStatusAllowsEdits(status: ShippingZoneStatus): boolean {
     status === "partially_active" ||
     status === "disabled" ||
     status === "needs_update"
+  );
+}
+
+function protectedStatus(status: ShippingZoneStatus): boolean {
+  return (
+    status === "protected" ||
+    status === "yaxii_cod_theme" ||
+    status === "external_yaxii" ||
+    status === "duplicate_external"
+  );
+}
+
+function compatibilityGroupForWilaya(
+  wilayaCode: string,
+  diagnostics: Extract<DiagnosticsLoadState, { status: "ready" }>["response"],
+): CompatibilityWilayaGroup | undefined {
+  return diagnostics.compatibility.zonesByNormalizedWilaya.find(
+    (group) => group.normalizedWilayaCode === wilayaCode,
+  );
+}
+
+function externalCompatibilityEntries(
+  group: CompatibilityWilayaGroup | undefined,
+): CompatibilityZoneEntry[] {
+  return (group?.entries ?? []).filter((entry) =>
+    ["Yaxii COD Theme", "External Yaxii zone"].includes(entry.sourceClassification),
+  );
+}
+
+function ysmCompatibilityEntries(
+  group: CompatibilityWilayaGroup | undefined,
+): CompatibilityZoneEntry[] {
+  return (group?.entries ?? []).filter(
+    (entry) => entry.sourceClassification === "Yaxii Shipping Manager",
   );
 }
 

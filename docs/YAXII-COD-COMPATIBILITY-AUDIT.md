@@ -667,3 +667,18 @@ TASK-014C implemented the first read-only compatibility diagnostics wave:
 - Shipping Editor shows a non-blocking info hint when a Yaxii COD setup is detected.
 
 TASK-014C did not adopt, repair, convert, delete, merge, or write WooCommerce zones. It did not write to `yaxii_zone_map`, change `SafeApplyEngine`, block Generator, edit Yaxii COD Theme source, or claim checkout compatibility is fixed.
+
+## TASK-014D Implementation Note
+
+TASK-014D implemented the prevention and read-only status wave:
+
+- Shipping Editor now uses the TASK-014C compatibility object to classify normalized wilayas covered by Yaxii COD Theme or external Yaxii-looking zones.
+- Theme-covered wilayas no longer appear as plain `Missing setup`.
+- Rows covered only by Yaxii COD Theme show `Created by Yaxii COD Theme`, stay read-only, and route to Diagnostics or native WooCommerce zones.
+- Rows covered by both Yaxii Shipping Manager and Yaxii COD Theme show `Duplicate zone` with conflict copy and no edit/repair controls.
+- External Yaxii-looking rows show `External Yaxii zone`, stay read-only, and are not adopted.
+- Generator Start now warns when an existing Yaxii COD setup plus duplicates or state-format mismatch exists.
+- Generator Coverage locks external/theme-covered wilayas out of create/repair selection and preselects only safe missing non-overlapping wilayas when available.
+- Preview-only mode can still review externally covered wilayas without exposing Generate/apply controls.
+- Preview planner defensively classifies selected external/theme-covered wilayas as protected skips instead of `createZones`.
+- Apply behavior for actual writes remains limited to existing safe apply groups; no theme/manual zone adoption, conversion, deletion, merge, or `yaxii_zone_map` write was added.
