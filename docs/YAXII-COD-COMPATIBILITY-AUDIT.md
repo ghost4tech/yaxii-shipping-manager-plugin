@@ -677,8 +677,11 @@ TASK-014D implemented the prevention and read-only status wave:
 - Rows covered only by Yaxii COD Theme show `Created by Yaxii COD Theme`, stay read-only, and route to Diagnostics or native WooCommerce zones.
 - Rows covered by both Yaxii Shipping Manager and Yaxii COD Theme show `Duplicate zone` with conflict copy and no edit/repair controls.
 - External Yaxii-looking rows show `External Yaxii zone`, stay read-only, and are not adopted.
+- Manual WooCommerce zones retain a clear `Manual WooCommerce zone` read-only status when matched to a wilaya, with read-only zone/method details and only Diagnostics/WooCommerce-zone navigation actions.
 - Generator Start now warns when an existing Yaxii COD setup plus duplicates or state-format mismatch exists.
 - Generator Coverage locks external/theme-covered wilayas out of create/repair selection and preselects only safe missing non-overlapping wilayas when available.
 - Preview-only mode can still review externally covered wilayas without exposing Generate/apply controls.
 - Preview planner defensively classifies selected external/theme-covered wilayas as protected skips instead of `createZones`.
 - Apply behavior for actual writes remains limited to existing safe apply groups; no theme/manual zone adoption, conversion, deletion, merge, or `yaxii_zone_map` write was added.
+
+Manual WooCommerce zone support beyond read-only visibility remains future scope for `TASK-014E — Manual WooCommerce Zone Support and Adoption Audit`.

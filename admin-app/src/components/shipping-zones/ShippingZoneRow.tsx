@@ -192,7 +192,7 @@ function RowActions({
             className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
           >
             <Activity className="h-3.5 w-3.5" />
-            Review in Diagnostics
+            Review Diagnostics
           </button>
           <button
             type="button"
@@ -212,14 +212,15 @@ function RowActions({
           Review changes
         </button>
       )}
-      <Switch
-        checked={enabled}
-        disabled={!canToggle}
-        onCheckedChange={(value) => onWilayaStatusChange(Boolean(value))}
-        aria-label={`${row.wilaya.name} enable status`}
-        title={canToggle ? "Enable or disable managed methods for this wilaya" : undefined}
-        className={cn(!enabled && "data-[state=unchecked]:bg-muted")}
-      />
+      {canToggle && (
+        <Switch
+          checked={enabled}
+          onCheckedChange={(value) => onWilayaStatusChange(Boolean(value))}
+          aria-label={`${row.wilaya.name} enable status`}
+          title="Enable or disable managed methods for this wilaya"
+          className={cn(!enabled && "data-[state=unchecked]:bg-muted")}
+        />
+      )}
       {row.pendingMethodCount > 0 && (
         <button
           type="button"

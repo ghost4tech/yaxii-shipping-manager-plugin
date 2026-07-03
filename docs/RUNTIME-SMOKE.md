@@ -9,7 +9,7 @@ Use this checklist before adding new WooCommerce write paths. The goal is to pro
 3. Confirm the main navigation shows only `Shipping Editor`, `Generator`, `Diagnostics`, and `Settings`.
 4. Confirm `Import / Export` and `Smart Form Sync` are not visible in the top navigation.
 5. Confirm Shipping Editor shows the reference-based management page with live WooCommerce status and pending-change controls for supported prices and method enabled status.
-6. Confirm Shipping Editor no longer shows bare `Protected`; manual/unknown rows use `Manual zone` or `Not managed by Yaxii`.
+6. Confirm Shipping Editor no longer shows bare `Protected`; manual/unknown rows use `Manual WooCommerce zone` or `Not managed by Yaxii`.
 7. Confirm a successful price or status apply shows `Updating...` for affected rows while diagnostics refreshes, not stale `Needs update`.
 8. Confirm the app header, top navigation, and active page content share the same left and right container edges on Shipping Editor, Generator, Diagnostics, and Settings.
 9. Confirm the shared container remains full-width without horizontal overflow on mobile widths.
@@ -112,7 +112,7 @@ Expected:
 - External Yaxii-looking coverage shows `External Yaxii zone`.
 - External/theme/duplicate rows are read-only: no editable price inputs, no row status toggle, no bulk price/status changes, and no `Repair setup`.
 - External/theme/duplicate row details show source, zone ID, zone name, location format, and method count when Diagnostics provides those fields.
-- External/theme/duplicate row actions are only `Review in Diagnostics` and `Open WooCommerce zones`.
+- External/theme/duplicate row actions are only `Review Diagnostics` and `Open WooCommerce zones`.
 - Generator Start shows `Existing Yaxii COD setup detected` when compatibility findings include Yaxii COD coverage plus duplicates or state-format mismatch.
 - Generator's normal create path preselects only truly missing non-overlapping wilayas.
 - Theme-covered duplicate wilayas are locked out of create/repair Coverage selection with `Already covered by Yaxii COD Theme`.
@@ -189,7 +189,8 @@ Expected:
 - If blockers exist, the modal says `Yaxii setup cannot be safely removed yet.` and does not show `Confirm removal`.
 - After successful removal, Settings shows `Yaxii setup removed. Manual WooCommerce zones were not touched.` and offers `Generate shipping zones`.
 - Expanding a manual/protected row shows the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when readable.
-- Manual/protected row details offer only `Open WooCommerce zones` and `Review in Diagnostics`.
+- Manual/protected row details offer only `Open WooCommerce zones` and `Review Diagnostics`.
+- Manual/protected rows do not show editable price inputs, enable/disable controls, `Repair setup`, `Generate`, `Adopt`, `Delete`, or `Convert`.
 - `Repair setup` and `Repair selected` send preview pricing rows with `methodStatuses` as an object, using an empty object when there are no status changes.
 - Generator Start shows `Create a new Yaxii setup` after removal even when protected manual zones remain.
 - Generator Start warns `Manual WooCommerce zones exist and will be protected.`

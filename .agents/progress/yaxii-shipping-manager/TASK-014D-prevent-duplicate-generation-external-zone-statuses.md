@@ -103,8 +103,10 @@ TASK-014C added a read-only `compatibility` object and Diagnostics cards, but Sh
 - The Yaxii COD hint now says some wilayas are read-only to prevent duplicate zones.
 - Theme/external/duplicate rows do not show editable method controls.
 - Theme/external/duplicate rows do not show `Repair setup`.
+- Manual rows show `Manual WooCommerce zone`, stay read-only, and do not show enable/disable controls unless the row has managed-method toggle capability.
+- Manual row details show the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when WooCommerce returns that data.
 - Details show source, zone ID, zone name, location format, and method count when available.
-- Actions route to Diagnostics and WooCommerce zones.
+- Actions route to `Review Diagnostics` and `Open WooCommerce zones`.
 
 ## Generator prevention behavior
 
@@ -132,6 +134,7 @@ TASK-014C added a read-only `compatibility` object and Diagnostics cards, but Sh
 
 - No Yaxii COD compatibility bridge exists.
 - No adoption/conversion/merge tool exists.
+- Manual WooCommerce zone edit/adoption/conversion remains future scope for `TASK-014E — Manual WooCommerce Zone Support and Adoption Audit`.
 - No `yaxii_zone_map` synchronization exists.
 - CSV backend remains not implemented.
 - Provider imports remain not implemented.
@@ -252,12 +255,62 @@ Passed on `/home/u538716307/domains/demo.yaxii.dev/public_html`.
 
 The first remote smoke invocation failed before WP-CLI execution due to shell quoting. The corrected invocation ran successfully and removed the temporary `/tmp/ysm-task-014d-remote-smoke.php` file.
 
+## Manual-zone clarification follow-up
+
+Additional clarification was applied after the initial TASK-014D closeout:
+
+- `Manual WooCommerce zone` is the visible Shipping Editor status for protected manual rows.
+- Manual-zone expanded details remain read-only and continue to show the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when readable.
+- Manual/protected rows no longer render the enable/disable switch unless a row has managed-method toggle capability.
+- Manual/protected row actions use `Review Diagnostics` and `Open WooCommerce zones`.
+- No manual-zone edit, adoption, conversion, delete, merge, or management workflow was added.
+- Future manual-zone work is documented as `TASK-014E — Manual WooCommerce Zone Support and Adoption Audit`.
+
+Follow-up checks:
+
+- `npm run typecheck`: passed.
+- `npm run lint`: passed with the existing 8 Fast Refresh warnings in unrelated UI files.
+- `npm run build`: passed with the existing Vite large chunk warning and plugin deprecation notice.
+- Source maps under `assets/admin`: `0`.
+- Restricted phrase scan: only existing no-telemetry/no-analytics docs and rules matched.
+- External asset scan: no source-level Google Fonts, remote CSS, or remote script findings.
+- WooCommerce write/delete scan: only existing SafeApplyEngine add-method and managed setup removal delete paths were found.
+- `git diff --check`: passed with line-ending normalization warnings only.
+
+Follow-up deployment:
+
+- Backup path: `/home/u538716307/backups/yaxii-shipping-manager/task-014d-manual-zone-clarification-20260703-134435`.
+- Deployed `assets/admin/manifest.json`.
+- Deployed `assets/admin/assets/main-CYCE8nS-.js`.
+- Deployed `assets/admin/assets/main-BvJEBEQL.css`.
+- Removed obsolete remote runtime asset `assets/admin/assets/main-BQyC6Wv5.js`.
+- Remote manifest points to `assets/main-CYCE8nS-.js` and `assets/main-BvJEBEQL.css`.
+- Remote source maps under `assets/admin`: `0`.
+
+Follow-up remote read-only smoke:
+
+- Compatibility object exists: `yes`.
+- Yaxii COD Theme detected: `yes`.
+- `yaxiiCodZoneMapCount`: `58`.
+- `yaxiiCodZoneCount`: `58`.
+- `ysmManagedZoneCount`: `69`.
+- `normalizedDuplicateWilayaCount`: `58`.
+- `stateFormatMismatchDetected`: `yes`.
+- `checkoutCompatibilityRisk`: `high`.
+- Previewing selected wilaya `01` produced `createZones=0`.
+- First protected skip type: `skip_external_yaxii_zone`.
+- First protected skip source: `yaxii_cod_theme`.
+- WooCommerce zone count changed during smoke: `no`.
+- WooCommerce method count changed during smoke: `no`.
+- `yaxii_zone_map` count changed during smoke: `no`.
+
 ## What was not changed
 
 - No Yaxii COD Theme files.
 - No WooCommerce zones or methods.
 - No `yaxii_zone_map` writes.
 - No manual-zone adoption.
+- No manual-zone edit, conversion, merge, delete, or management workflow.
 - No conversion tooling.
 - No removal/generator apply was run during local checks.
 - No Generator apply or setup removal was run on the server.
@@ -284,7 +337,7 @@ The first remote smoke invocation failed before WP-CLI execution due to shell qu
 
 ## Next recommended task
 
-TASK-014E: add focused automated/unit-style coverage for compatibility-derived Shipping Editor rows and Generator locked selection behavior, or design a future explicit compatibility bridge audit if the product direction requires Yaxii COD checkout interoperability.
+TASK-014E — Manual WooCommerce Zone Support and Adoption Audit.
 
 ## Commit hash, if committed
 

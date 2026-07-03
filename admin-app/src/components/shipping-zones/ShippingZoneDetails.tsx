@@ -42,7 +42,8 @@ export function ShippingZoneDetails({
       )}
       {row.status === "protected" && (
         <div className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800">
-          This zone is not managed by Yaxii. Yaxii will not edit it.
+          This manual WooCommerce zone is read-only in Yaxii Shipping Manager. It can be reviewed in
+          Diagnostics or managed from WooCommerce zones.
         </div>
       )}
       {row.status === "not_managed" && (
@@ -187,7 +188,7 @@ function ActionButtons({
         className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground hover:bg-muted"
       >
         <Activity className="h-3.5 w-3.5" />
-        Review in Diagnostics
+        Review Diagnostics
       </button>
     </>
   );

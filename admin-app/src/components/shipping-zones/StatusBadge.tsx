@@ -29,7 +29,7 @@ const STATUS_STYLES: Record<ShippingZoneStatus, { label: string; className: stri
     className: "border-amber-200 bg-amber-50 text-amber-700",
   },
   protected: {
-    label: "Manual zone",
+    label: "Manual WooCommerce zone",
     className: "border-slate-200 bg-slate-50 text-slate-700",
   },
   yaxii_cod_theme: {

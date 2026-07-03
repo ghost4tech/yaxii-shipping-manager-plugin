@@ -38,7 +38,7 @@ const STATUS_LABELS: Record<ShippingZoneStatus, string> = {
   needs_update: "Needs update",
   updating: "Updating...",
   missing: "Missing setup",
-  protected: "Manual zone",
+  protected: "Manual WooCommerce zone",
   yaxii_cod_theme: "Created by Yaxii COD Theme",
   external_yaxii: "External Yaxii zone",
   duplicate_external: "Duplicate zone",
@@ -277,7 +277,7 @@ export function ownershipLabel(ownershipHint: ZoneDiagnostic["ownershipHint"]): 
   }
 
   if (ownershipHint === "manual_unknown") {
-    return "Manual zone";
+    return "Manual WooCommerce zone";
   }
 
   return "Not managed by Yaxii";
@@ -330,7 +330,7 @@ function disabledReasonForStatus(status: ShippingZoneStatus): string {
   }
 
   if (status === "protected") {
-    return "Manual zone";
+    return "Manual WooCommerce zone";
   }
 
   if (status === "yaxii_cod_theme") {

@@ -18,7 +18,7 @@ The page shows:
 - filters for all, active, pending changes, needs update, missing setup, and manual/not-managed rows
 - whether a direct WooCommerce zone exists for the wilaya
 - whether the zone is recorded in the Yaxii managed registry
-- simple row status such as `Active`, `Partially active`, `Methods disabled`, `Missing setup`, `Needs update`, `Updating...`, `Conflict detected`, `Manual zone`, or `Not managed by Yaxii`
+- simple row status such as `Active`, `Partially active`, `Methods disabled`, `Missing setup`, `Needs update`, `Updating...`, `Conflict detected`, `Manual WooCommerce zone`, or `Not managed by Yaxii`
 - home and office live flat-rate method prices when the methods are registry-owned
 - technical zone and ownership details only after the merchant opens row details
 - a `Repair setup` action when a row is missing its Yaxii-managed WooCommerce setup
@@ -65,7 +65,7 @@ These rows:
 - do not allow status toggles or bulk actions;
 - do not show `Repair setup`;
 - show read-only source details when available: source, zone ID, zone name, location format, and method count;
-- route actions to `Review in Diagnostics` and `Open WooCommerce zones`.
+- route actions to `Review Diagnostics` and `Open WooCommerce zones`.
 
 Duplicate rows show this warning copy:
 
@@ -162,7 +162,7 @@ Repair uses the existing preview/apply path:
 
 Repair does not bypass preview/apply and does not write directly from the table.
 
-If a missing-looking wilaya also has a duplicate/manual conflict, the row is treated as `Conflict detected` or `Manual zone`; direct repair is not offered and the merchant is sent to Diagnostics.
+If a missing-looking wilaya also has a duplicate/manual conflict, the row is treated as `Conflict detected` or `Manual WooCommerce zone`; direct repair is not offered and the merchant is sent to Diagnostics.
 
 ## Unsupported Actions
 
@@ -177,10 +177,12 @@ Unsupported actions must be hidden, disabled, or labeled as later work:
 For manual or unknown rows:
 
 ```text
-This zone is not managed by Yaxii. Yaxii will not edit it.
+This manual WooCommerce zone is read-only in Yaxii Shipping Manager. It can be reviewed in Diagnostics or managed from WooCommerce zones.
 ```
 
-Manual/protected row details are read-only. They show the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when WooCommerce returns that data. The only actions are `Open WooCommerce zones` and `Review in Diagnostics`.
+Manual/protected row details are read-only. They show the WooCommerce zone name, matched wilaya code, method names, method prices, and enabled/disabled status when WooCommerce returns that data. The only actions are `Open WooCommerce zones` and `Review Diagnostics`.
+
+TASK-014D does not add manual-zone edit, adoption, conversion, delete, or merge controls. That work is future scope for `TASK-014E — Manual WooCommerce Zone Support and Adoption Audit`.
 
 Yaxii COD Theme, external Yaxii, and duplicate rows follow the same read-only protection boundary as manual rows. They are not adopted, converted, repaired, deleted, or edited from Shipping Editor.
 
@@ -189,7 +191,7 @@ Yaxii COD Theme, external Yaxii, and duplicate rows follow the same read-only pr
 The table routes merchants to:
 
 - `Open Generator`
-- `Review in Diagnostics`
+- `Review Diagnostics`
 - `WooCommerce zones`
 - `Review changes`
 - `Repair setup`
