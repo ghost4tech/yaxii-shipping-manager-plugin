@@ -1,0 +1,92 @@
+<?php
+/**
+ * Plugin bootstrap.
+ *
+ * @package YaxiiShippingManager
+ */
+
+namespace Yaxii\ShippingManager;
+
+use Yaxii\ShippingManager\Admin\AdminPage;
+use Yaxii\ShippingManager\Admin\AssetRegistrar;
+use Yaxii\ShippingManager\Apply\ApplyContract;
+use Yaxii\ShippingManager\Apply\ApplyRequestSanitizer;
+use Yaxii\ShippingManager\Apply\ManagedZoneRegistry;
+use Yaxii\ShippingManager\Apply\SafeApplyEngine;
+use Yaxii\ShippingManager\Data\DatasetRepository;
+use Yaxii\ShippingManager\Preview\PreviewPlanner;
+use Yaxii\ShippingManager\Preview\PreviewRequestSanitizer;
+use Yaxii\ShippingManager\Rest\ApplyController;
+use Yaxii\ShippingManager\Rest\ApplyContractController;
+use Yaxii\ShippingManager\Rest\BootstrapController;
+use Yaxii\ShippingManager\Rest\DatasetController;
+use Yaxii\ShippingManager\Rest\DiagnosticsController;
+use Yaxii\ShippingManager\Rest\ManagedSetupController;
+use Yaxii\ShippingManager\Rest\PreviewController;
+use Yaxii\ShippingManager\Rest\Routes;
+use Yaxii\ShippingManager\Rest\SettingsController;
+use Yaxii\ShippingManager\Settings\SettingsRepository;
+use Yaxii\ShippingManager\Tools\ManagedSetupRemovalExecutor;
+use Yaxii\ShippingManager\Tools\ManagedSetupRemovalPreview;
+use Yaxii\ShippingManager\WooCommerce\AlgeriaStatesRegistrar;
+use Yaxii\ShippingManager\WooCommerce\ShippingDiagnosticsService;
+use Yaxii\ShippingManager\WooCommerce\ShippingZoneReader;
+use Yaxii\ShippingManager\WooCommerce\YaxiiCodCompatibilityDetector;
+
+defined( 'ABSPATH' ) || exit;
+
+final class Plugin {
+	/**
+	 * Register WordPress hooks.
+	 */
+	public function register(): void {
+		$woocommerce_active  = $this->is_woocommerce_active();
+		$datasets               = new DatasetRepository();
+		$settings               = new SettingsRepository();
+		$managed_registry       = new ManagedZoneRegistry();
+		$algeria_states         = new AlgeriaStatesRegistrar( $woocommerce_active, $datasets, $settings );
+		$zone_reader            = new ShippingZoneReader( $woocommerce_active );
+		$compatibility_detector = new YaxiiCodCompatibilityDetector( $woocommerce_active, $datasets, $managed_registry );
+		$diagnostics            = new ShippingDiagnosticsService(
+			$woocommerce_active,
+			$datasets,
+			$settings,
+			$zone_reader,
+			$managed_registry,
+			$compatibility_detector
+		);
+		$preview_planner        = new PreviewPlanner( $datasets, $settings, $diagnostics, $managed_registry );
+		$safe_apply_engine      = new SafeApplyEngine( $woocommerce_active, $preview_planner, $managed_registry );
+		$apply_contract         = new ApplyContract( $settings, $managed_registry );
+		$removal_preview        = new ManagedSetupRemovalPreview( $woocommerce_active, $managed_registry, $zone_reader );
+		$removal_executor       = new ManagedSetupRemovalExecutor( $woocommerce_active, $managed_registry, $removal_preview );
+		$bootstrap              = new BootstrapController( $woocommerce_active, $datasets, $algeria_states );
+		$dataset_controller     = new DatasetController( $woocommerce_active, $datasets );
+		$settings_controller    = new SettingsController( $woocommerce_active, $settings );
+		$diagnostics_controller = new DiagnosticsController( $woocommerce_active, $diagnostics );
+		$preview_controller     = new PreviewController( $woocommerce_active, $preview_planner, new PreviewRequestSanitizer() );
+		$apply_controller       = new ApplyContractController( $woocommerce_active, $apply_contract );
+		$apply                  = new ApplyController( $woocommerce_active, new ApplyRequestSanitizer(), $safe_apply_engine );
+		$managed_setup          = new ManagedSetupController( $woocommerce_active, $removal_preview, $removal_executor );
+
+		if ( is_admin() ) {
+			$admin_page = new AdminPage( $woocommerce_active );
+			$admin_page->register();
+
+			$asset_registrar = new AssetRegistrar( $bootstrap );
+			$asset_registrar->register();
+		}
+
+		$algeria_states->register();
+
+		$routes = new Routes( $bootstrap, $dataset_controller, $settings_controller, $diagnostics_controller, $preview_controller, $apply_controller, $apply, $managed_setup );
+		$routes->register();
+	}
+
+	/**
+	 * Detect WooCommerce without calling WooCommerce APIs.
+	 */
+	private function is_woocommerce_active(): bool {
+		return class_exists( 'WooCommerce' ) || function_exists( 'WC' );
+	}
+}

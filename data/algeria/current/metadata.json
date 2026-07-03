@@ -1,0 +1,14 @@
+{
+  "mode": "current",
+  "source": "s450r1-algeria-cities-2025",
+  "source_commit": "ba0cd7d5aeb9aec54fcde69c073f9dfc34f94de2",
+  "version": "current-candidate-2025",
+  "complete": true,
+  "verified": false,
+  "wilaya_count": 69,
+  "commune_count": 1541,
+  "license": "Public domain statement preserved from source README",
+  "warnings": [
+    "Source reform claims are preserved as source claims and require independent official verification before marketing as official."
+  ]
+}
