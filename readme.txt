@@ -1,5 +1,5 @@
 === Yaxii Shipping Manager ===
-Contributors: ghost4tech
+Contributors: yaxii, ghost4tech
 Tags: woocommerce, shipping, algeria, cod, shipping-zones
 Requires at least: 6.5
 Tested up to: 7.0
