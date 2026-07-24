@@ -1,12 +1,13 @@
 <?php
 /**
- * Plugin Name: Yaxii Shipping Manager
- * Plugin URI: https://github.com/ghost4tech/yaxii-shipping-manager-plugin
- * Description: Algeria shipping setup for WooCommerce.
+ * Plugin Name: Yaxii Shipping Manager – WooCommerce Shipping Zones for Algeria
+ * Plugin URI: https://yaxii.dev/product/yaxii-shipping-manager/
+ * Description: Create, preview, and manage Algeria WooCommerce shipping zones with protected manual zones and diagnostics.
  * Version: 1.0.0
  * Requires at least: 6.5
  * Requires PHP: 7.4
- * Author: Yaxii
+ * Author: Yaxii Dev
+ * Author URI: https://yaxii.dev
  * Text Domain: yaxii-shipping-manager
  * Domain Path: /languages
  * License: GPL-2.0-or-later

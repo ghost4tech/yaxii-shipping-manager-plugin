@@ -1,6 +1,6 @@
 === Yaxii Shipping Manager ===
 Contributors: yaxii, ghost4tech
-Tags: woocommerce, shipping, algeria, cod, shipping-zones
+Tags: woocommerce, shipping, algeria, wilaya, shipping-zones
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 7.4
@@ -8,23 +8,34 @@ Stable tag: 1.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Configure and manage Algeria shipping zones for WooCommerce with previews, diagnostics, and protected zones.
+Set up and manage Algeria WooCommerce shipping zones by wilaya, with safe previews, diagnostics, and protection for your existing manual zones.
 
 == Description ==
 
-Yaxii Shipping Manager helps WooCommerce merchants configure Algeria wilaya shipping zones from a WordPress admin screen.
+Yaxii Shipping Manager is a WooCommerce shipping setup tool built specifically for Algerian merchants. It replaces the slow, error-prone process of building wilaya-by-wilaya shipping zones by hand in WooCommerce with a guided admin screen that generates, previews, and manages them for you.
 
-The plugin focuses on reviewed, local WooCommerce shipping setup:
+Every change is reviewed before it is applied. Nothing is written to your store's WooCommerce configuration until you confirm a generated preview, and zones the plugin did not create are left alone by default.
 
-* Generate Algeria WooCommerce shipping zones from a reviewed preview.
-* Add and update Yaxii-managed flat rate shipping methods for home and office delivery.
-* Manage prices, labels, and enabled status for Yaxii-managed methods.
-* Keep manual WooCommerce zones, Yaxii COD Theme zones, external Yaxii-looking zones, and duplicate zones protected and read-only unless they are verified Yaxii-managed.
-* Show read-only diagnostics for WooCommerce readiness, protected zones, and compatibility risks before changes are applied.
-* Detect existing Yaxii COD Theme shipping zones so the generator can avoid duplicate covered wilayas.
-* Remove only verified Yaxii-managed setup when explicitly confirmed.
+**Built for Algerian WooCommerce stores**
 
-The plugin does not send store data to remote services and does not load remote scripts, styles, or fonts.
+* Generate WooCommerce shipping zones for Algeria's wilayas from a reviewed, editable preview — nothing is applied automatically.
+* Add and update Yaxii-managed flat rate shipping methods for home delivery and office/stopdesk delivery.
+* Manage prices, labels, and enabled status for Yaxii-managed methods from one screen.
+* Detect existing Yaxii COD Theme shipping zones so the generator can avoid creating duplicate coverage for the same wilaya.
+
+**Protects what you already have**
+
+* Manual WooCommerce zones, Yaxii COD Theme zones, external Yaxii-looking zones, and duplicate zones are kept protected and read-only unless they are verified as Yaxii-managed.
+* Read-only diagnostics show WooCommerce readiness, protected zones, and compatibility risks before any change is applied.
+* The setup removal tool removes only verified Yaxii-managed zones and methods, and only after an explicit confirmation step.
+
+**Local-first, no tracking**
+
+The plugin does not send store data to remote services, does not phone home, and does not load remote scripts, styles, or fonts. Everything runs on your own WordPress site.
+
+= Current scope =
+
+This release manages shipping at the wilaya level. Commune-level pricing and third-party provider (Yalidine, ZR Express, Maystro, etc.) table imports are not part of this release.
 
 == Installation ==
 
