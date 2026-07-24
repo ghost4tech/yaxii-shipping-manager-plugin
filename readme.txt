@@ -8,18 +8,19 @@ Stable tag: 1.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Set up and manage Algeria WooCommerce shipping zones by wilaya, with safe previews, diagnostics, and protection for your existing manual zones.
+Create and manage Algeria WooCommerce shipping zones with 69-wilaya support, legacy 58-wilaya compatibility, safe previews, diagnostics, and protected zones.
 
 == Description ==
 
-Yaxii Shipping Manager is a WooCommerce shipping setup tool built specifically for Algerian merchants. It replaces the slow, error-prone process of building wilaya-by-wilaya shipping zones by hand in WooCommerce with a guided admin screen that generates, previews, and manages them for you.
+Yaxii Shipping Manager is a dedicated WooCommerce shipping setup tool for Algeria. It replaces slow, manual wilaya-by-wilaya zone building with a guided admin screen that generates, previews, and manages your Algeria WooCommerce shipping zones — supporting the current 69-wilaya structure and legacy 58-wilaya compatibility for older store setups.
 
-Every change is reviewed before it is applied. Nothing is written to your store's WooCommerce configuration until you confirm a generated preview, and zones the plugin did not create are left alone by default.
+Every change starts as a reviewed, editable preview. Nothing is written to your store's WooCommerce configuration until you confirm it, and zones the plugin did not create are left alone by default.
 
-**Built for Algerian WooCommerce stores**
+**Built for Algeria's WooCommerce and cash-on-delivery merchants**
 
-* Generate WooCommerce shipping zones for Algeria's wilayas from a reviewed, editable preview — nothing is applied automatically.
-* Add and update Yaxii-managed flat rate shipping methods for home delivery and office/stopdesk delivery.
+* Generate WooCommerce shipping zones covering Algeria's current 69-wilaya structure, with a legacy 58-wilaya compatibility mode for older store setups.
+* Reference commune/city data for coverage review as you plan your wilaya-level rollout.
+* Add and update Yaxii-managed flat rate shipping methods for home delivery and office/stopdesk delivery — the two delivery types most Algerian cash-on-delivery (COD) stores rely on.
 * Manage prices, labels, and enabled status for Yaxii-managed methods from one screen.
 * Detect existing Yaxii COD Theme shipping zones so the generator can avoid creating duplicate coverage for the same wilaya.
 
@@ -31,11 +32,11 @@ Every change is reviewed before it is applied. Nothing is written to your store'
 
 **Local-first, no tracking**
 
-The plugin does not send store data to remote services, does not phone home, and does not load remote scripts, styles, or fonts. Everything runs on your own WordPress site.
+The plugin does not send store data to remote services, does not use telemetry or analytics, and does not load remote scripts, styles, or fonts. Everything runs on your own WordPress site.
 
 = Current scope =
 
-This release manages shipping at the wilaya level. Commune-level pricing and third-party provider (Yalidine, ZR Express, Maystro, etc.) table imports are not part of this release.
+This release manages WooCommerce shipping zones and pricing at the wilaya level. Commune/city reference data is included for coverage review only; commune-level and city-level pricing are not implemented in this release. Third-party provider table imports (Yalidine, ZR Express, Maystro, etc.) and YSF sync are not active in this release. The plugin does not adopt, convert, or edit manual WooCommerce zones, and it is built specifically for Algeria rather than global/worldwide shipping.
 
 == Installation ==
 
@@ -63,6 +64,14 @@ The setup removal tool removes only verified Yaxii-managed zones after an explic
 = Does the plugin support commune-level pricing? =
 
 No. The current release manages shipping at the wilaya level.
+
+= Does the plugin support 69 wilayas? =
+
+Yes. The plugin supports the current 69-wilaya Algeria structure and also includes a legacy 58-wilaya compatibility mode for older store setups.
+
+= Does the plugin include cities or communes? =
+
+The plugin includes commune/city reference data for coverage review. Pricing and WooCommerce shipping zones are managed at the wilaya level in this release.
 
 = Does the plugin import provider shipping tables? =
 
