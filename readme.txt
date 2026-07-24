@@ -8,7 +8,7 @@ Stable tag: 1.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Create and manage Algeria WooCommerce shipping zones with 69-wilaya support, legacy 58-wilaya compatibility, safe previews, diagnostics, and protected zones.
+Manage Algeria WooCommerce shipping zones with 69-wilaya support, legacy 58-wilaya compatibility, safe previews, diagnostics, and protected zones.
 
 == Description ==
 

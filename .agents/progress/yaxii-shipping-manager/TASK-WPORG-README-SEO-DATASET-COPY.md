@@ -109,9 +109,23 @@ Post-commit verification via `svn info` on the live SVN URL confirmed both `trun
 
 `https://wordpress.org/plugins/yaxii-shipping-manager`
 
+## Follow-up fix (2026-07-25, same day) — short description length
+
+WordPress.org's plugin importer reported: "The Short Description section is too long and was truncated. A maximum of 150 characters is supported." The short description committed at r3622020 was 157 characters — 7 over the limit, which had been flagged as a risk in this report but used verbatim per the original task's exact-text instruction. WordPress.org confirmed it as an actual import warning, not just a soft guideline.
+
+Fix: shortened to a 146-character version preserving all original content/keywords, changing only "Create and manage" → "Manage":
+
+`Manage Algeria WooCommerce shipping zones with 69-wilaya support, legacy 58-wilaya compatibility, safe previews, diagnostics, and protected zones.`
+
+Synced to `release/yaxii-shipping-manager/readme.txt`, rebuilt `release/yaxii-shipping-manager.zip`, updated `trunk/readme.txt` and `tags/1.0.0/readme.txt`. `svn status` confirmed only these two files modified. User's message ("fix it and commit again") served as direct commit approval for this narrow, single-line fix.
+
+Committed: `svn commit -m "Fix readme short description length for WordPress.org import" trunk/readme.txt tags/1.0.0/readme.txt`
+
+**Revision: 3622021.** Verified live via `svn cat` on `trunk/readme.txt` — short description line is 146 characters.
+
 ## Next task
 
-None required for this readme update. Optional follow-up: supply final screenshots/banner/icon for the top-level SVN `assets/` folder, still empty by design.
+None required. Optional follow-up: supply final screenshots/banner/icon for the top-level SVN `assets/` folder, still empty by design.
 
 ## Commit hash
 
