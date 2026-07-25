@@ -83,11 +83,11 @@ No. The plugin is local-first and does not send telemetry or analytics data.
 
 == Screenshots ==
 
-1. Shipping Editor with Yaxii-managed zones, live prices, method status controls, and protected-zone labels.
-2. Generator setup flow for selecting Algeria coverage and previewing supported WooCommerce changes.
-3. Diagnostics health cards showing WooCommerce readiness, protected zones, and compatibility risks.
-4. Settings page with simplified preferences, always-on safety rules, and advanced managed setup tools.
-5. Remove Yaxii setup confirmation showing only verified Yaxii-managed removal candidates and protected manual zones.
+1. Shipping Editor showing wilaya-level zones, home and office/stopdesk delivery prices, and per-method status controls.
+2. Setup wizard coverage step: choose the current 69-wilaya dataset or the legacy 58-wilaya compatible dataset before generating zones.
+3. Setup wizard preview step: review the exact zones and methods to be created before anything is applied to WooCommerce.
+4. Setup wizard confirmation after generating, summarizing zones created and methods added.
+5. Diagnostics page showing WooCommerce readiness checks, pass/warning counts, and Algeria setup coverage.
 
 == Changelog ==
 
