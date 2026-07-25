@@ -164,7 +164,7 @@ Prove that Yaxii Shipping Manager does not adopt, update, or otherwise change a 
 - `clean-code-guard`: No production code changes were needed.
 - `docs-guard`: Documentation now matches the observed TASK-009B smoke evidence.
 - `wp-plugin-directory-guidelines`: No WordPress.org-sensitive product behavior was added.
-- Note: `AGENTS.md` references `.agent/skills/`, but this repo has `.agents/skills/`; the available repo-local skills were used.
+- Note: `AGENTS.md` references `.agents/skills/`, but this repo has `.agents/skills/`; the available repo-local skills were used.
 
 ## Checks Run
 

@@ -30,7 +30,7 @@ Before every task:
 
 1. Read this file.
 2. Read `AGENTS.md`.
-3. Inspect `.agent/skills/`.
+3. Inspect `.agents/skills/`.
 4. Use only skills that exist.
 5. Confirm working directory.
 6. Confirm Git root and branch.

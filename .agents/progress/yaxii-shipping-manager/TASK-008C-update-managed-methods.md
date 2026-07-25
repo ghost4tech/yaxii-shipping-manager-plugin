@@ -114,7 +114,7 @@ Browser admin smoke was not automated because no authenticated browser session o
 ## QA Guard Findings
 
 - Used repo-local `.agents/skills` guard instructions for WooCommerce, WordPress, REST, clean code, docs, and Plugin Directory review.
-- `.agent/skills/` was not present; `.agents/skills/` existed and was used.
+- `.agents/skills/` was not present; `.agents/skills/` existed and was used.
 - WooCommerce guard: writes remain guarded by preview revalidation and registry ownership checks; no deletes or manual-zone write path were added.
 - WordPress/REST guard: state-changing apply continues to require capability and REST nonce checks; user-facing PHP strings are translation-ready.
 - Clean-code guard: removed the dead method-update skip helper and kept changes scoped to the apply/planner/UI contract.

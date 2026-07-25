@@ -291,7 +291,7 @@ The plugin remains local-first in the proposed integration.
 
 ## Skills And Guards Used
 
-Repository-local `.agent/skills/` was not present. Repository-local `.agents/skills/` was present and inspected.
+Repository-local `.agents/skills/` was not present. Repository-local `.agents/skills/` was present and inspected.
 
 Guards used:
 

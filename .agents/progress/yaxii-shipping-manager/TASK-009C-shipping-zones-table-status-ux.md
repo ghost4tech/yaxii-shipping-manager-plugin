@@ -166,7 +166,7 @@ Controlled price update smoke through preview/apply:
 - `wp-rest-api`: diagnostics payload shape was extended through the existing read-only endpoint contract.
 - `woo-guard`: WooCommerce writes remain in SafeApplyEngine; the table has no direct write path.
 - `wp-plugin-directory-guidelines`: no external assets, license gates, remote dependencies, obfuscation, or upsell surfaces were added.
-- Repo-local `.agent/skills/` did not exist; repo-local `.agents/skills/` guard files were used.
+- Repo-local `.agents/skills/` did not exist; repo-local `.agents/skills/` guard files were used.
 
 ## Checks Run
 

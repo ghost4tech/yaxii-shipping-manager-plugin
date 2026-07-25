@@ -21,7 +21,7 @@ This was an audit and planning task only. No product code was changed.
 - `origin/main` does not contain `d1f3dd5`.
 - Safe sync path: keep this work on a task branch from `d1f3dd5`, then fast-forward or PR/merge TASK-010 and TASK-010A into `main` without rewriting history.
 - `app/.git` was not present.
-- `.agent/skills/` was not present.
+- `.agents/skills/` was not present.
 - `.agents/skills/` was present and used for available guard instructions.
 - `.agents/references/yaxii-shipping-hub-03/` is present but was not staged or committed.
 
@@ -147,24 +147,24 @@ It should not be required for routine managed price edits.
 
 ## Backend Capability Vs UI Expectation Table
 
-| UI expectation | Current capability | Recommendation |
-| --- | --- | --- |
-| Live WooCommerce status | Supported | Keep |
-| Managed Home/Office price updates | Supported through preview/apply | Make table flow clearer |
-| Free shipping as price `0` | Supported | Keep inline |
-| Bulk managed price updates | Supported through preview/apply | Keep secondary |
-| Create missing zones | Supported | Keep in Generator |
-| Add missing methods | Supported | Keep in Generator/repair |
-| Managed method label updates | Supported through preview/apply | Keep out of daily table unless clearly scoped |
-| Enable/disable methods | Not supported | Hide until backend task |
-| Zone-name updates | Preview only | Future task |
-| Deletes/reset/wipe | Not supported | Do not add |
-| Manual adoption | Not supported | Do not add |
-| Manual/unknown method edits | Not supported | Keep protected |
-| CSV | Not supported | Coming Soon or hidden |
-| Commune pricing | Not supported | Do not imply |
-| Provider imports | Not supported | Hide |
-| YSF sync | Not supported | Hide or Coming Soon |
+| UI expectation                    | Current capability              | Recommendation                                |
+| --------------------------------- | ------------------------------- | --------------------------------------------- |
+| Live WooCommerce status           | Supported                       | Keep                                          |
+| Managed Home/Office price updates | Supported through preview/apply | Make table flow clearer                       |
+| Free shipping as price `0`        | Supported                       | Keep inline                                   |
+| Bulk managed price updates        | Supported through preview/apply | Keep secondary                                |
+| Create missing zones              | Supported                       | Keep in Generator                             |
+| Add missing methods               | Supported                       | Keep in Generator/repair                      |
+| Managed method label updates      | Supported through preview/apply | Keep out of daily table unless clearly scoped |
+| Enable/disable methods            | Not supported                   | Hide until backend task                       |
+| Zone-name updates                 | Preview only                    | Future task                                   |
+| Deletes/reset/wipe                | Not supported                   | Do not add                                    |
+| Manual adoption                   | Not supported                   | Do not add                                    |
+| Manual/unknown method edits       | Not supported                   | Keep protected                                |
+| CSV                               | Not supported                   | Coming Soon or hidden                         |
+| Commune pricing                   | Not supported                   | Do not imply                                  |
+| Provider imports                  | Not supported                   | Hide                                          |
+| YSF sync                          | Not supported                   | Hide or Coming Soon                           |
 
 ## Lovable Brief Created
 
@@ -239,7 +239,7 @@ No PHP, npm, Composer, lint, typecheck, or build checks were required because on
 
 ## Blockers
 
-- `.agent/skills/` is missing despite `AGENTS.md` referencing it. Repo-local `.agents/skills/` was present and used.
+- `.agents/skills/` is missing despite `AGENTS.md` referencing it. Repo-local `.agents/skills/` was present and used.
 - `main` and `origin/main` do not contain TASK-010 commit `d1f3dd5`; safe sync should happen by fast-forward or PR/merge, not history rewrite.
 
 ## Next Recommended Task

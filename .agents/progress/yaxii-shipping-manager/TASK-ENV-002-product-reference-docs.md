@@ -56,7 +56,7 @@ Nested app repo:
 
 ## Skills found / used / missing
 
-Local `.agent/skills/`:
+Local `.agents/skills/`:
 
 - Not found / empty.
 
@@ -168,7 +168,7 @@ Still not implemented:
 - Plugin root Git commands failed as expected: the plugin root is not a Git repository.
 - Nested app repo is on branch `main`.
 - Nested app repo has a pre-existing deletion: ` D .lovable/project.json`.
-- Local `.agent/skills/` did not provide project skills.
+- Local `.agents/skills/` did not provide project skills.
 - `docs-guard` system skill was used.
 - `git diff --check` in the nested app repo passed with no output.
 - Trailing-whitespace scan for `docs` and the task report passed with no matches.

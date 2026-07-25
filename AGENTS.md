@@ -79,7 +79,7 @@ Run Plugin Check before release tasks.
 
 Before every task, inspect available skills under:
 
-`.agent/skills/`
+`.agents/skills/`
 
 Use only skills that actually exist. Do not invent skill names.
 
@@ -112,7 +112,7 @@ Before every task:
 2. Confirm whether the plugin root is a Git repository.
 3. Show current branch.
 4. Show `git status --short --untracked-files=all`.
-5. Inspect `AGENTS.md`, `CLAUDE.md`, and relevant `.agent/skills/` files.
+5. Inspect `AGENTS.md`, `CLAUDE.md`, and relevant `.agents/skills/` files.
 6. Inspect the files you will modify and at least one neighboring file.
 7. State the intended task boundary before editing.
 

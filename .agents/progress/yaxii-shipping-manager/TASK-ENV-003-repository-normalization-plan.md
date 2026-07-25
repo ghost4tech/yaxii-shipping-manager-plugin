@@ -25,7 +25,7 @@ This is a planning/audit task only. No plugin features were implemented, no file
 
 Requested local path:
 
-- `.agent/skills/`: not present.
+- `.agents/skills/`: not present.
 
 Installed local project skills actually found:
 

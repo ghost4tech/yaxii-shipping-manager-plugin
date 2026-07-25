@@ -165,7 +165,7 @@ WP-CLI/REST smoke:
 - `wp-rest-api`: pass. No REST route or schema changed.
 - `woo-guard`: pass. No WooCommerce write path changed; existing writes remain in `SafeApplyEngine`.
 - `wp-plugin-directory-guidelines`: pass. No WordPress.org-risky monetization, tracking, remote dependency, or obfuscation added.
-- Required `.agent/skills/` path was missing. Existing repo-local `.agents/skills/` was used instead.
+- Required `.agents/skills/` path was missing. Existing repo-local `.agents/skills/` was used instead.
 
 ## Checks run
 

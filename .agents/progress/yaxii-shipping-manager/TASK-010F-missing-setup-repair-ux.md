@@ -16,7 +16,7 @@ Implemented frontend UX for single-row and selected-row missing setup repair. No
 - Branch: `task/010f-missing-setup-repair-ux`
 - Base before task: `fd690fb` (`TASK-010E: align shipping zones quick tools with reference`)
 - Local `main` and `origin/main` were fast-forwarded to `fd690fb` before branching.
-- `.agent/skills/` was not present; `.agents/skills/` was present and used.
+- `.agents/skills/` was not present; `.agents/skills/` was present and used.
 
 ## Files changed
 

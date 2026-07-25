@@ -129,7 +129,7 @@ Created:
 - `wp-rest-api`: no REST schema or permission behavior changed.
 - `woo-guard`: no new WooCommerce write paths were added; smoke used the existing SafeApplyEngine path and restored the controlled price.
 - `wp-plugin-directory-guidelines`: reference app remains ignored and uncommitted; no external assets or hidden calls were added.
-- `.agent/skills/` is absent; repo-local `.agents/skills/` guard files were used.
+- `.agents/skills/` is absent; repo-local `.agents/skills/` guard files were used.
 
 ## Checks Run/Results
 

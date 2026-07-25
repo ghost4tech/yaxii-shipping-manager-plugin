@@ -16,7 +16,7 @@ Audit the latest old prototype reference and plan how to replace the current Dia
 - Recent branch graph showed `TASK-010I` at `37dc39e`, with `TASK-010H` and `TASK-010G` immediately behind it.
 - Latest approved work present locally: yes. TASK-010I, TASK-010H, TASK-010G, and earlier TASK-010 reports are present under `.agents/progress/yaxii-shipping-manager/`.
 - Nested `app/.git`: not present.
-- `.agent/skills/`: missing.
+- `.agents/skills/`: missing.
 - `.agents/skills/`: present and used for the requested guards.
 
 ## Reference path inspected
@@ -202,22 +202,22 @@ Remove or hide:
 
 ## Backend mapping
 
-| Prototype area | Classification | Notes |
-| --- | --- | --- |
-| Diagnostics health cards | Can copy now with real backend data | Map from `DiagnosticsResponse`. |
-| Diagnostics passed/warn/fail summary | Can copy with frontend adaptation | Count derived health-card statuses. |
-| Diagnostics run/check flow | Can copy with frontend adaptation | Use real refresh/load state. |
-| Diagnostics checkout simulator | Must be removed or hidden | Not real checkout proof. |
-| Diagnostics full details | Can copy as collapsed advanced details | Use existing real wilaya/zone data. |
-| Generator readiness badge | Can copy now with real backend data | Map from `applyReadiness.severity`. |
-| Generator top stat tiles | Can copy with frontend adaptation | Use preview summary/context, omit unknown stats. |
-| Generator preview groups | Can copy now with real backend data | Map from preview summary and plan groups. |
-| Generator preview sample | Can copy with adaptation | Use real create/add/update plan rows. |
-| Generator apply action | Must be adapted | Keep real apply contract. |
-| Generator success state | Must be adapted | Use real `ApplyResponse`. |
-| Generator disabled apply step | Must be removed | Real safe apply exists. |
-| Advanced details | Can copy as concept | Keep support details collapsed. |
-| Fake actions | Must be removed | No fake apply, reset, sync, provider, CSV backend, or checkout proof. |
+| Prototype area                       | Classification                         | Notes                                                                 |
+| ------------------------------------ | -------------------------------------- | --------------------------------------------------------------------- |
+| Diagnostics health cards             | Can copy now with real backend data    | Map from `DiagnosticsResponse`.                                       |
+| Diagnostics passed/warn/fail summary | Can copy with frontend adaptation      | Count derived health-card statuses.                                   |
+| Diagnostics run/check flow           | Can copy with frontend adaptation      | Use real refresh/load state.                                          |
+| Diagnostics checkout simulator       | Must be removed or hidden              | Not real checkout proof.                                              |
+| Diagnostics full details             | Can copy as collapsed advanced details | Use existing real wilaya/zone data.                                   |
+| Generator readiness badge            | Can copy now with real backend data    | Map from `applyReadiness.severity`.                                   |
+| Generator top stat tiles             | Can copy with frontend adaptation      | Use preview summary/context, omit unknown stats.                      |
+| Generator preview groups             | Can copy now with real backend data    | Map from preview summary and plan groups.                             |
+| Generator preview sample             | Can copy with adaptation               | Use real create/add/update plan rows.                                 |
+| Generator apply action               | Must be adapted                        | Keep real apply contract.                                             |
+| Generator success state              | Must be adapted                        | Use real `ApplyResponse`.                                             |
+| Generator disabled apply step        | Must be removed                        | Real safe apply exists.                                               |
+| Advanced details                     | Can copy as concept                    | Keep support details collapsed.                                       |
+| Fake actions                         | Must be removed                        | No fake apply, reset, sync, provider, CSV backend, or checkout proof. |
 
 ## What can be copied
 
@@ -368,7 +368,7 @@ No npm/PHP build was needed because only docs/report files were changed.
 
 None for audit/planning.
 
-Local `.agent/skills/` is missing, while `.agents/skills/` is present and used. This is a harness path mismatch to keep documenting in reports until normalized.
+Local `.agents/skills/` is missing, while `.agents/skills/` is present and used. This is a harness path mismatch to keep documenting in reports until normalized.
 
 ## Next recommended task
 
