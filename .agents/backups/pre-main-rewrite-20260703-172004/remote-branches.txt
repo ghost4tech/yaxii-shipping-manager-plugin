@@ -1,0 +1,5 @@
+﻿  origin/HEAD -> origin/main
+  origin/main
+  origin/task/006a-safe-apply-confirmation-contract
+  origin/task/007b-generator-wizard-reference-integration
+  origin/task/008c-update-managed-methods

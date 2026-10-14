@@ -1,0 +1,30 @@
+﻿ M .agents/progress/yaxii-shipping-manager/TASK-000-prototype-product-discovery-audit.md
+ M .agents/progress/yaxii-shipping-manager/TASK-008B-UX2-final-apply-manager-controls.md
+ M .agents/progress/yaxii-shipping-manager/TASK-008C-update-managed-methods.md
+ M .agents/progress/yaxii-shipping-manager/TASK-009A-stabilization-browser-smoke-cleanup.md
+ M .agents/progress/yaxii-shipping-manager/TASK-009B-manual-zone-protection-smoke.md
+ M .agents/progress/yaxii-shipping-manager/TASK-009C-shipping-zones-table-status-ux.md
+ M .agents/progress/yaxii-shipping-manager/TASK-010A-product-flow-ux-audit.md
+ M .agents/progress/yaxii-shipping-manager/TASK-010B-shipping-zones-reference-integration-plan.md
+ M .agents/progress/yaxii-shipping-manager/TASK-010F-missing-setup-repair-ux.md
+ M .agents/progress/yaxii-shipping-manager/TASK-011A-prototype-ui-rework-audit.md
+ M .agents/progress/yaxii-shipping-manager/TASK-ENV-002-product-reference-docs.md
+ M .agents/progress/yaxii-shipping-manager/TASK-ENV-003-repository-normalization-plan.md
+ M AGENTS.md
+ M CLAUDE.md
+ M data/algeria/current/communes.json
+ M data/algeria/current/metadata.json
+ M data/algeria/current/wilayas.json
+?? .agents/backups/pre-main-rewrite-20260703-172004/full-private-history.bundle
+?? .agents/backups/pre-main-rewrite-20260703-172004/head.txt
+?? .agents/backups/pre-main-rewrite-20260703-172004/local-branches.txt
+?? .agents/backups/pre-main-rewrite-20260703-172004/remote-branches.txt
+?? .agents/backups/pre-main-rewrite-20260703-172004/remotes.txt
+?? .agents/backups/pre-main-rewrite-20260703-172004/status-short.txt
+?? .agents/backups/pre-main-rewrite-20260703-172004/tags.txt
+?? .agents/backups/pre-public-repo-20260703-164222/head.txt
+?? .agents/backups/pre-public-repo-20260703-164222/local-branches.txt
+?? .agents/backups/pre-public-repo-20260703-164222/pre-public-repo-full-history-20260703-164222.bundle
+?? .agents/backups/pre-public-repo-20260703-164222/remote-branches.txt
+?? .agents/backups/pre-public-repo-20260703-164222/status-short.txt
+?? .agents/progress/yaxii-shipping-manager/TASK-011D-custom-method-shipping-zones-investigation.md
